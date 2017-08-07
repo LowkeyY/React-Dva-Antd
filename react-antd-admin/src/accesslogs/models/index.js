@@ -1,10 +1,10 @@
-import { getLogsList } from '../server/index'
+import { getAccessList } from '../services/index'
 import { routerRedux } from 'dva/router'
 import { parse } from 'qs'
 
 export default {
 
-  namespace: 'accesslogs',
+  namespace: 'accesstatistic',
 
   state: {
     list: [],
@@ -24,8 +24,8 @@ export default {
       history.listen(location => {
         if (location.pathname === '/accesslogs') {
           dispatch({
-            type: 'getLogsList',
-            payload: location.query,
+            type: 'getAccessList',
+            payload: location.getAccessList,
           })
         }
       })
@@ -33,15 +33,15 @@ export default {
   },
 
   effects: {
-    *query ({ payload }, { call, put }) {
+    *getAccessList ({ payload }, { call, put }) {
       payload = parse(location.search.substr(1))
-      const data = yield call(getLogsList, payload)
+      const data = yield call(getAccessList, payload)
       if (data) {
         if (data.status && data.status === 401) { yield put(routerRedux.push('/login')) } else {
           yield put({
             type: 'querySuccess',
             payload: {
-              list: data.data,
+              list: data.dataItem,
               pagination: {
                 current: Number(payload.page) || 1,
                 pageSize: Number(payload.pageSize) || 10,
@@ -51,8 +51,8 @@ export default {
           })
         }
       }
+     console.log(data)
     },
-
   },
 
   reducers: {
@@ -82,3 +82,4 @@ export default {
   },
 
 }
+

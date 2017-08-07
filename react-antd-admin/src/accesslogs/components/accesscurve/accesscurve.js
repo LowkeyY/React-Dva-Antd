@@ -10,7 +10,7 @@ const AccessCurve = () => {
     {name: 'Page E', uv: 1890, amt: 2181},
     {name: 'Page F', uv: 2390, amt: 2500},
     {name: 'Page G', uv: 3490, amt: 2100},
-  ];
+  ]
   return (
     <div>
       <ResponsiveContainer minHeight={360}>
@@ -23,7 +23,7 @@ const AccessCurve = () => {
           <Line type="monotone" dataKey="uv" stroke="#64ea91" dot={{ fill:" #64ea91" }}/>
         </LineChart>
       </ResponsiveContainer>
-      <h2 className="chart-type"></h2>
+      <h2 className="chart-type">{}</h2>
     </div>
   )
 }

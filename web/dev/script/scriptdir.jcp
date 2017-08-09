@@ -1,0 +1,84 @@
+
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+
+
+import com.susing.sql.*;
+import com.kinglib.*;
+import java.util.*;  
+import com.kinglib.workbench.*;
+import java.io.*;
+import org.w3c.dom.*;
+import com.susing.core.*;
+
+@class{
+public void doPost(Jacper jacper) {
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = hs.uid+"";
+
+	String type = jacper.getStr("type");
+	String dirName = jacper.getStr("name");
+	String currentDirectory=jacper.getStr("currentDirectory");
+
+	String homeDir="";
+	Element jcpConfig = (Element)KingleSystem.getProperty("jacper-config");
+	if(jcpConfig != null){
+		NodeList list = jcpConfig.getElementsByTagName("path");
+		String[][] pathInfo = new String[list.getLength()][2];
+		for(int i=0;i<pathInfo.length;i++){
+			Element el = (Element)list.item(i);
+			pathInfo[i][0] =el.getAttribute("url-starts");
+			pathInfo[i][1] = el.getAttribute("source-path");
+			if(pathInfo[i][0].equals("/"))  homeDir=pathInfo[i][1];
+		}
+	}
+
+	if (type.equals("save")){
+		try{	
+			File file = new File(currentDirectory+"/"+dirName);
+			//File file = new File(currentDirectory);
+			if(file.exists()){ 
+				<?{success:false,message:"?>jacper.trans("目录已经存在!")<?"}?>;
+			}else{
+				file.mkdir(); 
+			} 
+			<?{success:true,id:'?>dirName<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}
+	}else if (type.equals("updatesave")){
+		try{	
+		
+			File file = new File(currentDirectory);
+			File newFile = new File(currentDirectory.substring(0,currentDirectory.lastIndexOf("/"))+"/"+dirName);
+			boolean renameSuccess=file.renameTo(newFile);
+			if(renameSuccess){
+				<?{success:true,id:'?>dirName<?'}?>;
+			}else{
+				<?{success:false,message:"?>jacper.trans("目录改名失败")<?"}?>;
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}
+		
+	}else if (type.equals("delete")){
+		try{	
+			//File file = new File(homeDir+currentDirectory);
+			File file = new File(currentDirectory); 
+			boolean deleteSuccess=file.delete();
+			if(deleteSuccess){
+				<?{success:true}?>;
+			}else{
+				<?{success:false,message:"?>jacper.trans("目录删除失败")<?"}?>;
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}
+	}
+}
+}

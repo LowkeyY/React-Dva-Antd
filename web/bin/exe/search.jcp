@@ -1,0 +1,164 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.util.RandomStr;
+import com.kinglib.database.*;
+import com.kinglib.bi.*;
+import com.kinglibx.query.*;
+import com.kinglib.workbench.search.*;
+import java.util.*;
+
+@class{
+public void doPost(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+	String key=jacper.getStr("key");
+	String precise=jacper.getStr("precise");
+    String objectId=jacper.getStr("objectId");
+	int startRow = jacper.getInt("start",0);
+	int rowCount = jacper.getInt("limit",0);
+
+	key=key.replaceAll("\"","");
+	key=key.replaceAll("\'","");
+	key=key.replaceAll("“","");
+	key=key.replaceAll("”","");
+	key=key.replaceAll("‘","");
+	key=key.replaceAll("’","");
+	
+	if(key.indexOf('\"')!=-1||key.indexOf('\'')!=-1||key.indexOf('“')!=-1||key.indexOf('‘')!=-1||key.indexOf('”')!=-1||key.indexOf('‘')!=-1){
+			precise="true"; 
+	}
+
+	Program program=ProgramFactory.getInstance().getProgram(conPlat,objectId);
+	String searchType=program.getSearchType();
+
+	try{	
+		    JSONObject searchJSON = new JSONObject();	
+			searchJSON.put("success",true);
+			if(!key.equals("")){
+
+				SearchIndexFactory SIF=SearchIndexFactory.getInstance();
+				ArrayList<String []> results=SIF.getIndexSearch(conPlat,searchType);
+
+				ArrayList resultList=new ArrayList();
+				int count=0;
+				int count1=0;
+				int total=0;
+				String titleString="";
+				
+					if(key.indexOf(",")!=-1){
+						String[] keys=key.split(",");
+						for(int n=0;n<keys.length;n++){
+							for(int i=0;i<results.size();i++){
+								String [] result=results.get(i);
+								if(result[9].equals(keys[n])){
+									total++;
+									if(!result[0].equals(titleString)){
+										titleString=result[0];
+										count++;
+									}
+									if(count>startRow&&count<startRow+rowCount){
+										count1++;
+										resultList.add(result);
+									}
+								}
+							}
+						}
+					}else{
+						for(int i=0;i<results.size();i++){
+						String [] result=results.get(i);
+						if(precise.equals("true")){
+								if(result[9].equals(key)){
+									total++;
+									if(!result[0].equals(titleString)){
+										titleString=result[0];
+										count++;
+									}
+									if(count>startRow&&count<startRow+rowCount){
+										count1++;
+										resultList.add(result);
+									}
+								}
+						}else{
+								if(result[9].indexOf(key)!=-1){
+									total++;
+									if(!result[0].equals(titleString)){
+										titleString=result[0];
+										count++;
+									}
+									if(count>startRow&&count<startRow+rowCount){
+										count1++;
+										resultList.add(result);
+									}
+								}
+							}
+						}
+					}
+				String[][] searchResults=new String[count1][9];
+				resultList.toArray(searchResults);
+				searchJSON.put("total",count);
+
+				JSONArray jarr=new JSONArray();
+				if(searchResults.length>0){
+					for(int i=0;i<searchResults.length;i++){
+						String groupItem=searchResults[i][0];
+						String groupItem1=searchResults[i][2];
+						String titleItem=searchResults[i][2]+"/"+searchResults[i][1];
+						String titleItem1=searchResults[i][0]+"/"+searchResults[i][1];
+						String searchId=searchResults[i][8];
+  
+						IndexSearch indexSearch =SearchFactory.getInstance().getIndexSearch(conPlat,searchId);
+						String queryId=indexSearch.getQueryId();
+						QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+						QueryExtend QE=queryEF.getQueryExtend(conPlat,queryId);
+						
+						String expTab=indexSearch.getExportTable();
+						String expItem=indexSearch.getExportItem();
+
+						String startName=indexSearch.getStartName();
+						String endName=indexSearch.getEndName();
+						String dataSource=indexSearch.getDataSource();
+
+						StringBuilder desc = new StringBuilder();
+						if(!dataSource.equals("")){
+							desc.append(",").append(jacper.trans("数据来源:")).append(dataSource);
+						}
+						if(!startName.equals("")&&!searchResults[i][5].equals("")){
+							desc.append(",").append(startName).append(":").append(searchResults[i][5]);
+						}
+						if(!endName.equals("")&&!searchResults[i][6].equals("")){
+							desc.append(",").append(endName).append(":").append(searchResults[i][6]);
+						}
+						String searchDesc=desc.toString();
+						if(searchDesc.length()>0){
+							searchDesc=searchDesc.substring(1);
+						}
+						JSONObject titleJSON = new JSONObject();
+						titleJSON.put("name",searchResults[i][0]);
+						titleJSON.put("title",titleItem);
+						titleJSON.put("_parent",groupItem);
+						titleJSON.put("title1",titleItem1);
+						titleJSON.put("_category",groupItem1);
+						titleJSON.put("exportData",searchResults[i][3]);
+						titleJSON.put("rowCount",searchResults[i][4]);
+						titleJSON.put("_desc",searchDesc);
+						titleJSON.put("searchDate",searchResults[i][7]);
+						titleJSON.put("searchId",searchResults[i][8]);
+						titleJSON.put("exportTab",expTab);
+						titleJSON.put("exportItem",expItem);
+						jarr.put(titleJSON);
+					}			
+				}
+				searchJSON.put("data",jarr);
+			}else{
+				searchJSON.put("total",0);
+				JSONArray jarr=new JSONArray();
+				searchJSON.put("data",jarr);
+			}
+			jacper.print(searchJSON);
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}}

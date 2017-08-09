@@ -1,0 +1,178 @@
+
+import com.kinglib.*;    
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.integrate.*;
+import com.kinglib.ui.menu.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.UUID;
+@class{
+public void doGet(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String parent_id = jacper.getStr("parent_id");
+	String type = jacper.getStr("type");
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+			JSONObject integrateJSON = new JSONObject();	
+			String[] rs = conPlat.getRow("select a.logic_name,a.phy_name,a.integrate_type,a.os_type,a.program,a.launcher_menu,d.top_title,a.note,a.keyboard_type,a.play_sound,a.color_depth,a.remote_cursor,a.printer,a.clipboard from  $[plat].integrate_base a,$[plat].sys_top d where a.launcher_menu=d.top_id and a.object_id=?",new String[]{parent_id});
+			if(rs!=null){
+				integrateJSON.put("logicName",rs[0]);
+				integrateJSON.put("phyName",rs[1]);
+				integrateJSON.put("integratType",rs[2]);
+				integrateJSON.put("osType",rs[3]);
+				integrateJSON.put("program",rs[4]);
+				JSONObject idjson = new JSONObject();
+				idjson.put("text",rs[6]);
+				idjson.put("value",rs[5]);
+				integrateJSON.put("laucherMenu",idjson);
+				integrateJSON.put("note",rs[7]);
+				integrateJSON.put("keyboardType",rs[8]);
+				integrateJSON.put("play_Sound",rs[9]);
+				integrateJSON.put("color_Depth",rs[10]);
+				integrateJSON.put("remoteCursor",rs[11]);
+				integrateJSON.put("printer",rs[12]);
+				integrateJSON.put("clipboard",rs[13]);
+			}	
+			ObjectNode node=ObjectManager.getObject(parent_id);
+			if(node!=null){
+				integrateJSON.put("lastModifyTime",node.getLastModifyTime());
+				integrateJSON.put("lastModifyName",node.getLastModifyName());
+			}
+		   <?{success:true,data:?>integrateJSON.toString()<?}?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+   	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long userId=hs.uid;   
+
+	String type = jacper.getStr("type");	
+
+	String parent_id = jacper.getStr("parent_id");
+
+	String logicName = jacper.getStr("logicName");
+	String phyName = jacper.getStr("phyName");
+	String integratType = jacper.getStr("integratType");
+	String note = jacper.getStr("note");
+	String laucherMenu = jacper.getStr("laucherMenu");
+	String osType = jacper.getStr("os_type");
+	String program = jacper.getStr("program");
+	String keyboardType = jacper.getStr("keyboardType");
+	String play_Sound = jacper.getStr("play_Sound");
+	String colorDepth = jacper.getStr("color_Depth");
+	String remoteCursor = jacper.getStr("remoteCursor");
+	String printer = jacper.getStr("printer");
+	String clipboard = jacper.getStr("clipboard");
+
+	String object_name = "";
+	
+	ObjectManager OM=ObjectManager.getInstance();
+	if(type.equals("save")){
+		try{	
+				conPlat.setAutoCommit(false);	
+				String object_id  = "";
+				String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+				if(idType==null||idType.equals("0")){
+					object_id = SQLUtils.getNextVal(conPlat,1)+"";
+				}else{
+					object_id =UUID.randomUUID().toString();
+				}
+				ObjectNode applicationNode=OM.getObject(parent_id);
+				applicationNode.addChild(conPlat,object_id,logicName,ObjectType.INTEGRATE,userId);
+
+				conPlat.exec("INSERT INTO $[plat].integrate_base (object_id,logic_name,phy_name,integrate_type,os_type,program,launcher_menu,note,keyboard_type,play_sound,color_depth,remote_cursor,printer,clipboard) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",new String[]{object_id+"",logicName,phyName,integratType,osType,program,laucherMenu,note,keyboardType,play_Sound,colorDepth,remoteCursor,printer,clipboard});	
+				conPlat.exec("UPDATE $[plat].sys_top SET default_app ='bin.integrate.Frame?parent_id="+object_id+"' where top_id=?",new String[]{laucherMenu});
+				try{
+					Menu parent=MenuFactory.getInstance().getMenu(laucherMenu);
+					parent.setPath("bin.integrate.Frame?parent_id="+parent_id);
+				}catch(Exception e){
+					e.printStackTrace();
+				}		
+				conPlat.commit();
+				<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if(type.equals("updatesave")){
+			try{	
+				conPlat.setAutoCommit(false);	
+				ObjectNode integrateNode=OM.getObject(parent_id);
+				integrateNode.updateName(conPlat,logicName);
+				IntegrateFactory IFactory=IntegrateFactory.getInstance();
+				Integrate integrate=IFactory.getIntegrate(conPlat,parent_id+"");
+				String oldMenu=integrate.getLaucherMenu();
+				IFactory.remove(parent_id+"");
+				conPlat.exec("UPDATE $[plat].integrate_base set  logic_name=?,phy_name=?,integrate_type=?,os_type=?,program=?,launcher_menu=?,note=?,keyboard_type=?,play_sound=?,color_depth=?,remote_cursor=?,printer=?,clipboard=?  where object_id=?",new String[]{logicName,phyName,integratType,osType,program,laucherMenu,note,keyboardType,play_Sound,colorDepth,remoteCursor,printer,clipboard,parent_id+""});	
+				conPlat.exec("UPDATE $[plat].sys_top SET default_app ='' where top_id=?",new String[]{oldMenu});
+				conPlat.exec("UPDATE $[plat].sys_top SET default_app ='bin.integrate.Frame?parent_id="+parent_id+"' where top_id=?",new String[]{laucherMenu});
+				try{
+					Menu oldTopManu=MenuFactory.getInstance().getMenu(oldMenu);
+					oldTopManu.setPath("");
+					Menu parent=MenuFactory.getInstance().getMenu(laucherMenu);
+					parent.setPath("bin.integrate.Frame?parent_id="+parent_id);
+				}catch(Exception e){
+					e.printStackTrace();
+				}		
+				conPlat.commit();
+				<?{success:true,id:'?>parent_id<?'}?>;
+			}catch(Exception e){
+				e.printStackTrace();
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+	}else if(type.equals("delete")){
+		try{	
+			conPlat.setAutoCommit(false);	
+			IntegrateNode integrateNode=(IntegrateNode)OM.getObject(parent_id);
+			conPlat.exec("UPDATE $[plat].sys_top SET default_app ='' where top_id=?",new String[]{integrateNode.getMenuId()});
+			try{
+				Menu parent=MenuFactory.getInstance().getMenu(integrateNode.getMenuId());
+				parent.setPath("");
+			}catch(Exception e){
+				e.printStackTrace();
+			}		
+			integrateNode.destroy(conPlat);
+			conPlat.commit();
+			<?{success:true}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

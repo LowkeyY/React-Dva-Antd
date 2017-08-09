@@ -1,0 +1,49 @@
+
+import java.util.*;
+import com.kinglib.*;
+
+import com.kinglib.bi.*;
+import com.kinglib.util.json.*;
+import com.kinglibx.query.*;
+
+
+@class{
+	                                    
+public void doPost(Jacper jacper) {
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	String type = jacper.getStr("type");
+	String name = "PLATFORM_EXT";
+//	conPlat.parseObjectName("$[plat]");
+	String object_id = jacper.getStr("object_id");
+
+	jacper.getResponse().setContentType("application/x-json");
+	try{
+		String[][] rss=null;
+		JSONObject optionJSON = new JSONObject("{}");
+		if(type.equals("style")){
+			rss =conPlat.get("select name,type from $[mdsys].sdo_styles_table where sdo_owner=?",new String[]{name});
+				JSONArray jarr=new JSONArray();
+				try{
+					for(int i=0;i<rss.length;i++){
+						JSONObject items = new JSONObject();
+						items.put("text",rss[i][1]);
+						items.put("value",rss[i][0]);
+						jarr.put(items);
+					}
+					optionJSON.put("items",jarr);					
+				}catch(Exception e){}
+				<??>optionJSON.toString()<??>;
+			}
+		
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+}

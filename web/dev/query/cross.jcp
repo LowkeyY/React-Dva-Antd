@@ -1,0 +1,56 @@
+
+import com.kinglib.bi.*;
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglibx.query.*;
+import java.util.Map;
+import com.kinglib.util.json.*;
+
+@class{
+	public void doGet(Jacper jacper){
+
+		Connection conPlat =jacper.getConnection("plat");
+		String sql;
+		String[] title = null;
+		Connection conTemp =null;
+
+		String query_id = jacper.getString("query_id","-1");
+		String name = jacper.getString("query_name");
+		String colName = jacper.getString("col_name");
+		
+		if(!query_id.equals("-1")){	
+
+			Map map = jacper.getParamMap("_X");
+
+			QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+			QueryExtend QE=queryEF.getQueryExtend(conPlat,query_id);
+			String server =QE.getServer(conPlat,query_id+"");
+			conTemp = jacper.getConnection(server);
+			Query query = QueryFactory.getInstance().getQuery(conPlat,query_id);
+			sql = query.parseSql(conPlat,new String[]{colName},map);
+			sql = "select distinct "+sql.substring(7);
+		}else{		
+			if(name==null)
+				return;
+			String connString=name.substring(2,name.indexOf("]"));
+			conTemp = jacper.getConnection(connString);
+			sql = "select distinct "+colName+" from "+name; 
+		}
+		String[][] data = conTemp.get(sql);
+
+		JSONArray jarr=new JSONArray();
+		try{
+			for(int i=0;i<data.length;i++){
+				if(!data[i][0].equals("")){
+					JSONObject items = new JSONObject("{}");
+					items.put("value",data[i][0]);
+					items.put("text",data[i][0]);
+					jarr.put(items);
+				}
+			}
+		}catch(Exception e){}
+		jacper.print("{items:"+jarr+"}");
+}
+public void doPost(Jacper jacper){
+	doGet(jacper);
+}}

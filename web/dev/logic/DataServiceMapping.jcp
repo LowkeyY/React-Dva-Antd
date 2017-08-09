@@ -1,0 +1,202 @@
+import java.util.HashSet;
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.bi.QueryExtend;
+import com.kinglib.bi.QueryExtendFactory;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.util.json.JSONPart;
+import com.kinglib.util.json.JSONValue;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+import com.kinglib.workbench.application.Application;
+import com.kinglib.workbench.application.ApplicationFactory;
+import com.kinglib.workbench.dataservice.DataServiceFactory;
+import com.kinglibx.query.ColumnNode;
+import com.kinglibx.query.Query;
+import com.kinglibx.query.QueryFactory;
+
+@class{
+	private String getJson(String[][] data, String[] columns) {
+		if (data == null)
+			return "";
+		JSONArray jarr = new JSONArray();
+		try {
+			for (int i = 0; i < data.length; i++) {
+				JSONObject items = new JSONObject();
+				for (int j = 0; j < columns.length; j++) {
+					if (columns[j].equals("grid_data")) {
+						items.put(columns[j], new JSONValue(data[i][j]));
+					} else {
+						items.put(columns[j], data[i][j]);
+					}
+				}
+				jarr.put(items);
+			}
+		} catch (Exception e) {
+		}
+		return "{items:" + jarr + "}";
+	}
+
+	private String getJson(String[] data, String[] columns) {
+		if (data == null)
+			return "";
+		JSONArray jarr = new JSONArray();
+		try {
+			for (int i = 0; i < data.length; i++) {
+				JSONObject items = new JSONObject();
+				for (int j = 0; j < columns.length; j++)
+						items.put(columns[j], data[i]);
+				jarr.put(items);
+			}
+		} catch (Exception e) {
+		}
+		return "{items:" + jarr + "}";
+	}
+
+	public void doPost(Jacper jacper) {
+		String gettype = jacper.getStr("type");
+		Connection conPlat = jacper.getConnection("plat");
+		jacper.setSession();
+		String object_id = jacper.getStr("object_id");
+		String json = "";
+
+		if (gettype.equals("query_column")) {
+			json = getQueryColumn(jacper.getStr("query_id"), conPlat);
+		} else if (gettype.equals("get_tables")) {
+			String database_link = jacper.getStr("database_link");
+			String[][] tab = conPlat.get("select object_id,lname from $[plat].meta_table where DBLINK=?", new String[] { database_link }, 0);
+			json = getJson(tab, new String[] { "id", "lname" });
+		} else if (gettype.equals("get_links")) {
+			ObjectNode systemNode = ObjectManager.getObject(object_id).upTo(ObjectType.SYSTEM);
+			ObjectNode[] groupNodes = systemNode.getChilds(ObjectType.APPLICATIONGROUP);
+
+			HashSet<String> dbLinkSet = new HashSet<String>();
+			for (int j = 0; j < groupNodes.length; j++) {
+				ObjectNode[] appNodes = groupNodes[j].getChilds(ObjectType.APPLICATION);
+				for (int k = 0; k < appNodes.length; k++) {
+					String appId = appNodes[k].getId();
+					ApplicationFactory appFactory = ApplicationFactory.getInstance();
+					Application app = appFactory.getApplication(conPlat, appId + "");
+					String dbLink = app.getDatabaseLink();
+					dbLinkSet.add(dbLink);
+				}
+			}
+			String[] database_Link = new String[dbLinkSet.size()];
+			dbLinkSet.toArray(database_Link);
+			json = getJson(database_Link, new String[] { "text" });
+		} else if (gettype.equals("get_querys")) {
+			String[][] queryList = conPlat.get("select query_name,query_id from $[plat].app_query  where query_id is not null and (object_id is null or object_id not in (select object_id from $[plat].meta_table)) order by query_name", new String[] {}, 0);
+			json = getJson(queryList, new String[] { "text", "value" });
+		} else if (gettype.equals("get_data_service")) {
+			json = getMapping(conPlat, object_id, jacper.getStr("tab_id"));
+		} else if (gettype.equals("ctrl_tabquery")) {
+			String[][] ryan1 = conPlat.get("select data_source_id,data_source_name,'',data_source_name from $[plat].data_service_mapping where object_id=?  group by data_source_id,data_source_name", new String[] { object_id }, 0);
+			for (int i = 0; i < ryan1.length; i++) {
+				ObjectNode node = ObjectManager.getObject(ryan1[i][0]);
+				ryan1[i][1] = node.getName() + "_" + ryan1[i][1];
+				ryan1[i][2] = getMapping(conPlat, object_id, ryan1[i][0]);
+			}
+			json = getJson(ryan1, new String[] { "data_source_id", "data_source_name", "grid_data", "data_tag" });
+		}
+		conPlat.close();
+		jacper.print(json);
+	}
+
+	public String getQueryColumn(String query_id, Connection conPlat) {
+		Query query = QueryFactory.getInstance().getQuery(conPlat, query_id);
+		ColumnNode[] columns = query.getColumnNode();
+		String[][] rs2 = new String[columns.length][2];
+		for (int i = 0; i < columns.length; i++)
+			rs2[i][0] = rs2[i][1] = columns[i].getColumnName();
+		return getJson(rs2, new String[] { "text", "value" });
+	}
+
+	public String getMapping(Connection conPlat, String object_id, String tab_id) {
+		ObjectNode node = ObjectManager.getObject(tab_id);
+		String[][] transValue = conPlat.get("select data_source_id,DATA_COLUMN,DATA_COLUMN,name from $[plat].data_service_mapping where object_id=? and data_source_id=?", new String[] { object_id, tab_id }, 0);
+		if (node.getType() == ObjectType.METATABLE) {
+			MetaTable mt = MetaFactory.getObject(node.getId());
+			if (transValue.length == 0) {
+				transValue = new String[mt.getColumnCount()][4];
+				MetaColumn[] cs = mt.getColumnArray();
+				for (int i = 0; i < cs.length; i++) {
+					transValue[i][0] = tab_id;
+					transValue[i][2] = String.valueOf(cs[i].getId());
+					transValue[i][3] = "";
+				}
+			}
+			MetaColumn mc = null;
+			for (String[] row : transValue) {
+				mc = mt.getColumn(row[2]);
+				row[1] = mc.getLname() + "(" + mc.getPname() + ")";
+			}
+		} else {
+			if (transValue.length == 0) {
+				QueryExtendFactory queryEF = QueryExtendFactory.getInstance();
+				QueryExtend QE = queryEF.getQueryExtend(conPlat, tab_id);
+				Query query = QE.getQuery();
+				String[] titles = query.getCells();
+				transValue = new String[titles.length][4];
+				for (int i = 0; i < titles.length; i++) {
+					transValue[i][0] = tab_id;
+					transValue[i][1] = titles[i];
+					transValue[i][2] = titles[i];
+					transValue[i][3] = "";
+				}
+			}
+
+		}
+		return getJson(transValue, new String[] { "qid", "lname", "colId", "newName" });
+	}
+
+	public void doPut(Jacper jacper) {
+		jacper.setSession();
+		Param param = new Param(jacper);
+		JSONPart ret = new JSONPart(30);
+		Connection conPlat = param.getConnection("plat");
+		String objectId = param.getString("objectId");
+		String value = param.getString("value");
+		try {
+			conPlat.setAutoCommit(false);
+
+			JSONArray result = new JSONArray(value);
+			String[][] vs = new String[result.length()][5];
+			// r:"id", "lname", "colId", "newName","data_tag"
+			for (int i = 0; i < result.length(); i++) {
+				JSONObject js=result.getJSONObject(i);
+				vs[i][0]=objectId;
+				vs[i][1]=js.getString("qid");
+				vs[i][2]=js.getString("colId");
+				vs[i][3]=js.getString("newName");
+				vs[i][4]=js.getString("data_tag");
+			}
+			conPlat.exec("delete from $[plat].data_service_mapping where OBJECT_ID=?",new String[]{objectId});
+			conPlat.exec("insert into $[plat].data_service_mapping(OBJECT_ID,DATA_SOURCE_ID,DATA_COLUMN,NAME,DATA_SOURCE_NAME)values(?,?,?,?,?)", vs);
+			DataServiceFactory.getInstance().remove(objectId);
+			ret.join("success", true);
+			conPlat.commit();
+		} catch (Exception e) {
+			ret.join("success", false);
+			ret.join("message", e.getMessage());
+			e.printStackTrace();
+		} finally {
+			try{
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e){
+			}
+		}
+		jacper.print(ret);
+	}
+
+
+
+}

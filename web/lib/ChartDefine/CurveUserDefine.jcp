@@ -1,0 +1,382 @@
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.*;
+import com.kinglib.util.json.*;
+import java.sql.Types;
+import java.util.*;
+import com.kinglib.bi.chart.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.unit.*;
+import com.kinglib.bi.*;
+import com.social.api.core.model.*;
+import com.kinglib.i18n.*;
+
+@class{
+	public void doGet(Jacper jacper){
+
+		HttpSession hs = jacper.getSession();
+		String parent_id = jacper.getStr("parent_id");
+		String prg_id = jacper.getString("prg_id","-1");
+		String objectId=jacper.getString("objectId","-1");
+		long userId=hs.uid;
+		
+		Connection conPlat=jacper.getConnection("plat");
+		if(!prg_id.equals("-1")){
+			Program prg =ProgramFactory.getInstance().getProgram(conPlat,prg_id);
+			parent_id=String.valueOf(prg.getChartId());
+
+		} 
+	
+		String[] rss=null;		
+		JSONObject resultJSON=null; 
+		Connection conCert=jacper.getConnection("cert");
+		try{
+			JSONObject chartJSON = new JSONObject();
+			JSONObject extra = new JSONObject(); 
+
+			if(!objectId.equals("-1")&& UserDefineChart.getInstance().hasDefined(String.valueOf(userId),objectId)){ 
+				rss = conCert.getRow("select  X_AXIS_FORMAT,X_AXIS_SHOW,X_AXIS_VALUE,SHOW_GRID,GRID_COLOR,DATA_TOOLTIP,SAMPLE_INTERVAL,'',VIEW3DDEPTH,Inner_Color,data_Editor,X_AXIS_START,Title,'',Combine_Num,query_id,'',same_scale,SAMPLE_REMAIN,YOVERLAP,X_AXIS_ANGLE,DATETIME_FORMAT,X_AXIS_TYPE, X_TITLE, LEGEND_SHOW, LEGEND_COLUMNS, LEGEND_POSITION, LEGEND_ALIGN, LEGEND_ANCHOR, LEGEND_INSIDE, LEGEND_ALIGNBY, PLOT_TYPE,  TICKMARKS_PLACEMENT, object_id,user_id from $[cert].USER_CHART  where object_id=? and user_id=?" ,new String[]{String.valueOf(objectId),String.valueOf(userId)});
+			}else{
+				rss = conPlat.getRow("select  X_AXIS_FORMAT,X_AXIS_SHOW,X_AXIS_VALUE,SHOW_GRID,GRID_COLOR,DATA_TOOLTIP,SAMPLE_INTERVAL,'',VIEW3DDEPTH,Inner_Color,data_Editor,X_AXIS_START,Title,'',Combine_Num,query_id,'',same_scale,SAMPLE_REMAIN,YOVERLAP,X_AXIS_ANGLE,DATETIME_FORMAT,X_AXIS_TYPE, X_TITLE, LEGEND_SHOW, LEGEND_COLUMNS, LEGEND_POSITION, LEGEND_ALIGN, LEGEND_ANCHOR, LEGEND_INSIDE, LEGEND_ALIGNBY, PLOT_TYPE, TICKMARKS_PLACEMENT from $[plat].CRTL_CHART where CHART_ID=? " ,new String[]{parent_id});
+			}   
+				chartJSON.put("AxisXFormat",rss[0]);
+				chartJSON.put("showX",rss[1]);
+				chartJSON.put("AxisXValue",rss[2]);
+//				chartJSON.put("checkGrid",rss[3]);
+			switch(Integer.parseInt(rss[3])){
+				case 0:
+					chartJSON.put("GridX","off");
+					chartJSON.put("GridY","off");
+					break;
+				 
+				case 1:
+					chartJSON.put("GridX","on");
+					chartJSON.put("GridY","on");
+					break;	
+					
+				case 2:
+					chartJSON.put("GridX","on");
+					chartJSON.put("GridY","off");
+					break;	
+					
+				case 3:
+					chartJSON.put("GridX","off");
+					chartJSON.put("GridY","on");
+					break;	
+			}
+				chartJSON.put("Border_Colorfield",rss[4]);
+	            char[] aa=rss[5].toCharArray();
+	            chartJSON.put("Is_Titled_X","off");
+	            chartJSON.put("Is_Titled_Y","off"); 
+	            chartJSON.put("Is_Titled_Z","off");	
+	            for(int i=0; i<aa.length; i++){
+
+					switch(aa[i]){
+						case 'X':
+							chartJSON.put("Is_Titled_X","on");
+							break;
+						case 'Y':
+								chartJSON.put("Is_Titled_Y","on");
+							break;
+			
+						case 'Z':
+							chartJSON.put("Is_Titled_Z","on");
+							break;
+					}
+				}	
+//				chartJSON.put("Is_Titled",rss[5]);
+				chartJSON.put("sampleInterval",rss[6]);
+				chartJSON.put("View3Ddepth",rss[8]);
+				chartJSON.put("Iner_Colorfield",rss[9]);
+				chartJSON.put("checkDateEdit",rss[10]);	
+				chartJSON.put("xAxisStart",rss[11]);
+				chartJSON.put("Title",rss[12]);
+				chartJSON.put("Combine_Num",rss[14]);
+				chartJSON.put("query_id",rss[15]);
+				chartJSON.put("same_scale",rss[17]);
+				chartJSON.put("chart_id",parent_id);	
+				chartJSON.put("sampleRemain",rss[18]);	
+				chartJSON.put("overlap",rss[19]);	
+				chartJSON.put("xAxisAngle",rss[20]);
+				chartJSON.put("DateTimeFormat",rss[21]);
+				chartJSON.put("xAxisType",rss[22]);
+				chartJSON.put("xTitle",rss[23]);
+				chartJSON.put("legendShow",rss[24]);
+				chartJSON.put("legendColumns",rss[25]);
+				chartJSON.put("legendPosition",rss[26]);
+				chartJSON.put("legendAlign",rss[27]);	
+				chartJSON.put("legendAnchor",rss[28]);	
+				chartJSON.put("legendInside",rss[29]);
+				chartJSON.put("legendAlignBy",rss[30]);
+				chartJSON.put("plotType",rss[31]);
+                chartJSON.put("tickmarksPlacement",rss[32]);
+ 
+			ObjectNode node=ObjectManager.getObject(parent_id);
+			if(node!=null){
+				chartJSON.put("lastModifyTime",node.getLastModifyTime());
+				chartJSON.put("lastModifyName",node.getLastModifyName());
+			}
+
+			//chartColumn
+			JSONArray jarr=new JSONArray();
+			String[][] crs=null;
+			if(!objectId.equals("-1")&& UserDefineChart.getInstance().hasDefined(String.valueOf(userId),objectId)){ 
+				 crs = conCert.get("select  UNIT_ID,SERIES_ID,Y_AXIS_FORMAT,CHART_TYPE,Y_AXIS_MAX,Y_AXIS_VALUE,ATT_AXIS,Y_AXIS_POSITION,Y_AXIS_COLOR,Y_AXIS_TITLE,Y_AXIS_START,Y_AXIS_TYPE,Y_LEGEND_TITLE,CHART_ID from $[cert].USER_CHART_SERIES where object_id=? and user_id=? order by SERIES_ID ",new String[]{String.valueOf(objectId), String.valueOf(userId)});
+			}else{
+				crs = conPlat.get("select  UNIT_ID,SERIES_ID,Y_AXIS_FORMAT,CHART_TYPE,Y_AXIS_MAX,Y_AXIS_VALUE,ATT_AXIS,Y_AXIS_POSITION,Y_AXIS_COLOR,Y_AXIS_TITLE,Y_AXIS_START,Y_AXIS_TYPE,Y_LEGEND_TITLE,CHART_ID from $[plat].CRTL_ChartSeries where CHART_ID=? order by SERIES_ID ",new String[]{parent_id});
+			}
+			for(int z=0;z<crs.length;z++){
+				JSONObject columnJSON = new JSONObject("{}");
+				columnJSON.put("UNIT_ID",crs[z][0]);
+				columnJSON.put("SERIES_ID",crs[z][1]);
+				columnJSON.put("AXISYFORMAT",crs[z][2]);
+				columnJSON.put("TYPE_ID",new JSONValue(crs[z][3]));
+				columnJSON.put("yAxisMax",crs[z][4]);	
+				columnJSON.put("AXISYVALUE",crs[z][5]);
+				columnJSON.put("ATT_AXIS",crs[z][6]);
+				columnJSON.put("AXIS_POSITION",crs[z][7]);
+				columnJSON.put("SERIES_COLOR",crs[z][8]);
+				columnJSON.put("yAxisTitle",crs[z][9]);	
+				columnJSON.put("yAxisStart",crs[z][10]);
+				columnJSON.put("yAxisType",crs[z][11]);
+				columnJSON.put("yLegendTitle",crs[z][12]);	
+				columnJSON.put("CHART_ID",parent_id);
+				jarr.put(columnJSON);
+			}
+
+			resultJSON = new JSONObject();
+			resultJSON.put("items",jarr);
+			extra.put("chartColumn",resultJSON);	
+			
+			//units
+			int Combine_Num=1;
+			try{
+				Combine_Num=Integer.parseInt(rss[14]);
+			}catch(Exception e){}
+
+
+			jarr=new JSONArray();
+			for(int i=1;i<=Combine_Num;i++){
+				JSONObject items = new JSONObject();
+				items.put("value",i);
+				items.put("text",(i)+jacper.trans("单元"));
+				jarr.put(items);
+			}
+			resultJSON = new JSONObject();
+			resultJSON.put("items",jarr);
+			extra.put("units",resultJSON);	
+
+
+			//typeEditor
+			extra.put("typeEditor",getTypeEditor(userId+""));	
+
+			
+			//yvalue
+			String[][] styles =conPlat.get("select column_name,order_id from $[plat].app_query_column  where query_id=?",new String[]{rss[15]});
+
+            String[] qtitles=new String[styles.length];
+					for(int i=0;i<styles.length;i++){
+						qtitles[i]=styles[i][0];
+					}
+			MetaColumn[] mcsa = getMetaColumns(conPlat,rss[15], qtitles);
+			Unit u;
+			String dataUnit="";
+			
+			jarr=new JSONArray();
+			for(int i=0;i<styles.length;i++){
+				JSONObject items = new JSONObject();
+				items.put("text",styles[i][0]);
+				items.put("value",styles[i][0]);
+				
+				if(mcsa[i]!=null && mcsa[i].getUnit().length()>0){
+				  	u=UnitFactory.getInstance().getUnit(conPlat, mcsa[i].getUnit());
+				    if(u!=null)
+				    	dataUnit=u.getName();
+				    else
+				  		dataUnit="";
+				} 
+				else
+				    dataUnit="";	
+				items.put("dataUnit",dataUnit);
+				jarr.put(items);
+			}
+			resultJSON = new JSONObject();
+			resultJSON.put("items",jarr);
+			extra.put("yvalue",resultJSON);	
+
+			jacper.print("{success:true,data:"+chartJSON+",extra:"+extra+"}");
+
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+			conCert.close();
+		}
+	
+	}
+
+//get data unit	
+	private MetaColumn[] getMetaColumns(Connection con,String query_id,String[] titles){
+		MetaColumn[] columns=new MetaColumn[titles.length];
+		
+		for(int i=0;i<titles.length;i++){
+			try{
+				String colName=QueryExtend.getFinalItem(con,query_id,titles[i]);
+				if(colName!=null && colName.length()>0){
+					String[] np=colName.split("\\.");
+					MetaTable mt=MetaFactory.getObjectWithFullName(np[0]+"."+np[1]);
+					if(mt!=null){
+						for(MetaColumn mc:mt.getColumns()){
+							if(mc.getPname().toUpperCase().equals(np[2].toUpperCase())){
+								columns[i]=mc;
+							}
+						}
+					}
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+		return columns;
+	}
+		
+	private JSONObject getTypeEditor(String user_id) throws JSONException{
+			JSONArray jarr=new JSONArray();
+			Translator t=I18n.getLocal(user_id+"").getTranslator(ChartType.class);
+			for(ChartType c:ChartType.values()){
+				JSONObject items = new JSONObject();
+				items.put("text",t.trans(c.getTitle()));
+				items.put("value",c.getValue());
+				jarr.put(items);
+			}
+			JSONObject resultJSON = new JSONObject();
+			resultJSON.put("items",jarr);
+			return resultJSON;
+	}
+
+	public void doPut(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		long userId=hs.uid;
+		try{
+			JSONObject resultJSON=getTypeEditor(userId+"");
+			resultJSON.put("success",true);
+			jacper.print(resultJSON);
+		}catch(Exception e){
+		}
+	}
+
+	public void doPost(Jacper jacper){
+		Connection conCert=jacper.getConnection("cert");	
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		
+		long userId=hs.uid;   
+
+   		
+		ObjectManager OM=ObjectManager.getInstance();
+		String parent_id = jacper.getString("parent_id","1");
+		String chart_id  = jacper.getStr("chart_id");
+		String objectId=jacper.getString("objectId","-1");
+		
+		int AxisXFormat = jacper.getInt("AxisXFormat",0);
+		String AxisXValue = jacper.getStr("AxisXValue");
+		String GrideColor = jacper.getStr("Border_Colorfield");
+		int Combine_Num = jacper.getInt("Combine_Num",1);
+		String InerColor = jacper.getStr("Iner_Colorfield");
+		String Title = jacper.getStr("Title");
+	    String Is_Titled="";
+		if((jacper.getStr("Is_Titled_X")).equals("on")) Is_Titled=Is_Titled+"X";
+		if((jacper.getStr("Is_Titled_Y")).equals("on")) Is_Titled=Is_Titled+"Y";
+		if((jacper.getStr("Is_Titled_Z")).equals("on")) Is_Titled=Is_Titled+"Z";
+
+		int View3Ddepth = jacper.getInt("View3Ddepth",1);
+		int Show_X = jacper.getInt("showX",1);
+//		int IsGrideLine = jacper.getInt("checkGrid",1);
+		int IsGrideLine=0; 
+        int gridX=0, gridY=0;
+        if((jacper.getStr("Grid_X")).equals("on")) gridX=1;
+        if((jacper.getStr("Grid_Y")).equals("on")) gridY=1;
+        switch(gridX+gridY){
+        	case 0:   
+        		IsGrideLine=0;
+        		break;
+        		
+        	case 1: 
+        	    IsGrideLine= gridX ==1  ? 2:3 ;
+        		break;
+        
+            case 2:   
+        		IsGrideLine=1;
+        		break; 
+        }
+		String fields=jacper.getStr("fields");
+		String query_id = jacper.getString("query_id","0");
+		int overlap = jacper.getInt("overlap",1);
+		String same_scale = jacper.getStr("same_scale");
+		String type = jacper.getStr("type");
+//		int xStart = jacper.getInt("xAxisStart",0);
+		String xStart = jacper.getStr("xAxisStart");
+		int sampleInterval = jacper.getInt("sampleInterval",0);
+		int sampleRemain = jacper.getInt("sampleRemain",30);
+		int xAxisAngle = jacper.getInt("xAxisAngle",0);
+		String dateTimeFormat=jacper.getStr("DateTimeFormat");
+		
+		String xAxisType=jacper.getStr("xAxisType");
+        String xTitle=jacper.getStr("xTitle");
+        
+        String legendShow="false";
+        if((jacper.getStr("legendShow")).equals("on")) legendShow="true";
+
+		int legendColumns=jacper.getInt("legendColumns",1);
+        String legendPosition=jacper.getStr("legendPosition");
+        String legendAlign=jacper.getStr("legendAlign");
+        String legendAnchor=jacper.getStr("legendAnchor");
+        String legendInside=jacper.getStr("legendInside");
+        String legendAlignBy=jacper.getStr("legendAlignBy");
+        String plotType=jacper.getStr("plotType");
+        String tickmarksPlacement=jacper.getStr("tickmarksPlacement");
+         
+        UserType userType=User.getUser(String.valueOf(userId)).getUserType();	
+		try{
+			conCert.setAutoCommit(false);
+			if(type.equals("delete")){
+				if(!objectId.equals("-1")&& UserDefineChart.getInstance().hasDefined(String.valueOf(userId),String.valueOf(objectId))){
+					UserDefineChart.getInstance().remove(String.valueOf(userId),String.valueOf(objectId));
+					conCert.exec("delete from $[cert].USER_CHART where user_id =? and object_id=?",new String[]{String.valueOf(userId),String.valueOf(objectId)});
+					conCert.exec("delete from $[cert].USER_CHART_SERIES where user_id =? and object_id=?",new String[]{String.valueOf(userId),String.valueOf(objectId)});
+					conCert.commit();
+					<?{success:true}?>;
+				}
+			}else{ 
+				if(type.equals("save")){
+					UserDefineChart.getInstance().regist(String.valueOf(userId),String.valueOf(objectId));
+					conCert.exec("delete from $[cert].USER_CHART where user_id =? and object_id=?",new String[]{String.valueOf(userId),String.valueOf(objectId)});
+					conCert.exec("delete from $[cert].USER_CHART_SERIES where user_id =? and object_id=?",new String[]{String.valueOf(userId),String.valueOf(objectId)});
+
+					conCert.exec("insert into $[cert].USER_CHART (chart_id,X_AXIS_FORMAT,X_AXIS_SHOW,X_AXIS_VALUE,GRID_COLOR,SHOW_GRID,View3Ddepth,YOVERLAP,SAMPLE_INTERVAL,INNER_COLOR,X_AXIS_START,Title,Combine_Num,query_id,same_scale,SAMPLE_REMAIN,DATA_TOOLTIP,X_AXIS_ANGLE, DATETIME_FORMAT,X_AXIS_TYPE, X_TITLE, LEGEND_SHOW, LEGEND_COLUMNS, LEGEND_POSITION, LEGEND_ALIGN, LEGEND_ANCHOR, LEGEND_INSIDE, LEGEND_ALIGNBY, PLOT_TYPE,TICKMARKS_PLACEMENT, USER_ID,OBJECT_ID) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, ?, ?,?,?,?,?,?,?,?, ?,?)" ,
+					            new String[]{chart_id,AxisXFormat+"",Show_X+"",AxisXValue,GrideColor,IsGrideLine+"",View3Ddepth+"",overlap+"",sampleInterval+"",InerColor,xStart+"",Title,Combine_Num+"",query_id+"",same_scale,String.valueOf(sampleRemain),Is_Titled,String.valueOf(xAxisAngle),dateTimeFormat,xAxisType,xTitle, legendShow, String.valueOf(legendColumns), legendPosition, legendAlign, legendAnchor, legendInside, legendAlignBy, plotType,tickmarksPlacement, String.valueOf(userId),String.valueOf(objectId)});				
+					JSONArray jarr=new JSONArray(fields);
+
+					for( int i = 0; i < jarr.length() ; i++ ){
+						JSONObject js=jarr.getJSONObject(i);
+						conCert.exec("insert into $[cert].USER_CHART_SERIES (chart_id,Unit_id,Series_Id,CHART_TYPE,Y_AXIS_FORMAT,Y_AXIS_POSITION,Y_AXIS_VALUE,Y_AXIS_MAX,Y_AXIS_TITLE,Y_AXIS_COLOR,ATT_AXIS,Y_AXIS_START,Y_AXIS_TYPE, Y_LEGEND_TITLE,USER_ID,OBJECT_ID) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)" ,new String[]{chart_id,js.getString("UNIT_ID"),String.valueOf(i),js.getString("TYPE_ID"),js.getString("AXISYFORMAT"),js.getString("AXIS_POSITION"),js.getString("AXISYVALUE"),js.getString("yAxisMax"),js.getString("yAxisTitle"),js.getString("SERIES_COLOR"),js.getString("ATT_AXIS"),js.getString("yAxisStart"),js.getString("yAxisType"),js.getString("yLegendTitle"),String.valueOf(userId),String.valueOf(objectId)});
+					}
+				} 
+             
+			conCert.commit();
+			<?{success:true,id:'?>chart_id<?'}?>;
+			}
+		}catch(Exception e){
+			try {
+				conCert.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conCert.close();
+				
+			}catch(Exception e2) {}
+		}
+
+	}	
+}

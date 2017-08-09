@@ -1,0 +1,345 @@
+
+import com.kinglib.*;    
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.module.*;
+import com.kinglib.ui.menu.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.UUID;
+import  com.kinglib.ui.core.*;
+import com.social.api.core.model.*;
+import com.social.api.core.model.User;
+import com.social.api.core.model.UserType;
+
+@class{
+public void doGet(Jacper jacper){
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String parent_id = jacper.getStr("parent_id");
+	Connection conPlat = jacper.getConnection("plat");
+	String type = jacper.getStr("type");
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+
+		JSONObject moduleJSON = new JSONObject();	
+
+			String[] rs = conPlat.getRow("select a.modlogic_name,a.modphy_name,a.modtype,c.icon_url,a.top_default,a.note,c.parent_app,case when  d.app_title is null then e.top_title else d.app_title end,a.left_width,a.right_width,a.up_height,a.down_height from $[plat].mod_base a left outer join $[plat].sys_application c on a.object_id=c.object_id left outer join $[plat].sys_application d on d.app_id=c.parent_app left outer join $[plat].sys_top e on e.top_id=c.parent_app  where  a.object_id=?",new String[]{parent_id});
+			if(rs!=null){
+				moduleJSON.put("modlogic_name",rs[0]);
+				moduleJSON.put("modphy_name",rs[1]);
+				moduleJSON.put("modtype",rs[2]);
+				moduleJSON.put("icon_url",rs[3]);
+				moduleJSON.put("top_default",rs[4]);
+				moduleJSON.put("note",rs[5]);
+				JSONObject idjson = new JSONObject();
+				idjson.put("text",rs[7]);
+				idjson.put("value",rs[6]);
+				moduleJSON.put("menu_id",idjson);
+
+				moduleJSON.put("left_width",rs[8]);
+				moduleJSON.put("right_width",rs[9]);
+				moduleJSON.put("up_height",rs[10]);
+				moduleJSON.put("down_height",rs[11]);
+			}	
+			ObjectNode node=ObjectManager.getObject(parent_id);
+			if(rs!=null && node!=null){
+				moduleJSON.put("lastModifyTime",node.getLastModifyTime());
+				moduleJSON.put("lastModifyName",node.getLastModifyName());
+				Menu m=MenuFactory.getInstance().getMenu(rs[6]);
+				String path="";
+				if(m!=null){
+					Menu root=MenuFactory.getInstance().getRoot();
+					int u=0;
+					while(m!=root && u++<10){ 
+						path=m.getTitle()+"\\"+path;
+						m=m.getParent();
+					}
+					path=path.substring(0,path.length()-1);
+				}
+				moduleJSON.put("menuPath",path);
+			}
+		   <?{success:true,data:?>moduleJSON.toString()<?}?>;
+	}catch(Exception e){
+		 <?{success:false,data:'?>e.getMessage()<?'}?>;
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+   	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long userId=hs.uid;   
+
+	String type = jacper.getStr("type");	
+
+	String parent_id = jacper.getStr("parent_id");
+
+	String modlogic_name = jacper.getStr("modlogic_name");
+	String modphy_name = jacper.getStr("modphy_name");
+	String modtype = jacper.getStr("modtype");
+	String note = jacper.getStr("note");
+	String parent_menu = jacper.getStr("menu_id");
+	String icon_url = jacper.getStr("icon_url");
+	String topDefault = jacper.getStr("top_default");
+
+
+	String left_width = jacper.getStr("left_width");
+	String right_width = jacper.getStr("right_width");
+	String up_height = jacper.getStr("up_height");
+	String down_height = jacper.getStr("down_height");
+
+	String object_name = "";
+		
+	ObjectManager OM=ObjectManager.getInstance();
+	CertManager cache=CertManager.getInstance();
+
+	if(type.equals("save")){
+		int modt =Integer.parseInt(modtype);
+
+		try{	
+			conPlat.setAutoCommit(false);	
+			String object_id  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+			ObjectNode applicationNode=OM.getObject(parent_id);
+			applicationNode.addChild(conPlat,object_id,modlogic_name,ObjectType.MODULE,userId);
+
+			if(topDefault.equals("1")){
+				String topID=getTopID(conPlat,parent_menu);
+				String[][] rs=conPlat.get("select menu_id,object_id from mod_base",new String[]{},0);
+				for(int i=0;i<rs.length;i++){
+					String allTopID=getTopID(conPlat,parent_menu);
+					if(allTopID.equals(topID)){
+						conPlat.exec("UPDATE $[plat].mod_base SET top_default = '0' where object_id=?",new String[]{rs[i][1]});
+						conPlat.exec("UPDATE $[plat].sys_top SET default_app = 'bin.exe.Frame?parent_id="+parent_id+"' where top_id=?",new String[]{topID});
+					}
+				}
+				Menu cur=MenuFactory.getInstance().getMenu(topID);
+				if(cur!=null){
+					cur.setPath("bin.exe.Frame?parent_id="+parent_id);
+					cur.setJson(null);
+				}
+			}
+
+			String menu_id  = "";
+			if(idType==null||idType.equals("0")){
+				menu_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				menu_id =UUID.randomUUID().toString();
+			}
+			conPlat.exec("INSERT INTO $[plat].mod_base (application_id, menu_id, modlogic_name, modphy_name, modtype, object_id,top_default,note,left_width,right_width,up_height,down_height) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",new String[]{parent_id,menu_id,modlogic_name,modphy_name,modt+"",object_id+"",topDefault+"",note,left_width,right_width,up_height,down_height});	
+			
+
+			try{
+				Menu parent=MenuFactory.getInstance().getMenu(parent_menu);
+				conPlat.exec("INSERT INTO $[plat].sys_application (app_id, app_name, app_title, parent_app, all_use, app_seq, son, object_id,create_user,icon_url,is_valid) VALUES (?,'bin.exe.Frame',?,?,'y','1000','0',?,?,?,'true')",new String[]{menu_id,modlogic_name,parent_menu,object_id+"",userId+"",icon_url});
+				if(parent!=null){
+					Menu menu=new Menu(menu_id, "bin.exe.Frame", modlogic_name, 1000,(new SimpleDateFormat("yyyy/MM/dd")).format(new Date()),object_id, String.valueOf(userId),icon_url,"0", false);
+					MenuFactory.getInstance().addToCache(menu);
+					menu.hang(parent);
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+
+			conPlat.exec("UPDATE $[plat].sys_application SET son = son + 1 WHERE app_id = ?",new String[]{parent_menu});			
+			parent_id=object_id+"";
+			ObjectNode moduleNode=OM.getObject(parent_id);
+			((ModuleNode)moduleNode).setMenuId(menu_id);
+			switch(modt){
+					case 1:
+						if(idType==null||idType.equals("0")){
+							object_id = SQLUtils.getNextVal(conPlat,1)+"";
+						}else{
+							object_id =UUID.randomUUID().toString();
+						}
+						object_name = jacper.trans("主窗口");
+						moduleNode.addChild(conPlat,object_id,object_name,ObjectType.MAINFRAME,userId);
+						break;
+					case 2:
+						if(idType==null||idType.equals("0")){
+							object_id = SQLUtils.getNextVal(conPlat,1)+"";
+						}else{
+							object_id =UUID.randomUUID().toString();
+						}
+						object_name = jacper.trans("左框架");
+						moduleNode.addChild(conPlat,object_id,object_name,ObjectType.LEFTFRAME,userId);
+						if(idType==null||idType.equals("0")){
+							object_id = SQLUtils.getNextVal(conPlat,1)+"";
+						}else{
+							object_id =UUID.randomUUID().toString();
+						}
+						object_name = jacper.trans("右框架");
+						moduleNode.addChild(conPlat,object_id,object_name,ObjectType.RIGHTFRAME,userId);
+						break;
+					case 3:  
+						if(idType==null||idType.equals("0")){
+							object_id = SQLUtils.getNextVal(conPlat,1)+"";
+						}else{
+							object_id =UUID.randomUUID().toString();
+						}
+						object_name = jacper.trans("上框架");
+						moduleNode.addChild(conPlat,object_id,object_name,ObjectType.UPPERFRAME,userId);
+						if(idType==null||idType.equals("0")){
+							object_id = SQLUtils.getNextVal(conPlat,1)+"";
+						}else{
+							object_id =UUID.randomUUID().toString();
+						}
+						object_name = jacper.trans("下框架");
+						moduleNode.addChild(conPlat,object_id,object_name,ObjectType.LOWERFRAME,userId);
+						break;
+					case 4:
+						if(idType==null||idType.equals("0")){
+							object_id = SQLUtils.getNextVal(conPlat,1)+"";
+						}else{
+							object_id =UUID.randomUUID().toString();
+						}
+						object_name = jacper.trans("左框架");
+						moduleNode.addChild(conPlat,object_id,object_name,ObjectType.LEFTFRAME,userId);
+						if(idType==null||idType.equals("0")){
+							object_id = SQLUtils.getNextVal(conPlat,1)+"";
+						}else{
+							object_id =UUID.randomUUID().toString();
+						}
+						object_name = jacper.trans("右上框架");
+						moduleNode.addChild(conPlat,object_id,object_name,ObjectType.UPPERFRAME,userId);
+						if(idType==null||idType.equals("0")){
+							object_id = SQLUtils.getNextVal(conPlat,1)+"";
+						}else{
+							object_id =UUID.randomUUID().toString();
+						}
+						object_name = jacper.trans("右下框架");
+						moduleNode.addChild(conPlat,object_id,object_name,ObjectType.LOWERFRAME,userId);
+						break;
+				}		
+				conPlat.commit();
+				<?{success:true,id:'?>parent_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if(type.equals("updatesave")){
+			try{	
+				conPlat.setAutoCommit(false);	
+				ObjectNode moduleNode=OM.getObject(parent_id);
+				moduleNode.updateName(conPlat,modlogic_name);
+				ModuleFactory mf=ModuleFactory.getInstance();
+				mf.remove(parent_id+"");
+				if(topDefault.equals("1")){
+					String oldTopID=getTopID(conPlat,parent_menu);
+					String[][] rs=conPlat.get("select menu_id,object_id from mod_base",new String[]{},0);
+					for(int i=0;i<rs.length;i++){
+						String topID=getTopID(conPlat,parent_menu);
+						if(oldTopID.equals(topID)){
+							conPlat.exec("UPDATE $[plat].mod_base SET top_default = '0' where object_id=?",new String[]{rs[i][1]});
+							conPlat.exec("UPDATE $[plat].sys_top SET default_app = 'bin.exe.Frame?parent_id="+parent_id+"' where top_id=?",new String[]{oldTopID});
+						}
+					}
+					Menu cur=MenuFactory.getInstance().getMenu(oldTopID);
+					if(cur!=null){
+						cur.setPath("bin.exe.Frame?parent_id="+parent_id);
+						cur.setJson(null);
+					}
+				}
+				conPlat.exec("UPDATE $[plat].mod_base SET modlogic_name =?,modphy_name = ?,top_default =?,note=?,left_width=?,right_width=?,up_height=?,down_height=? WHERE object_id=?",new String[]{modlogic_name,modphy_name,topDefault,note,left_width,right_width,up_height,down_height,parent_id+""});
+				Menu cur=MenuFactory.getInstance().getMenu(((ModuleNode)moduleNode).getMenuId());
+				if(cur!=null){
+					Menu parent=cur.getParent();
+					cur.setTitle(modlogic_name);
+					cur.setIconUrl(icon_url);
+					cur.setJson(null);
+					if(!String.valueOf(parent.getId()).equals(parent_menu)){
+						Menu newParent=MenuFactory.getInstance().getMenu(parent_menu);
+						if(newParent!=null){
+							parent.removeChild(cur);
+							cur.hang(newParent);
+						}
+					}
+				}else{
+					Menu newCur=MenuFactory.getInstance().getMenu(parent_menu);
+					if(newCur!=null){
+						if("".equals(newCur.getLinkedObjectId()) && !newCur.hasChild())
+							conPlat.exec("UPDATE $[plat].mod_base SET menu_id=? WHERE object_id=?",new String[]{newCur.getId(),parent_id+""});
+							conPlat.exec("UPDATE $[plat].sys_application SET object_id=?,portal_id=? WHERE app_id =?",new String[]{parent_id+"","",newCur.getId()});					
+					}
+				}
+				conPlat.exec("UPDATE $[plat].sys_application SET app_title=?,parent_app=?,icon_url=? WHERE app_id =?",new String[]{modlogic_name,parent_menu,icon_url,String.valueOf(((ModuleNode)moduleNode).getMenuId())});	
+				conPlat.commit();
+				<?{success:true,id:'?>parent_id<?'}?>;
+			}catch(Exception e){
+				e.printStackTrace();
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+	}else if(type.equals("delete")){
+		try{	
+			conPlat.setAutoCommit(false);	
+			ModuleNode moduleNode=(ModuleNode)OM.getObject(parent_id);
+			String[] rs=conPlat.getRow("select menu_id from mod_base where object_id=?",new String[]{parent_id});
+			if(rs!=null&&rs[0].equals("1")){
+				String topID=getTopID(conPlat,rs[0]);
+				Menu cur=MenuFactory.getInstance().getMenu(topID);
+				cur.setPath("");
+				cur.setJson(null);
+			}
+			String[][] rs1=conPlat.get("SELECT strategy_id,group_id FROM $[plat].sys_strategy_auth WHERE module_id=?",new String[]{parent_id},0);
+			if(rs1.length>0){
+				for(int i=0;i<rs1.length;i++){
+					conPlat.exec("delete from $[plat].sys_strategy_auth where strategy_id=? and group_id=? and module_id=?",new String[]{rs1[i][0],rs1[i][1],parent_id});
+					cache.removeStrategyAuth(rs1[i][0]);
+				}
+				ButtonFactory.clearCache();
+				MenuFactory.getInstance().clearMenuPrivilege();
+			}
+			MenuFactory.getInstance().removeMenu(moduleNode.getMenuId());
+			moduleNode.destroy(conPlat);
+			conPlat.commit();
+			<?{success:true}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+public String getTopID(Connection conPlat,String parentAppID) {
+	String topID=parentAppID;
+	String[] app= conPlat.getRow("SELECT parent_app from $[plat].sys_application  WHERE app_id=?",new String[]{parentAppID+""});
+	if(app!=null&&app.length!=0){
+		topID= getTopID(conPlat,app[0]);
+	}
+	return topID;
+ }
+}

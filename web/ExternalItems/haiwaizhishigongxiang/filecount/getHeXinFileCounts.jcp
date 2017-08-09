@@ -1,0 +1,119 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.space.HWSpaceFactory;
+import gpra.filesystem.space.HWSpaceNode;
+import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+//public class getRootFileCounts {
+@class{
+	public void doGet(Jacper jacper) {
+		HttpSession hs = jacper.getSession();
+		Connection con = jacper.getConnection(HWUnits.HW_DBLINK);
+		String currentNodeId = jacper.getStr("_id");
+		String path = jacper.getStr("_path");
+		boolean isTop = "top".equals(currentNodeId);
+		int currentNodeLevel = 1;
+		if(!isTop){
+			if(path.startsWith("top/")){
+				currentNodeId = path.substring(4, 40);
+				path = path.substring(3);
+			} else 
+				currentNodeLevel = -1;
+		}
+		int totalCounts = 0 , pos = -1;
+		HashMap<String, String> childAndParent = new HashMap<String, String>();
+		HashMap<String, Integer> parentCount = new HashMap<String, Integer>();
+		
+		String[][] rows = con.get("select c.id , c.p_id from dir_file_classified c where c.p_id is not null");
+		if(isTop && rows != null && rows.length > 0){
+			for(String[] row : rows){
+				childAndParent.put(row[0], row[1]);
+				parentCount.put(row[1], 0);
+			}
+		}
+		String spaceId =(String) jacper.getSession().get("HW_BASE_SPACEID");
+		String addWhere = (spaceId.equals(HWSpaceFactory.getBaseSpace().getSpaceId())) ? "and f.is_secrecy = 0":" and f.space_id = '"+spaceId+"'";
+				
+		String[][] count = con.get("select f.country_id , count(*) from dir_file_base f where f.att_128 = '1' "+addWhere+" group by f.country_id");
+		if(count!= null && count.length > 0){
+			JSONObject result = new JSONObject();
+			try {
+				for(String[] row : count){
+					String key = row[0];
+					int total = Integer.parseInt(row[1]);
+					if(parentCount.containsKey(key)){
+						total += parentCount.get(key);
+						parentCount.put(key, total);
+					} else if(childAndParent.containsKey(key)){
+						key = childAndParent.get(key);
+						total += parentCount.get(key);
+						parentCount.put(key, total);
+					}
+					result.put(key + "__" + String.valueOf(currentNodeLevel) , total);
+					totalCounts += total;
+				}
+				jacper.print("{success:true,childCounts:"+result.toString()+"}");
+				return;
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+		
+
+			 /**else {
+				String spaceId = getSpaceIdBydefaultDirId(currentNodeId);
+				if(spaceId.length() > 0){
+					StringBuilder nodeDir = new StringBuilder(spaceId + path);
+					int pos = -1;
+					String[] count = con.getRow("select count(*) from dir_file_base f where f.att_128 = '1' and f.node_id = ?" , new String[]{currentNodeId});
+					if(count!= null && count.length > 0)
+						totalCounts = Integer.parseInt(count[0]);
+					int prefixPath = nodeDir.length() + 37;
+					StringBuilder sql = new StringBuilder("select substr(f.file_dir , 0 , "+prefixPath+"), count(*) from dir_file_base f" +
+							" where f.file_dir like '"+nodeDir.toString()+"%' and f.att_128 = '1' and f.is_secrecy = '0' group by substr(f.file_dir , 0 , "+prefixPath+")");
+					long start = System.currentTimeMillis();
+					System.out.println(sql.toString());
+					String[][] rows = con.get(sql.toString());
+					System.out.println("get counts need (" +(System.currentTimeMillis() - start)+")ms. rows :" + (rows == null ? "null" : rows.length));
+					if(rows != null && rows.length > 0){
+						JSONObject result = new JSONObject();
+						try {
+							result.put(isTop ? "top" : currentNodeId + "__" + String.valueOf(currentNodeLevel) , totalCounts);
+							for(String row[] : rows){
+								if((pos = row[0].lastIndexOf("/")) != -1)
+									result.put(row[0].substring(pos + 1) + "__" + String.valueOf(currentNodeLevel) , Integer.parseInt(row[1]));
+							}
+						} catch (JSONException e) {
+							e.printStackTrace();
+						}
+						jacper.print("{success:true,childCounts:"+result.toString()+"}");
+						return;
+					}					
+				}
+			}**/
+		jacper.print("{success:false}");
+	}
+	
+	public String getSpaceIdBydefaultDirId(String dirId){
+		String result = "";
+		try {
+			String pSpaceId = HWSpaceFactory.getBaseSpace().getSpaceId();
+			for(HWSpaceNode node : HWSpaceFactory.getSpaceByParentId(pSpaceId)){
+				if(node.getDefaultDirId().equals(dirId)){
+					result = node.getSpaceId();
+					break;
+				}
+			}
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+		return result;
+	}
+}

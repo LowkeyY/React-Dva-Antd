@@ -1,0 +1,127 @@
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.application.*;
+import com.kinglib.util.json.*;
+import com.social.api.core.model.User;
+import com.social.api.core.model.User;
+import com.social.api.core.model.UserType;
+
+import java.util.*;
+import java.text.Collator;
+
+@class{
+	public void doPost(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String userId = hs.uid+"";
+		String deptId=hs.getString("dept_id");
+		User u = User.getUser(userId+"");
+		UserType userType=u.getUserType();
+
+		String id=jacper.getStr("node");
+		boolean allowSelect=true;
+		String icon="/themes/icon/all/table.gif";
+		ArrayList<String[]> al=new ArrayList<String[]>(5);
+		int level=0;
+		if(id.indexOf(":")==-1){
+			allowSelect=false;
+			ObjectNode pnode=ObjectManager.getObject(id);
+			if(pnode==null) return;
+			HashSet<String> dbLinkSet=new HashSet<String>();
+			ApplicationFactory appFactory=ApplicationFactory.getInstance();
+			Application app=null;
+			Connection conPlat=jacper.getConnection("plat");
+			icon="/themes/icon/all/server_database.gif";
+			String dbLink=null;
+			
+			HashSet<String> appSet=new HashSet<String>();
+			if (userType.getValue()!=1&&userType.getValue()!=0){
+				String[][] rs=conPlat.get("select id from $[plat].system_auth where roleid=?",new String[]{userId+""},0);
+				for(int i=0;i<rs.length;i++){
+					appSet.add(rs[i][0]);
+				}
+			}
+			for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.APPLICATION)){
+				if (userType.getValue()==1||userType.getValue()==0){
+						app=appFactory.getApplication(conPlat,String.valueOf(node.getId()));
+						dbLink=(app==null)?null:app.getDatabaseLink();
+						if(dbLink!=null)
+							dbLinkSet.add(dbLink);
+				}else{
+					if(appSet.contains(node.getId()+"")){
+						app=appFactory.getApplication(conPlat,String.valueOf(node.getId()));
+						dbLink=(app==null)?null:app.getDatabaseLink();
+						if(dbLink!=null)
+							dbLinkSet.add(dbLink);
+					}
+				}
+			}
+			conPlat.close();
+			for(String key:dbLinkSet){
+				if(key.equals("plat") || key.equals("cert") || key.equals("utils") || key.equals("work") || key.equals("kingle")|| key.equals("mdsys")|| key.equals("")) continue;
+				al.add(new String[]{id+":"+key,key,"false"});
+			}		
+		}else{
+			level=1;
+			String[] ids=id.split(":");
+			ObjectNode pnode=ObjectManager.getObject(ids[0]);
+			MetaTable mt=null;
+			for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.METATABLE)){
+				mt=MetaFactory.getObject(node.getId());
+				if(mt!=null && mt.getDblink().equals(ids[1]))
+					al.add(new String[]{String.valueOf(node.getId()),mt.getLname(),"true"}); 
+			}
+		}
+		try{
+			JSONArray treeJSONArray=new JSONArray();
+			for(String[] r:order(al)){
+				JSONObject resultJSON = new JSONObject();
+				resultJSON.put("text",r[1]);
+				resultJSON.put("allowSelect",allowSelect);
+				resultJSON.put("leaf",allowSelect);
+				resultJSON.put("id",r[0]);
+				resultJSON.put("icon",icon);
+				treeJSONArray.put(resultJSON);
+			}
+			if(level==0&&order(al).size()==0){
+				JSONObject resultJSON = new JSONObject();
+				resultJSON.put("text",jacper.trans("无"));
+				resultJSON.put("allowSelect",true);
+				resultJSON.put("leaf",true);
+				resultJSON.put("id","-999999");
+				resultJSON.put("icon",icon);
+				treeJSONArray.put(resultJSON);
+			}			
+			jacper.print(treeJSONArray.toString());
+
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+
+	//性能很差，以后有时间工具类里重写
+	public ArrayList<String[]> order(ArrayList<String[]> al) {
+		Comparator cmp = Collator.getInstance(java.util.Locale.CHINA);
+		String cur, t;
+		int pos = 0;
+		String[] tmp = null;
+		for (int i = 0; i < al.size() - 1; i++) {
+			cur = al.get(i)[1];
+			pos = i;
+			for (int j = i + 1; j < al.size(); j++) {
+				t = al.get(j)[1];
+				if (cmp.compare(t,cur)<0) {
+					cur = t;
+					pos = j;
+				}
+			}
+			if (pos != i) {
+				tmp = al.get(i);
+				al.set(i, al.get(pos));
+				al.set(pos, tmp);
+			}
+		}
+		return al;
+	}
+}

@@ -1,0 +1,46 @@
+import java.io.*;
+import com.kinglib.*;
+import com.susing.EFile;
+import javax.servlet.http.*;
+import com.kinglib.util.parser.*;
+import com.kinglib.ui.core.utils.*;
+import com.susing.upload.*;
+
+@class{
+		public void doPost(Jacper jacper){
+			Param param=new Param(jacper);
+
+			String userId =param.getString("userId");
+			try{
+				if (FileUpload.isMultipartContent(jacper.getRequest().getContentType())) {
+
+					FileUpload upload = new FileUpload(Integer.parseInt(userId));
+					upload.setSize(param.getString("totalMax"),param.getString("totalMin"));
+					upload.parseRequest(param.getRequest());
+					upload.appendParamToMap(param);
+					FileExtend.verifyFileTip(param, upload.getFileNames());
+
+					boolean goOn=true;//是否继续向下执行
+
+					EFile uf=param.getEFile("fileField");
+
+					CSVParser csvparser = new CSVParser(uf.getInputStream());
+					csvparser.insert(jacper);
+					goOn=false;
+					uf.delete();
+				}
+				<?{success:true,message:'?>jacper.trans("数据上传成功")<?'}?>;
+			}catch(Exception e){
+				e.printStackTrace();
+				try{
+					jacper.getResponse().resetBuffer();
+					jacper.getResponse().setStatus(500);
+					jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+				}catch(Exception ecc){
+					ecc.printStackTrace();
+				}
+			}
+
+
+	}
+}

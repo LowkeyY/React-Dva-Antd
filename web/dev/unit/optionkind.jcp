@@ -1,0 +1,71 @@
+
+import java.io.IOException;
+import java.awt.Color;
+import java.awt.GradientPaint;
+import java.io.OutputStream;
+
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.unit.*;
+    
+@class{	   
+
+public void doPost(Jacper jacper){
+	
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	String types=jacper.getStr("type");
+	String id=jacper.getString("group_id","0");
+	String system_id=jacper.getString("system_id","0");
+
+	String name=jacper.getStr("name");
+	name=name.replaceAll("'","\\\\'");
+
+	if(types.equals("save")){	
+		try{	
+			String unit_group  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				unit_group = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				unit_group =UUID.randomUUID().toString();
+			}
+			
+			String insertStr="insert into $[plat].unit_group (id,name,system_id) values (?,?,?)";
+			conPlat.exec(insertStr,new String[]{unit_group+"",name,system_id+""});
+			id = unit_group;
+			<?{success:true,id:'?>unit_group<?',system_id:'?>system_id<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}else if(types.equals("updatesave")){
+		try{	
+			String updStr="update $[plat].unit_group set name=? where id=?";
+			conPlat.exec(updStr,new String[]{name,id+""});
+			<?{success:true,id:'?>id<?',system_id:'?>system_id<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+			UnitFactory.getInstance().removeUnitGroup(id+"");
+		}
+	}else if(types.equals("delete")){
+		try{	
+			conPlat.exec("delete from $[plat].unit_group where id=?", new String[]{id+""});
+			conPlat.exec("delete from $[plat].unit where group_id=?", new String[]{id+""});
+			<?{success:true,system_id:'?>system_id<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+			UnitFactory.getInstance().removeUnitGroup(id+"");
+		}
+	}
+}
+}

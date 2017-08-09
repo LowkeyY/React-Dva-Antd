@@ -1,0 +1,99 @@
+
+
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+
+import com.kinglib.*;
+import com.social.api.core.model.*;
+import com.kinglib.util.json.*;
+import com.kinglib.dictionary.*;
+
+import com.kinglib.workbench.integrate.*;
+import com.kinglib.workbench.workflow.*;
+import com.kinglib.ui.folder.*;
+import com.kinglib.database.*;
+import com.kinglib.ui.core.utils.Param;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+		Connection conCert = jacper.getConnection("cert");
+		Connection conPlat = jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		int login_as = (int)hs.uid;
+
+		String type = jacper.getStr("type");
+
+
+		String positionArray = DictFactory.getInstance().getDict(conPlat,4011).getJavascriptArray();
+		String roleNameArray = DictFactory.getInstance().getDict(conPlat,4145).getJavascriptArray();
+
+		try{
+			String dept_id=jacper.getStr("dept_id");
+			
+			JSONObject roleJSON = new JSONObject("{}");
+
+			if(type.equals("new")){
+				roleJSON.put("positionArray",positionArray);
+				roleJSON.put("roleNameArray",roleNameArray);
+				<?[?>roleJSON.toString()<?]?>;
+			}else{
+				String role_id=jacper.getStr("roleId");
+
+				String[] rs = conCert.getRow("select a.roles,a.position_id,a.role_name,a.duty,a.entry_person ,a.entry_date,a.sort_id from $[cert].role_base a  where  a.role_id=?",new String[]{role_id});
+
+				roleJSON.put("roleId",role_id);
+				roleJSON.put("roles",rs[0]);
+				roleJSON.put("positionId",rs[1]);
+				roleJSON.put("roleName",rs[2]);
+				roleJSON.put("duty",rs[3]);
+
+				roleJSON.put("positionArray",positionArray);
+				roleJSON.put("roleNameArray",roleNameArray);
+				roleJSON.put("entry_person",rs[4]);	
+				if(rs[5].equals("")){
+					roleJSON.put("entry_date","");				
+				}else{
+					roleJSON.put("entry_date",rs[5].substring(0,11));
+				}
+				roleJSON.put("sortId",rs[6]);
+				
+				Role role = CertManager.getRole(role_id);
+			   <?[?>roleJSON.toString()<?]?>;
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conCert.close(); 
+			conPlat.close();
+		}
+}
+
+	public void doPost(Jacper jacper){
+
+		boolean isLogin = jacper.setSession();
+		Param param=new Param(jacper); 
+		String type = jacper.getStr("type");
+
+		if(type.equals("save")){
+			Role role=CertManager.createRole(param);	
+		
+		}else if(type.equals("updatesave")){
+			String roleId = jacper.getStr("roleId");
+			Role role=Role.getRole(roleId);
+			role.update(param);
+		
+		}else if(type.equals("delete")){
+			String roleId = jacper.getStr("roleId");
+			Role role=Role.getRole(roleId);
+			role.delete(param);
+
+		}
+		jacper.print("{'success':true}");
+		param.closeAllConnection();
+	}
+}

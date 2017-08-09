@@ -1,0 +1,127 @@
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.*;
+import com.kinglib.dictionary.*;
+import com.kinglib.workbench.integrate.*;
+import com.kinglib.workbench.application.*;
+import com.kinglib.util.json.*;
+import com.kinglib.util.*;
+import java.util.*;
+
+@class{
+	public void doPost(Jacper jacper){
+		String type=jacper.getStr("type");
+		String[][] rs=null;
+		String objectId = jacper.getStr("objectId");
+			if(type.equals("query")){
+				ObjectNode pnode=ObjectManager.getObject(objectId);
+				if(pnode==null) return ;
+				ArrayList<String[]> al=new ArrayList<String[]>(20);
+				ObjectNode qnode=null;
+				MetaTable mt=null;
+				for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.QUERY)){
+					qnode=ObjectManager.getObject(node.getId());
+					mt=MetaFactory.getObject(node.getId());
+					if(qnode!=null&&mt==null){
+						al.add(new String[]{qnode.getName(),String.valueOf(qnode.getId())});					
+					}
+				}
+				rs = al.toArray(new String[al.size()][2]);
+			}else if(type.equals("report")){
+				ObjectNode pnode=ObjectManager.getObject(objectId);
+				if(pnode==null) return ;
+				ArrayList<String[]> al=new ArrayList<String[]>(20);
+				for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.REPORT)){
+						al.add(new String[]{node.getName(),String.valueOf(node.getId())});
+				}
+				rs = al.toArray(new String[al.size()][2]);
+
+			}else if(type.equals("chart")){
+				ObjectNode pnode=ObjectManager.getObject(objectId);
+				if(pnode==null) return ;
+				ArrayList<String[]> al=new ArrayList<String[]>(20);
+				for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.CHART)){
+						al.add(new String[]{node.getName(),String.valueOf(node.getId())});		
+				}
+				rs = al.toArray(new String[al.size()][2]);
+			}else if(type.equals("textreport")){
+				ObjectNode pnode=ObjectManager.getObject(objectId);
+				if(pnode==null) return ;
+				ArrayList<String[]> al=new ArrayList<String[]>(20);
+				for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.TEXTREPORT)){
+						al.add(new String[]{node.getName(),String.valueOf(node.getId())});		
+				}
+				rs = al.toArray(new String[al.size()][2]);
+			}else if(type.equals("map")){
+				ObjectNode pnode=ObjectManager.getObject(objectId);
+				if(pnode==null) return ;
+				ArrayList<String[]> al=new ArrayList<String[]>(20);
+				for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.MAP)){
+						al.add(new String[]{node.getName(),String.valueOf(node.getId())});
+				}
+				rs = al.toArray(new String[al.size()][2]);
+			}else if(type.equals("integrate")){
+				ObjectNode pnode=ObjectManager.getObject(objectId);
+				if(pnode==null) return ;
+				ArrayList<String[]> al=new ArrayList<String[]>(20);
+				Connection conPlat=jacper.getConnection("plat");
+				try{
+					IntegrateFactory IFactory=IntegrateFactory.getInstance();
+					Integrate integrate=null;
+					for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.INTEGRATE)){
+						integrate=IFactory.getIntegrate(conPlat,String.valueOf(node.getId()));
+						if(integrate!=null){
+									al.add(new String[]{node.getName(),String.valueOf(node.getId())});
+						}
+					}
+				}catch(Exception e){
+				}finally{
+					conPlat.close();
+				}
+				rs = al.toArray(new String[al.size()][2]);
+			}else if(type.equals("portlet")){
+				ObjectNode pnode=ObjectManager.getObject(objectId);
+				if(pnode==null) return ;
+				ArrayList<String[]> al=new ArrayList<String[]>(20);
+				for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.PORTALET)){
+					al.add(new String[]{node.getName(),String.valueOf(node.getId())});		
+				}
+				rs = al.toArray(new String[al.size()][2]);
+			}else if(type.equals("searchType")){
+				ObjectNode pnode=ObjectManager.getObject(objectId);
+				if(pnode==null) return ;
+				ArrayList<String[]> al=new ArrayList<String[]>(20);
+				for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.SEARCHCATEGORY)){
+					al.add(new String[]{node.getName(),String.valueOf(node.getId())});		
+				}
+				rs = al.toArray(new String[al.size()][2]);
+			}else if(type.equals("qualityType")){
+				ObjectNode pnode=ObjectManager.getObject(objectId);
+				if(pnode==null) return ;
+				ArrayList<String[]> al=new ArrayList<String[]>(20);
+				for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.QUALITYGROUP)){
+					al.add(new String[]{node.getName(),String.valueOf(node.getId())});		
+				}
+				rs = al.toArray(new String[al.size()][2]);
+			}else{
+				return;
+			}
+			JSONObject form=null;
+			try{
+				Arrays.sort(rs, new TwoDimArrayComparator());
+				form= new JSONObject("{success:true}");
+				JSONArray jarr=new JSONArray();
+				for(int i=0;i<rs.length;i++){
+					JSONObject js=new JSONObject("{}");
+					js.put("text",rs[i][0]);
+					js.put("value",rs[i][1]);
+					jarr.put(js);
+				}
+				form.put("items",jarr);
+				form.put("totalCount",jarr.length());
+				jacper.print(form.toString());
+			}catch(Exception e){
+				e.printStackTrace(); 
+			}
+}
+}

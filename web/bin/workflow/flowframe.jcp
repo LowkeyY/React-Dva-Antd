@@ -1,0 +1,371 @@
+
+import java.util.*;
+import java.io.IOException;
+import com.kinglib.*;
+
+import com.kinglib.workflow.Workflow;
+import com.kinglib.workflow.basic.BasicWorkflow;
+import com.kinglib.workflow.loader.*;
+import com.kinglib.workflow.InvalidEntryStateException;
+import com.kinglib.workflow.WorkflowException;
+import com.kinglib.workflow.config.DefaultConfiguration;
+import com.kinglib.workflow.spi.Step;
+import com.kinglib.workflow.loader.RegisterDescriptor;
+
+import com.kinglib.propertyset.PropertySet;
+import com.kinglib.propertyset.PropertySetManager;
+import com.kinglib.workbench.workflow.*;
+
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.ui.workflow.RandomStore;
+
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.database.SpecialSet;
+import com.kinglib.ui.core.utils.CoreUtils;
+import com.kinglib.workbench.program.Program;
+import com.social.api.core.model.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = hs.uid+"";
+	String role_id= hs.getString("role_id");
+	
+
+	String workflowId=jacper.getStr("workflowId");
+	String instanceId=jacper.getStr("instanceId");
+
+	long entryId = jacper.getLong("entryId",-1);
+	int flowType=jacper.getInt("flowType",0);//1-已申请,2-待审批,3-已审批,4-已结案
+	long stepId = jacper.getLong("stepId",-1);
+
+	Workflow wf = new BasicWorkflow(user_id);
+	DefaultConfiguration config = new DefaultConfiguration();
+	wf.setConfiguration(config);
+    WorkflowDescriptor wd =  wf.getWorkflowDescriptor(instanceId);
+
+	String act_id="";
+	String type="";
+	Map actMap=null;
+  
+  	boolean isFirst=false;
+
+	if(flowType==4){
+		List ls=wf.getHistorySteps(entryId);
+		int id=((Step)ls.get(0)).getStepId();
+		actMap=wd.getStep((long)id).getMetaAttributes(); 
+		act_id=actMap.get("act_id").toString();
+	}else{
+		if(stepId==-1){
+			List initialActList=wd.getInitialActions();  
+			for (Iterator iterator = initialActList.iterator(); iterator.hasNext();) {
+				ActionDescriptor initalActionObject =(ActionDescriptor)iterator.next();
+				actMap=initalActionObject.getMetaAttributes();
+			}	
+			isFirst=true;
+		}else{
+			StepDescriptor stp= wd.getStep(stepId == 0?3:stepId);
+			if(stp==null&&flowType==3){
+				<?{success:false,message:"?>jacper.trans("流程结束,单未存储流程标志,请检查流程定义")<?"}?>;
+				return ;
+			}
+			actMap=stp.getMetaAttributes();
+		}
+		if(actMap.containsKey("act_id")){
+			act_id=actMap.get("act_id").toString();
+		}else{
+			if(entryId==-1){
+				List initialActList = wd.getInitialActions();
+				int initId = 0;
+				for (Iterator iterator = initialActList.iterator(); iterator.hasNext();) {
+					ActionDescriptor initalActionObject = (ActionDescriptor) iterator.next();
+					initId = initalActionObject.getId();
+				}
+				try {
+					String roleString="";
+					String roleString1="";
+
+					Role role= Role.getRole(role_id);
+					if(role!=null){
+						Strategy[] sts=role.getStrategys();
+						if(sts!=null){
+							for(int i=0;i< sts.length;i++){
+								roleString+=",r:"+sts[i].getId();
+								roleString1+=",d:"+sts[i].getId();
+							}
+							roleString=roleString.substring(1,roleString.length());
+							roleString1=roleString1.substring(1,roleString1.length());
+						}
+					}
+				
+					entryId = wf.initialize(instanceId, initId, null);
+					PropertySet ps = wf.getPropertySet(entryId);
+					ps.setString("initer",user_id);
+					wf.start(instanceId,initId,entryId,null);
+					List steps=wf.getCurrentSteps(entryId);
+					Collection currentSteps = wf.getCurrentSteps(entryId);
+					for (Iterator interator = currentSteps.iterator();interator.hasNext();) {
+						Step step = (Step) interator.next();
+						if(step.getOwner().equals("a:"+role_id)||step.getOwner().equals(user_id+"")||(roleString1.indexOf(step.getOwner())!=-1)||(roleString.indexOf(step.getOwner())!=-1)){
+							stepId = step.getStepId();
+						}
+					}
+					if(stepId!=-1){
+						StepDescriptor stp= wd.getStep(stepId);
+						actMap=stp.getMetaAttributes();
+						act_id=actMap.get("act_id").toString();
+					}
+				}catch (Exception e){
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	if(flowType==2||flowType==0){
+		if(actMap.containsKey("type")){
+			type=actMap.get("type").toString();
+		}
+	}else{
+			type="view";
+	}
+
+
+
+	Connection conPlat = jacper.getConnection("plat");
+	Connection conWork = jacper.getConnection("work");
+	com.kinglib.workbench.workflow.WorkflowFactory WFF=com.kinglib.workbench.workflow.WorkflowFactory.getInstance();
+	com.kinglib.workbench.workflow.Workflow workflow= WFF.getWorkflow(conPlat,workflowId);
+	WorkflowAct workflowAct=workflow.getWorkflowAct(act_id);
+
+	String dataId="";
+	String exportTable="";
+	String exportItem="";
+	String exportData="";
+	boolean haveData=false;
+
+	Program[] mainPrograms=workflowAct.getMainProgram();
+	if(mainPrograms.length==1){
+		String tabId=mainPrograms[0].getTabId();
+		MetaTable mt = MetaFactory.getObject(tabId);
+		exportTable=String.valueOf(mt.getObjectId());
+		StringBuilder exportItemBuilder = new StringBuilder();
+		int n = 0;
+		for (MetaColumn c : mt.getPrimaryKeys()) {
+			if (n > 0){
+				exportItemBuilder.append(",");
+			}
+			exportItemBuilder.append(c.getPname());
+			n++;
+		}
+		exportItem=exportItemBuilder.toString();
+		RandomStore RS=RandomStore.getInstance();
+		String key=instanceId+"-"+user_id;
+		String workflowToken=RS.getRandom(conWork,key);
+		Connection conLocal = jacper.getConnection(mt.getDblink());
+		MetaColumn tokenColumn = null;
+		for (MetaColumn c : mt.getColumns()) {
+			if (c.getSpecialSet() == SpecialSet.WorkflowSign) {
+				tokenColumn = c;
+				break;
+			}
+		}
+		if (tokenColumn != null){
+			StringBuilder sql = new StringBuilder(50);
+			sql.append("select ");
+			for (MetaColumn c : mt.getPrimaryKeys()) {
+				if (sql.length() > 8) {
+					sql.append(",");
+				}
+				CoreUtils.appendSelect(sql, c);
+			}
+			sql.append(" from ").append(mt.getName()).append(" where ");
+			CoreUtils.appendWhere(sql, tokenColumn, workflowToken);
+			String[] result = conLocal.getRow(sql.toString());
+
+			if (result != null && result.length > 0) {
+				StringBuilder dataIdBuilder = new StringBuilder();
+				StringBuilder exportDataBuilder = new StringBuilder();
+				int i = 0;
+				for (MetaColumn c : mt.getPrimaryKeys()) {
+					if (i > 0){
+						dataIdBuilder.append(":");
+						exportDataBuilder.append("::");
+					}
+					exportDataBuilder.append(result[i]);
+					dataIdBuilder.append(result[i]);
+					i++;
+				}
+				exportData=exportDataBuilder.toString();
+				dataId=dataIdBuilder.toString();
+				haveData=true;
+			}else{
+				StringBuilder dataIdBuilder = new StringBuilder();
+				StringBuilder exportDataBuilder = new StringBuilder();
+				exportData="-999999";
+				dataId="-999999";
+				haveData=false;
+			}
+				
+		}
+	}else if (mainPrograms.length>1){
+		String[] tabIds={mainPrograms[0].getTabId(),mainPrograms[1].getTabId()};
+		boolean finded=false;
+		int main=-1;
+		
+		for(MetaTable tab: MetaFactory.getSubTables(tabIds[0])){
+			if(tab.getObjectId()==tabIds[1]){
+				finded=true;
+				main=0;
+				break;
+			}
+		}
+		if(!finded){
+			for(MetaTable tab: MetaFactory.getSubTables(tabIds[1])){
+				if(tab.getObjectId()==tabIds[0]){
+					main=1;
+					break;
+				}
+			}
+		}
+
+		if(main!=-1){
+			RandomStore RS=RandomStore.getInstance();
+			String key=instanceId+"-"+user_id;
+			String workflowToken=RS.getRandom(conWork,key);
+
+			MetaTable mt = MetaFactory.getObject(tabIds[main]);
+
+			StringBuilder exportItemBuilder = new StringBuilder();
+
+			int n = 0;
+			for (MetaColumn c : mt.getPrimaryKeys()) {
+				if (n > 0){
+					exportItemBuilder.append(",");
+				}
+				exportItemBuilder.append(c.getPname());
+				n++;
+			}
+
+			exportTable=String.valueOf(mt.getObjectId());
+			exportItem=exportItemBuilder.toString();
+
+			Connection conLocal = jacper.getConnection(mt.getDblink());
+			MetaColumn tokenColumn = null;
+			for (MetaColumn c : mt.getColumns()) {
+				if (c.getSpecialSet() == SpecialSet.WorkflowSign) {
+					tokenColumn = c;
+					break;
+				}
+			}
+			if (tokenColumn != null) {
+				StringBuilder sql = new StringBuilder(50);
+				sql.append("select ");
+				for (MetaColumn c : mt.getPrimaryKeys()) {
+					if (sql.length() > 8) {
+						sql.append(",");
+					}
+					CoreUtils.appendSelect(sql, c);
+				}
+				sql.append(" from ").append(mt.getName()).append(" where ");
+				CoreUtils.appendWhere(sql, tokenColumn, workflowToken);
+				String[] result = conLocal.getRow(sql.toString());
+
+				if (result != null && result.length > 0) {
+					StringBuilder dataIdBuilder = new StringBuilder();
+					StringBuilder exportDataBuilder = new StringBuilder();
+					int i = 0;
+					for (MetaColumn c : mt.getPrimaryKeys()) {
+						if (i > 0){
+							dataIdBuilder.append(":");
+							exportDataBuilder.append("::");
+						}
+						exportDataBuilder.append(result[i]);
+						dataIdBuilder.append(result[i]);
+						i++;
+					}
+					exportData=exportDataBuilder.toString();
+					dataId=dataIdBuilder.toString();
+					haveData=true;
+				}else{
+					StringBuilder dataIdBuilder = new StringBuilder();
+					StringBuilder exportDataBuilder = new StringBuilder();
+					exportData="-999999";
+					dataId="-999999";
+					haveData=false;
+				}
+			}
+			conLocal.close();
+		}
+	}
+	if(entryId!=-1){
+		PropertySet ps = null;
+		ps=wf.getPropertySet(entryId);
+		dataId=ps.getString("dataId");
+		exportData=dataId;
+	}
+	
+	
+	try{
+		JSONObject WFAObject=workflowAct.getJSON();
+		WFAObject.put("sucess",true);
+		JSONArray frameJSONArray=WFAObject.getJSONArray("panels");
+		for(int i=0;i<frameJSONArray.length();i++){
+			JSONObject frameJSON=(JSONObject)frameJSONArray.get(i);
+			JSONArray prgJSONArray=frameJSON.getJSONArray("items");
+			for(int j=0;j<prgJSONArray.length();j++){
+				JSONObject prgJSON=(JSONObject)prgJSONArray.get(j);
+				prgJSON.put("workflowId",workflowId);
+				prgJSON.put("instanceId",instanceId);
+				if(entryId!=-1){
+					prgJSON.put("pageType",type);
+					prgJSON.put("entryId",entryId);
+					prgJSON.put("dataId",dataId);
+					prgJSON.put("exportTab",exportTable);
+					prgJSON.put("exportItem",exportItem);
+					prgJSON.put("exportData",exportData);
+					prgJSON.put("stepId",stepId);
+					prgJSON.put("flowType",flowType);
+				}else if(haveData){
+					prgJSON.put("entryId",entryId);
+					prgJSON.put("stepId",stepId);
+					prgJSON.put("flowType",flowType);
+					prgJSON.put("exportTab",exportTable);
+					prgJSON.put("exportItem",exportItem);
+					prgJSON.put("exportData",exportData);
+					prgJSON.put("dataId",dataId);
+					if(prgJSON.get("programType").equals("WorkflowInput")||prgJSON.get("programType").equals("WorkflowLinkInput")){
+						prgJSON.put("pageType","edit");
+					}else{
+						prgJSON.put("pageType","list");
+					}
+				}else if(!haveData){
+						prgJSON.put("entryId",entryId);
+						prgJSON.put("stepId",stepId);
+						prgJSON.put("flowType",flowType);
+					if(prgJSON.get("programType").equals("WorkflowInput")||prgJSON.get("programType").equals("WorkflowLinkInput")){
+						prgJSON.put("pageType","new");
+					}else{
+						prgJSON.put("exportTab",exportTable);
+						prgJSON.put("exportItem",exportItem);
+						prgJSON.put("exportData",exportData);
+						prgJSON.put("dataId",dataId);
+						prgJSON.put("pageType","list");
+					}
+				}
+			}
+		}
+		jacper.print(WFAObject.toString());
+	}catch(Exception e){
+		e.printStackTrace();
+	}
+	conPlat.close();
+}
+}
+
+

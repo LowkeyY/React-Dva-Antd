@@ -1,0 +1,81 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.runner.OutHomeDataJson;
+import gpra.filesystem.search.SearchRunningQueue;
+import gpra.filesystem.task.HWTaskWorkUserOpt;
+import gpra.filesystem.task.HWTaskWorkUserOpt.UserOptType;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+
+import javax.servlet.http.HttpServletRequest;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+	//public class test{
+
+@class{
+	public void doPost(Jacper jacper){
+		try{
+			Connection conDocmgr = jacper.getConnection(HWUnits.HW_DBLINK);
+			String id=jacper.getString("data");
+			String userid = String.valueOf(jacper.getSession().uid);
+			String[] ids=id.split(",");
+			String ip=getIpAddr(jacper.getRequest());
+			ArrayList<String[]> useraddrtimes = HWTaskWorkUserOpt.getUseraddrtimes(conDocmgr);
+			for (String string : ids) {
+				String andsql="";
+				if(userid.equals(HWUnits.GuestUserId)){
+					andsql=" and ip='"+ip+"'";
+				}
+				String sql="select * from DIR_FILE_RECOMMEND where file_id='"+string+"' and user_id='"+userid+"'"+andsql;
+				String[][]rs=conDocmgr.get(sql);
+				String nowdate=HWUnits.getNowDateLong();
+				if (rs==null || rs.length==0) {
+					User user = CertManager.getUser(userid);
+					String filers[]=conDocmgr.getRow("select file_uploader,file_dept from dir_file_base where file_id='"+string+"'");
+					if (filers!=null && filers.length>0) {
+						conDocmgr.exec("insert into DIR_FILE_RECOMMEND values(?,'1',$str_date(?,120),?,?,?,?,?)",new String[]{string,nowdate,userid,ip,user.getDeptId(),filers[0],filers[1]});
+					}
+					String seqrs[]=conDocmgr.getRow("select file_id from DIR_FILE_RECOMMEND_SEQ where file_id='"+string+"'");
+					
+					float count= HWTaskWorkUserOpt.getIntegralByFile(userid, ip, UserOptType.RECOMMEND.getType(), useraddrtimes);					count=count*10;
+					DecimalFormat df = new DecimalFormat("###");
+					String fs=df.format(count);
+					System.out.println("-----------\nfs:"+fs);
+					
+					if(seqrs==null || seqrs[0].equals("")){
+						conDocmgr.exec("insert into DIR_FILE_RECOMMEND_SEQ values(?,?)",new String[]{string,fs});
+					}else{
+						conDocmgr.exec("update DIR_FILE_RECOMMEND_SEQ set seq_id=(seq_id+"+fs+") where file_id=?",new String[]{string});
+					}
+					SearchRunningQueue.add(new HWTaskWorkUserOpt(string  , userid , jacper.getRequest().getRemoteAddr() , UserOptType.RECOMMEND));
+				}else{
+					conDocmgr.exec("update DIR_FILE_RECOMMEND set DATE_TIME=$str_date(?,120) where file_id=? and USER_ID=?",new String[]{nowdate,string,userid});
+				}
+			}
+			
+			OutHomeDataJson.inputTuiJian(conDocmgr);
+			jacper.print("{success:true}");
+		} catch (Exception e) {
+			jacper.print("{success:false}");
+			e.printStackTrace();
+		}
+	}
+
+	public String getIpAddr(HttpServletRequest request) {
+		String ip = request.getHeader("x-forwarded-for");
+		if(ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getHeader("Proxy-Client-IP");
+		}
+		if(ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getHeader("WL-Proxy-Client-IP");
+		}
+		if(ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getRemoteAddr();
+		}
+		return ip;
+	}
+}

@@ -1,0 +1,43 @@
+/**
+ * com.kinglib.ui.input.InputBase.java
+ * 
+ * @author TIANZHOU
+ * @date 2008-8-15
+ * 
+ * 注意:此文件不能改名!
+ *
+ */
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import com.kinglib.service.login.LoginService;
+
+import com.susing.KingleServletRequest;
+import com.susing.KingleServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import com.susing.core.KingleSession;
+import com.susing.core.KingleSystem;
+import com.susing.core.SessionUtil; 
+
+@class{
+	public void service(ServletRequest req, ServletResponse res) throws ServletException, IOException {
+		KingleSession session = null;
+		KingleServletRequest request = (KingleServletRequest)req;
+		String sessionId = SessionUtil.getSessionIdFromCookie(request);
+		if (sessionId != null)
+			session = KingleSystem.getSessionContext().getSession(sessionId);
+		if (session == null || session.getUserId() == null|| session.isTimeout()) {
+			KingleServletResponse kres = new KingleServletResponse((HttpServletResponse)res);
+			KingleServletRequest kreq = new KingleServletRequest((HttpServletRequest)req, (HttpServletResponse)res);
+			LoginService loginService = (LoginService) KingleSystem.getService("登录服务");
+			loginService.onSessionValidateFailed(kreq, kres);
+		}else{
+			if(request.getMethod().equals("POST")){
+				session.access();
+			}
+		}
+	}
+}

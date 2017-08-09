@@ -1,0 +1,291 @@
+
+import java.io.IOException;
+import java.awt.Color;
+import java.awt.GradientPaint;
+import java.io.OutputStream;
+
+import com.kinglib.*;
+import com.kinglib.ui.menu.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import java.util.UUID;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+@class{
+	
+	public void doGet(Jacper jacper){
+		
+		Connection conPlat = jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String topId=jacper.getStr("id");
+		String from = jacper.getStr("from");
+
+
+		
+		try{
+				jacper.getResponse().setContentType("application/x-json");
+				
+				String[] rs = conPlat.getRow("select top_id,top_title,top_seq,icon_url,is_system,root_use,default_app,entry_date,creater,is_valid,menu_type,auth_string,app_x,app_y,app_width,app_height,icon_url48,parent_top,note,iframe,portal_id,terminal_type,autoRun,shortcut,quickstart,menustyle from $[plat].sys_top where top_id=?",new String[]{topId+""});
+				
+				String[] rrss= conPlat.getRow("select count(a.app_id) from $[plat].sys_application  a where a.parent_app=? ",new String[]{topId});
+
+				String[] rrss1= conPlat.getRow("select count(a.top_id) from $[plat].sys_top  a where a.parent_top=? ",new String[]{topId});
+
+				int sonNum=Integer.parseInt(rrss[0])+Integer.parseInt(rrss1[0]);
+
+				JSONObject menuJSON = new JSONObject("{}");
+				menuJSON.put("id",rs[0]);
+				menuJSON.put("top_title",rs[1]);
+				menuJSON.put("top_seq",rs[2]);
+				menuJSON.put("icon_url",rs[3]);
+				menuJSON.put("is_system",rs[4]);
+				menuJSON.put("root_use",rs[5]);
+				menuJSON.put("default_app",rs[6]);
+				menuJSON.put("entry_date",rs[7]);
+				menuJSON.put("creater",rs[8]);
+				menuJSON.put("isValid",rs[9]);
+				menuJSON.put("menu_type",rs[10]);
+				if(!rs[11].equals("")){
+					String authStr=rs[11].substring(1,rs[11].length()-1);
+					String[] authArray=authStr.split(",");
+					JSONArray authArr=new JSONArray();
+					for(int i=0;i<authArray.length;i++){
+						authArr.put(authArray[i]);
+					}
+					menuJSON.put("authString",authArr.toString());	
+				}else{
+					menuJSON.put("authString","[]");
+				}
+				menuJSON.put("son",sonNum+"");	
+
+				menuJSON.put("app_x",rs[12]);
+				menuJSON.put("app_y",rs[13]);
+				menuJSON.put("app_width",rs[14]);	
+				menuJSON.put("app_height",rs[15]);	
+
+				menuJSON.put("icon_url48",rs[16]);
+				menuJSON.put("parent_top",rs[17]);
+				menuJSON.put("note",rs[18]);
+				menuJSON.put("iframe",rs[19]);
+				menuJSON.put("portal_id",rs[20]);
+				menuJSON.put("terminal_type",rs[21]);
+
+				menuJSON.put("autoRunRG",rs[22]);
+				menuJSON.put("shortcutRG",rs[23]);
+				menuJSON.put("quickstartRG",rs[24]);
+				menuJSON.put("menustyle",rs[25]);
+
+				ObjectNode node=ObjectManager.getObject(topId);
+				if(node!=null){
+					menuJSON.put("lastModifyTime",node.getLastModifyTime());
+					menuJSON.put("lastModifyName",node.getLastModifyName());
+				}
+
+				<?[?>menuJSON.toString()<?]?>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+}
+
+private int toInt(String str) {
+	try {
+		return Integer.parseInt(str);
+	} catch (Exception e) {
+		return 0;
+	}
+}
+
+private float toFloat(String str) {
+	try {
+		return Float.parseFloat(str);
+	} catch (Exception e) {
+		return 0;
+	}
+}
+
+public void doPost(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;   
+
+	String type=jacper.getStr("type");
+	String topTitle = jacper.getStr("TopMenuTitle");
+	int topSeq= jacper.getInt("TopMenuSeq",1000);
+
+	String isSystem = jacper.getStr("isSystem");
+	String rootUse = jacper.getStr("rootUse");
+	String defaultApplication = jacper.getStr("defaultApplication");
+	
+	String isValid = jacper.getStr("isValid");
+	String menuType = jacper.getStr("MenuType");
+	String terminalType = jacper.getStr("terminalType");
+	
+	String from = jacper.getStr("from");
+	if(from.equals("menu"))
+		isSystem="true";
+	else 
+		isSystem="false";
+	String appX = jacper.getStr("app_x");
+	String appY = jacper.getStr("app_y");
+	String appWidth = jacper.getStr("app_width");
+	String appHeight = jacper.getStr("app_height");
+
+	String icon_url = jacper.getStr("icon_url");	
+	String iconUrl48= jacper.getStr("icon_url48");
+	String note = jacper.getStr("note");
+	String iframe = jacper.getStr("iframe");
+
+	String autoRun = jacper.getStr("autoRunRG");
+	String shortcut = jacper.getStr("shortcutRG");
+	String quickstart = jacper.getStr("quickstartRG");
+	String menustyle = jacper.getStr("menustyle");
+
+	ObjectManager OM=ObjectManager.getInstance();
+
+	String[] authArray = jacper.getArray("authString");
+	String authString="";
+	if(authArray!=null){
+		for(int i=0;i<authArray.length;i++){
+			 authString+=','+authArray[i];
+		}
+		authString+=",";
+	}
+
+	String entryDate=(new SimpleDateFormat("yyyy/MM/dd")).format(new Date());
+
+	if(type.equals("save")){
+		
+		String parent_id = jacper.getStr("parent_id");
+		String parent_top = jacper.getString("parent_top");
+		String system_id= jacper.getStr("system_id");
+
+		if(parent_top==null)
+			parent_top=parent_id;
+		String id = jacper.getStr("id");
+		try{	
+			String top_id = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				top_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				top_id =UUID.randomUUID().toString();
+			}
+
+			try{
+				ObjectNode topMenuNode=OM.getObject(system_id);
+				if(topMenuNode!=null)
+					topMenuNode.addChild(conPlat,top_id,topTitle,ObjectType.TOP,user_id);
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			conPlat.exec("insert into $[plat].sys_top (top_id,top_title,top_seq,icon_url,root_use,default_app,entry_date,creater,is_valid,menu_type,auth_string,portal_id,app_x,app_y,app_width,app_height,parent_top,icon_url48,note,iframe,terminal_type,autoRun,shortcut,quickstart,menustyle,is_system) values (?,?,?,?,?,?,$getdate(),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",new String[]{top_id,topTitle,String.valueOf(topSeq),icon_url, rootUse,defaultApplication,user_id+"",isValid+"",menuType,authString+"",system_id,appX,appY,appWidth,appHeight,parent_top,iconUrl48,note,iframe,terminalType,autoRun,shortcut,quickstart,menustyle,isSystem});
+
+
+			TopMenu menu=new TopMenu(top_id,defaultApplication,topTitle,topSeq,entryDate,"0", String.valueOf(user_id),icon_url,system_id,iframe.equals("true"),authString,rootUse,toFloat(appX),toFloat(appY),toFloat(appWidth),toFloat(appHeight),iconUrl48,toInt(menuType),toInt(terminalType),autoRun.equals("true"),shortcut.equals("true"),quickstart.equals("true"),menustyle,isSystem.equals("true"));
+			
+			Menu parent=MenuFactory.getInstance().getMenu(parent_top);
+			if(parent!=null){
+				menu.hang(parent);
+			}
+			MenuFactory.getInstance().addToCache(menu);
+			<?{success:true,id:'?>top_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}else if(type.equals("updatesave")){
+		String topId = jacper.getStr("id");
+		try{	
+			ObjectNode topMenuNode=OM.getObject(topId);
+			if(topMenuNode!=null)
+				topMenuNode.updateName(conPlat,topTitle);
+			TopMenu m=(TopMenu)MenuFactory.getInstance().getMenu(topId);
+			if(m!=null){
+				if(isValid.equals("true")){
+					m.setTitle(topTitle);
+					boolean needsToOrder=(topSeq!=m.getSequence());
+					m.setSequence(topSeq);
+					m.setIconUrl(icon_url);
+					m.setRootUse(rootUse);
+					m.setPath(defaultApplication);
+					m.setCreateUser(String.valueOf(user_id));
+					m.setEntryDate(entryDate);
+					m.setHeight(toInt(appHeight));
+					m.setWidth(toInt(appWidth));
+					m.setX(toInt(appX));
+					m.setY(toInt(appY));
+					m.setIcon48px(iconUrl48);
+					m.setIframe(iframe.equals("true"));
+					m.setMenuType(toInt(menuType));
+					m.setTerminalType(toInt(terminalType));
+					m.setAuthString(authString);
+					m.setAutoRun(autoRun.equals("true"));
+					m.setShortcut(shortcut.equals("true"));
+					m.setQuickstart(quickstart.equals("true"));
+					m.setMenuStyle(menustyle);
+					m.setJson(null);
+					if(needsToOrder){
+						m.getParent().orderChilds();
+					}
+					MenuFactory.getInstance().notifyCache(m);
+				}else{
+					MenuFactory.getInstance().removeMenu(topId);
+				}
+			}else{
+				if(isValid.equals("true")){
+					String[] p=conPlat.getRow("select parent_top,portal_id from $[plat].sys_top where top_id=?",new String[]{topId});
+					Menu parent=MenuFactory.getInstance().getMenu(p[0]);
+					if(parent!=null){
+						TopMenu menu=new TopMenu(topId,defaultApplication,topTitle,topSeq,entryDate,"0", String.valueOf(user_id),icon_url,p[1],iframe.equals("true"),authString,rootUse,toInt(appX),toInt(appY),toInt(appWidth),toInt(appHeight),iconUrl48,toInt(menuType),toInt(terminalType),autoRun.equals("true"),shortcut.equals("true"),quickstart.equals("true"),menustyle,isSystem.equals("true"));
+						menu.hang(parent);
+						MenuFactory.getInstance().addToCache(menu);
+					}
+				}
+			}
+			conPlat.exec("update $[plat].sys_top set top_title=?,top_seq=?,icon_url=?,is_system=?,root_use=?,default_app=?,entry_date=$getdate(),creater=?,is_valid=?,menu_type=?,auth_string=?,app_x=?,app_y=?,app_width=?,app_height=?,icon_url48=?,note=?,iframe=?,terminal_type=?,autoRun=?,shortcut=?,quickstart=?,menustyle=? where top_id=?",new String[]{topTitle,String.valueOf(topSeq),icon_url,isSystem,rootUse,defaultApplication,user_id+"",isValid+"",menuType,authString+"",appX,appY,appWidth,appHeight,iconUrl48,note,iframe,terminalType,autoRun,shortcut,quickstart,menustyle,topId+""});
+			<?{success:true,id:'?>topId<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}else if(type.equals("delete")){
+		String topId = jacper.getStr("id");
+		ObjectNode topMenuNode=OM.getObject(topId);
+		try{
+			conPlat.setAutoCommit(false);
+			if(topMenuNode==null){
+				conPlat.exec("delete from $[plat].sys_top where top_id=?",new String[]{topId});
+			}else{
+				topMenuNode.destroy(conPlat);
+			}
+
+			MenuFactory.getInstance().removeMenu(topId);
+			conPlat.commit();
+			<?{success:true,id:'?>topId<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

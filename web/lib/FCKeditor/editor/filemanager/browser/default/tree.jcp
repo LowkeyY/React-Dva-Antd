@@ -1,0 +1,37 @@
+import java.io.IOException;      
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conUtils = jacper.getConnection("utils");
+	Connection conCert = jacper.getConnection("cert");
+
+	boolean isLogin = jacper.setSession();  
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+	
+	String id=jacper.getStr("id");
+
+	String hasChild = "0";
+	String forder_id = ""+id;
+	String href = "",target="";   
+	String[][] rs=null;
+	
+	rs = conUtils.get("select dir_id,dir_name,son from  $[utils].image_forder where parent_id=? ",new String[]{id+""},0);
+	<?<forder _parent="?>forder_id<?" event="event1">?>;
+	for(int i=0;i<rs.length;i++){
+		if(rs[i][2].equals("0")){
+			hasChild=rs[i][2];
+		}else{
+			hasChild="1";
+		}
+		<?<e _id="?>rs[i][0]<?" _hasChild ="?>hasChild<?"  title="?>rs[i][1]<?"  target1="frmResourcesList" herfs1="frmresourceslist.jcp?id=?>rs[i][0]<?"  target2="frmUpload" herfs2="frmupload.jcp?id=?>rs[i][0]<?"  target3="frmCreateFolder" herfs3="frmcreatefolder.jcp?id=?>rs[i][0]<?"  url="tree.jcp?id=?>rs[i][0]<?"/>?>;
+	}
+	<?</forder>?>;
+}
+}

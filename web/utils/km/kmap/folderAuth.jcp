@@ -1,0 +1,394 @@
+
+
+import java.io.IOException;
+
+import com.kinglib.*;
+
+@class{
+
+
+	public void doGet(Jacper jacper) {
+		
+		Connection conUtils  = jacper.getConnection("utils");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String user_id = hs.uid+"";
+
+
+		String forderID=jacper.getStr("parent_id");
+		String auth=jacper.getStr("auth");	
+
+		String styleForm="<script>var frm = new ShowForm('folderAuth.jcp','post');</script>";
+
+<?<html>   
+		<head>
+		<title>?>jacper.trans("报表管理")<?</title>
+		<meta http-equiv="Content-Type" content="text/html">
+		<yacus style="behavior:url(#default#userdata);" id="__YACUS_CACHE"/>
+		<SCRIPT SRC="/JavaScript"></SCRIPT>
+		<script src='/themes/js/show.js'></script>
+		<script src='/themes/js/verify.js'></script>
+		<script src="/themes/js/showmenu.js"></script>
+		<link rel='stylesheet' type='text/css' href='/themes/css/standard.css'>
+		<SCRIPT>
+		susing("MButton","Menu","MenuTree");
+		var event1 = new Object();
+		event1.title_click = function(){
+			listUser(this.prop._id,this.prop.title);
+		}
+
+		function main(){
+			var save,leftwin,mod,unload,sourceReg,createInstall;
+			var titleMap = new Map();
+			leftwin =  new MButton("?>jacper.trans("切换窗填充")<?","/themes/icon/xp/leftwin.gif");
+			leftwin.click = function(){
+				if(parent.left._LEFTWIN_.style.display == 'none'){
+					parent.left._LEFTWIN_.style.display = '';
+					parent.rightFrame.cols="20%,80%";
+					leftwin.setDown(false);
+				}else{
+					parent.left._LEFTWIN_.style.display = 'none';
+					parent.rightFrame.cols="0,*";
+					leftwin.setDown(true);
+				}
+			}
+
+			var goback = new MButton("?>jacper.trans("返回")<?","/themes/icon/common/redo.gif");
+			goback.click = function(){
+				self.location.href='categorycreate.jcp?type=view&auth=?>auth<?&parent_id=?>forderID<?&ran='+Math.random();
+				return false;
+			}
+			titleMap.append("",goback);
+
+			save =  new MButton("?>jacper.trans("保存")<?","/themes/icon/common/save.gif");
+			save.click = function(){
+				submit();
+			}
+			titleMap.append("",save);
+			addbtn =  new MButton("?>jacper.trans("添加")<?","/themes/icon/program/back.gif");
+			addbtn.click = function(){
+				addthem();
+			}
+			titleMap.append("",addbtn);
+
+			titleMap.append("<span style='height:22;width:6;background-image:url(\"/themes/images/separator.gif\")'> </span>",leftwin);
+			titleMap.finish(titlemap);
+			leftwin.setDown(false);
+
+			var menuTree = new MenuTree(Tool.parseXML('<root _id="root"><forder _hasChild="1" event="event1"><e _id="0" _parent="root" title="?>jacper.trans("企业总部")<?"  url="/lib/selectDept/depttree.jcp?_id=0"/></forder></root>'));
+			menuTree.setEvent("event1",event1);
+			menuTree.finish(TreeDemo);
+			listUser('0','?>jacper.trans("企业总部")<?');
+		}
+		</script>
+		<script>
+		var oldobj=null;
+		function add(userInfo){
+			if(!isExist(userInfo)){
+				var row=document.all.listTable.insertRow();
+				row.userInfo=userInfo;
+				eval("row.onclick=function(){invert(this)};")
+				row.bgColor="white";
+				row.style.cursor="hand";
+				var td1=row.insertCell();
+				td1.align="center";
+				td1.innerHTML=userInfo.split("#")[1];
+				var td2=row.insertCell();
+				td2.align="center";
+				td2.innerHTML=userInfo.split("#")[0];
+				var td3=row.insertCell();
+				td3.align="center";
+				td3.innerHTML="<select onchange='changeAuthority(this.parentNode.parentNode,this)'><option value='1' selected>?>jacper.trans("读取")<?<option value='2'>?>jacper.trans("读取")<?/?>jacper.trans("写入")<?<option value='3'>?>jacper.trans("读取")<?/?>jacper.trans("写入")<?/?>jacper.trans("删除")<?</select>";
+				var td4=row.insertCell();
+				td4.align="center";
+				td4.innerHTML="<a href='javascript:remove()'><img height=15 width=15 src='/themes/default/icon/common/delete.gif'></a>";
+			}
+		}
+		function isExist(newUserInfo){
+			var newArr=newUserInfo.split("#");
+			var newInfo=newArr[0]+newArr[1];
+			var listTable=document.all.listTable;
+			var arr=listTable.getElementsByTagName("tr");
+			var oldArr;
+			var oldInfo="";
+			for(var i=1;i<arr.length;i++){
+				oldArr=arr[i].userInfo.split("#");
+				oldInfo=oldArr[0]+oldArr[1];
+				if(newInfo==oldInfo)
+					return true;
+			}
+			return false;
+		}
+
+		function invert(row){
+			document.all.listTable.selectedIndex=row.rowIndex;
+			if(oldobj){
+				var arr=oldobj.getElementsByTagName("td");
+				for(var i=0;i<arr.length;i++){
+					arr[i].style.color="black";
+					arr[i].style.backgroundColor="white";
+				}
+			}
+			var arr=row.getElementsByTagName("td");
+			for(var i=0;i<arr.length;i++){
+				arr[i].style.color="red";
+				arr[i].style.backgroundColor="lightyellow";
+			}
+			oldobj=row;
+		}
+		function autoAdd(userInfo){
+				var row=document.all.listTable.insertRow();
+				row.userInfo=userInfo;
+				eval("row.onclick=function(){invert(this)};")
+				row.bgColor="white";
+				row.style.cursor="hand";
+				var td1=row.insertCell();
+				td1.align="center";
+				td1.innerHTML=userInfo.split("#")[1];
+				var td2=row.insertCell();
+				td2.align="center";
+				td2.innerHTML=userInfo.split("#")[0];;
+				var td3=row.insertCell();
+				td3.align="center";
+				var sel1="";
+				var sel2="";
+				var sel3="";
+				if (userInfo.split("#")[4]=='1'){
+					sel1="selected";
+				}else if(userInfo.split("#")[4]=='2'){
+					sel2="selected";
+				}else if(userInfo.split("#")[4]=='3'){
+					sel3="selected";
+				}
+				td3.innerHTML="<select onchange='changeAuthority(this.parentNode.parentNode,this)'><option value='1' "+sel1+">?>jacper.trans("读取")<?<option value='2' "+sel2+">?>jacper.trans("读取")<?/?>jacper.trans("写入")<?<option value='3' "+sel3+">?>jacper.trans("读取")<?/?>jacper.trans("写入")<?/?>jacper.trans("删除")<?</select>";
+				var td4=row.insertCell();
+				td4.align="center";
+				td4.innerHTML="<a href='javascript:remove()'><img height=15 width=15 src='/themes/default/icon/common/delete.gif'></a>";
+		} 
+
+		function getStatic(){?>;
+		String userArr="var arr=[";
+		String[][] userArray=null;		
+		String authType=(String)com.susing.core.KingleSystem.getProperty("auth_type");
+		if(authType.equals("0")){
+			 userArray=conUtils.get("select c.user_id,a.real_name,c.dept_id,b.short_name,c.ctrl from $[utils].kmap_auth c left outer join  $[cert].user_base a on a.user_id=c.user_id  left outer join $[cert].dept_base b on c.dept_id=b.dept_id   where  c.auth_id=(select auth_id from $[utils].kmap_category where category_id=?)",new String[]{forderID});
+		}else if(authType.equals("1")){
+			 userArray=conUtils.get("select c.user_id,a.roles,c.dept_id,b.short_name,c.ctrl  from $[utils].kmap_auth c left outer join $[cert].role_base a on a.role_id=c.user_id  left outer join $[cert].dept_base b on c.dept_id=b.dept_id  where  c.auth_id=(select auth_id from $[utils].kmap_category where category_id=?) ",new String[]{forderID});
+		}
+
+		String[] oneUser=new String[6];
+		for(int i=0;i<userArray.length;i++){
+			for(int j=0;j<userArray[i].length;j++){
+				oneUser[j]=userArray[i][j];
+				if(userArray[i][4].equals("1"))
+					oneUser[5]=jacper.trans("读取");
+				else if (userArray[i][4].equals("2"))
+					oneUser[5]=jacper.trans("读取")+"/"+jacper.trans("写入");
+				else if (userArray[i][4].equals("3"))
+					oneUser[5]=jacper.trans("读取")+"/"+jacper.trans("写入")+"/"+jacper.trans("删除");
+			}
+			if (i!=0 ) userArr+=",";
+			if(oneUser[2].equals("0"))
+				oneUser[3]=jacper.trans("企业总部");
+			if(oneUser[0].equals("-999")){
+				userArr+="'"+jacper.trans("当前部门所有人员")+"#"+oneUser[3]+"#-999#"+oneUser[2]+"#"+oneUser[4]+"#"+oneUser[5]+"#'";
+			}else if(oneUser[0].equals("-999999")){
+				userArr+="'"+jacper.trans("当前部门及所有子部门人员")+"#"+oneUser[3]+"#-999999#"+oneUser[2]+"#"+oneUser[4]+"#"+oneUser[5]+"#'";
+			}else{
+				userArr+="'"+oneUser[1]+"#"+oneUser[3]+"#"+oneUser[0]+"#"+oneUser[2]+"#"+oneUser[4]+"#"+oneUser[5]+"#'";
+			}
+		}
+		userArr+="];";	
+		<??>userArr<??>;
+		<?
+		for(var i=0;i<arr.length;i++){
+					autoAdd(arr[i]);
+			}
+		}
+		function addthem(){
+			var arr=document.all.userList.options;
+			for(var i=0;i<arr.length;i++){
+				if(arr[i].selected){
+					add(arr[i].value);
+				}
+			}
+		}
+		function remove(){
+			var listTable=document.all.listTable;
+			if(!listTable.selectedIndex){
+				alert("?>jacper.trans("请先选择要删除的用户!")<?");
+				return;
+			}
+			listTable.deleteRow(listTable.selectedIndex);
+			listTable.selectedIndex=null;
+		}
+		function submit(){
+			var fm=eval(frm.nam);
+			var arr=document.all.listTable.getElementsByTagName("tr");
+			var content="";
+			for(var i=1;i<arr.length;i++){
+				content +=arr[i].userInfo+":";
+			}
+			if(fm.forderID.value==null||fm.forderID.value==''){
+				alert('?>jacper.trans("请先选择要赋权的报表目录")<?!');
+				return;
+			}else{
+				fm.content.value=content;
+				fm.submit();
+			}
+		}
+		function listUser(val,val1){
+			var tempXML=Tool.getXML("/lib/selectUser/getUserList.jcp?dept_id="+val+"&rand="+Math.random());
+			var userMap = tempXML.childNodes;
+			var len = userMap.length;
+			var userArray=new Array;
+			for(var i=0;i<len;i++){
+				var elements = userMap[i];
+				 if(elements.tagName=='user'){							
+						userArray[i]=new Array;
+						userArray[i][0]=val;
+						userArray[i][1]=elements.attributes.getNamedItem("id").value;
+						userArray[i][2]=elements.text.toString();	
+						userArray[i][3]=val1;
+						userArray[i][4]='1';	
+						userArray[i][5]='?>jacper.trans("读取")<?';
+				  }
+			}
+			userArray[len]=new Array;
+			userArray[len][0]=val;
+			userArray[len][1]='-999';
+			userArray[len][2]='?>jacper.trans("当前部门所有人员")<?';	
+			userArray[len][3]=val1;
+			userArray[len][4]='1';	
+			userArray[len][5]='?>jacper.trans("读取")<?';
+
+			userArray[len+1]=new Array;
+			userArray[len+1][0]=val;
+			userArray[len+1][1]='-999999';
+			userArray[len+1][2]='?>jacper.trans("当前部门及所有子部门人员")<?';	
+			userArray[len+1][3]=val1;
+			userArray[len+1][4]='1';	
+			userArray[len+1][5]='?>jacper.trans("读取")<?';
+
+			var str=[];
+			str.push('<select name="userList" style="width:100%;height=100%" multiple="true">');
+			for(var i=0;i<userArray.length;i++){
+				str.push('<option value="',userArray[i][2],'#',userArray[i][3],'#',userArray[i][1],'#',userArray[i][0],'#',userArray[i][4],'#',userArray[i][5],'">',userArray[i][2],'</option>');
+			}
+			str.push('</select>');
+			var selectString=str.join('');
+			document.all.selectUser.innerHTML =selectString;
+		}
+		function changeAuthority(row,select){
+			var arr=row.userInfo.split("#");
+			var arr2=select.options;
+			arr[5]=arr2[select.selectedIndex].text;
+			arr[4]=arr2[select.selectedIndex].value;
+			var temp="";
+			for(var i=0;i<arr.length;i++){
+				if(i==0)
+					temp +=arr[i];
+				else
+					temp +="#"+arr[i];
+			}
+			row.userInfo=temp;
+		}
+		</script>
+		</head>	
+		<body bgcolor='#F6F6F6'  topmargin="0" leftmargin="0"  leftmargin="0" bottommargin="0"  >
+		?>styleForm<?
+		<table height="100%" width="100%"  cellspacing="0" cellpadding="0">
+         <tr height=20  width="100%"><td>
+		<table cellspacing cellpadding align=center width=100%>
+				<tr><td nowrap width='100%' height='25' colspan='2'>
+						<table width='100%' cellspacing='0' cellpadding='0' height='28' bgcolor="#9EBEF5">
+								<tr><td nowrap width='2' height='25' ></td><td valign='bottom'>
+										<table width="66%" cellspacing="0" cellpadding="0" background="/themes/images/bg2.gif">
+										   <tr>
+												<td width=7><img src="/themes/images/t1.gif"></td>
+												<td width="100%" background="/themes/images/bg2.gif" id=titlemap></td>
+												<td width=13><img src="/themes/images/tbar_tail.gif"></td>
+										   </tr>
+										</table>
+								</td></tr>
+						</table>
+				</td></tr>
+		</table>
+</td></tr>
+<tr  width="100%"><td  style="border-left:1px solid #ACA899;">
+		<table cellSpacing="1" valign="top" cellPadding=1 width="100%" height="100%" bgcolor="#ECE9D8" style="border-left:1px solid #ACA899;border-right:1px solid #ACA899;border-top:1px solid #ACA899" >
+			  <tr><td align="left">				
+					<table   width="100%" bgcolor="#FEFAEF" style="border-top:1px solid #ACA899;border-left:1px solid #ACA899;border-right:1px solid #FFFFFF;border-bottom:1px solid #FFFFFF" cellspacing cellpadding height="100%" >
+						<tr>
+						<td bgcolor=white id=TreeDemo width="25%" height="100%" style="border:1 solid #7F9DB9" valign="top">
+							<div style="width:100%;height:100%;overflow:auto">
+								<div id=resource_table></div>
+							</div>
+						</td>
+						<td valign="top" id="selectUser" width="25%"  height="100%">	
+							<select name='userList' style="width:100%;height=100%" multiple=true></select>
+						</td>
+						<td valign="top" width="50%" height="100%">	
+							<table id='listTable' width='100%' border=0 cellspacing='0' cellpadding='1' align=center >
+								<tr align=center height='20' bgcolor='#ECE9D8'>
+									<th width='35%'>?>jacper.trans("部门")<?</th>
+									<th width='35%'>?>jacper.trans("用户")<?</th>
+									<th width='20%'>?>jacper.trans("权限")<?</th>
+									<th width='10%'>?>jacper.trans("操作")<?</th>
+								</tr> 
+							</table>
+						</td>
+						</tr>
+					</table>
+			</td></tr>		
+		</table>
+		<tr height=20  width="100%">
+			<td background="/themes/default/images/status_bg.gif" id="statu" align="left"></td></tr>
+		</td></tr>
+			<input type='hidden' name='forderID' value=?>forderID<?>
+			<input type='hidden' name='auth' value=?>auth<?>
+			<input type='hidden' name='content'>?>;
+			if(userArray!=null&&userArray.length>0)
+				<?<script>getStatic();</script>?>;
+			<?<script>frm.Close();</script>
+		</table>
+		</body>
+		</html>?>;
+		}
+
+public void doPost(Jacper jacper){
+
+		Connection conUtils = jacper.getConnection("utils");
+
+		String forderID=jacper.getStr("forderID");
+		String auth=jacper.getStr("auth");	
+		String content=jacper.getStr("content");	
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+		
+		String auth_str="";
+		String path_user="";
+		String path_dept="";
+		String[] patharr=null;
+
+		conUtils.exec("delete from $[utils].kmap_auth where auth_id=(select auth_id from $[utils].kmap_category where category_id=?)",new String[]{forderID});
+
+		if(!content.equals("")&&content!=null){
+			patharr=content.split(":");		
+			int auth_id = SQLUtils.getNextVal(conUtils,16);
+			for(int i=0;i<patharr.length;i++){
+				String[] yy=patharr[i].split("#");
+				path_dept=yy[3];
+				path_user=yy[2];
+				auth_str=yy[4];
+				conUtils.exec("insert into $[utils].kmap_auth(auth_id,dept_id,user_id,ctrl) values(?,?,?,?)",new String[]{auth_id+"",path_dept,path_user,auth_str});
+			}			
+			conUtils.exec("update $[utils].kmap_category set auth_id=? where category_id=?",new String[]{auth_id+"",forderID});
+		}
+		<?<script>self.location.href='folderAuth.jcp?auth=?>auth<?&parent_id=?>forderID<?';</script>?>;
+	}
+}
+    

@@ -1,0 +1,130 @@
+
+
+
+import com.kinglib.*;
+import com.susing.*;
+import com.susing.util.*;
+
+@class{
+public void doGet(Jacper jacper){
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid; 
+	
+	String frm = "";
+
+	String rs="3";
+	if (Integer.parseInt(rs)>1) rs="1";
+	String starticon="/themes/icon/xp/dhd.gif";
+	String endicon="/themes/icon/xp/dhd.gif";
+	String tree_title=jacper.trans("应用资源");
+
+	Connection conPlat = jacper.getConnection("plat");
+	String[] rs1 = conPlat.getRow("select register_code,active_code,version from $[plat].system_register",null);
+	if(rs1==null){
+		<?<script>alert("?>jacper.trans("系统未注册,请注册并获得商典公司认证后方可查询和安装应用!")<?");self.location.replace("register.jcp?rand="+Math.random());</script>?>;
+		return;
+	}
+<?
+<html>
+<head><title></title>
+<meta http-equiv="Content-Type" content="text/html;">
+<yacus style="behavior:url(#default#userdata);" id="__YACUS_CACHE"/>
+<SCRIPT SRC="/JavaScript"></SCRIPT>
+<script src='/themes/js/show.js'></script>
+<script src="/themes/js/showmenu.js"></script>
+<script src='/themes/js/verify.js'></script>
+<link rel='stylesheet' type='text/css' href='/themes/css/standard.css'>
+<SCRIPT>
+susing("MButton","Menu","MenuTree");
+function main(){
+	var install,leftwin;
+	var titleMap = new Map();
+	leftwin =  new MButton("?>jacper.trans("切换窗格")<?","/themes/icon/xp/leftwin.gif");
+	leftwin.click = function(){
+		if(parent.appload._LEFTWIN_.style.display == 'none'){
+			parent.appload._LEFTWIN_.style.display = '';
+			parent.rightFrame.cols="20%,80%";
+			leftwin.setDown(false);
+		}else{
+			parent.appload._LEFTWIN_.style.display = 'none';
+			parent.rightFrame.cols="0,*";
+			leftwin.setDown(true);
+		}
+	}
+	titleMap.append("",leftwin);
+	titleMap.finish(titlemap);
+	leftwin.setDown(false);
+
+	var sourceTable,closeLeft,leftwin,btEditor,btExport,btImport;
+	var menuTree = new MenuTree(Tool.parseXML('<root _id="root"><forder _id="top" _parent="root"  _hasChild="1"  event="event1"><e _id="top" _parent="root"  icon0="?>starticon<?" icon1="?>endicon<?" title="?>tree_title<?" url="resourcetree.jcp?_id=top" _hasChild="?>rs<?"  target1="create" /></forder></root>'));
+	menuTree.setEvent("event1",event1);
+	menuTree.finish(TreeDemo);
+}
+var event1 = new Object();
+</SCRIPT>
+</head>
+<body topmargin="0" leftmargin="0" rightmargin="0" bottommargin="0" bgcolor="#9EBEF5" style="overflow:auto">
+<table height="100%" width="100%"  cellspacing="0" cellpadding="0">
+<tr height=20  width="100%"><td>
+<table cellspacing cellpadding align=center width=100%>
+			<tr><td nowrap width='100%' height='25' colspan='2'>
+					<table width='100%' cellspacing='0' cellpadding='0' height='28' bgcolor="#9EBEF5">
+							<tr><td nowrap width='2' height='25' ></td><td valign='bottom'>
+									<table width='45%' cellspacing='0' cellpadding='0' background='/themes/default/images/bg2.gif'>
+										<tr>
+											<td width=7><img src="/themes/images/t1.gif"></td>
+											<td width="100%" background="/themes/images/bg2.gif" id=titlemap></td>
+											<td width=13><img src="/themes/images/tbar_tail.gif"></td>
+										</tr>
+									</table>
+							</td></tr>
+					</table>
+			</td></tr>
+	</table>
+</td></tr>
+
+<tr  width="100%"><td  style="border-left:1px solid #ACA899;">	
+<script>var frm = new ShowForm('updateCheck.jcp','post');</script>
+<table cellSpacing="3" cellPadding width="100%" height=100% bgcolor="#ECE9D8" style="border-left:1px solid #ACA899;border-right:1px solid #ACA899;border-top:1px solid #ACA899" >
+	 <tr><td align="left" width=25%>				
+			<table   width="100%" bgcolor="#FEFAEF" style="border-top:1px solid #ACA899;border-left:1px solid #ACA899;border-right:1px solid #FFFFFF;border-bottom:1px solid #FFFFFF" cellspacing cellpadding height="100%" >
+					<tr><td valign="top" height="100%">	
+						<table cellpadding cellspacing width="100%"  height="100%">
+							<tr height=1><td bgcolor="#FEFAEF"></td></tr>
+								<tr>
+									<td bgcolor=white id=TreeDemo style="border:1 solid #7F9DB9" valign="top">
+									<div style="width:100%;height:100%;overflow:auto"><div id=resource_table>	
+									</div></td>
+								</tr>
+						<tr height=1 valign="top"><td bgcolor="#FCF9E8"></td></tr>
+					</table>
+			</td></tr>
+		</table>
+	</td>
+	<td align="left"  width=75%>				
+			<table   width="100%" bgcolor="#FEFAEF" style="border-top:1px solid #ACA899;border-left:1px solid #ACA899;border-right:1px solid #FFFFFF;border-bottom:1px solid #FFFFFF" cellspacing cellpadding height="100%" >
+						<tr id='statusFrame'  ><td  valign="top"  width="100%"  height="100%">
+							<table cellpadding cellspacing width="100%"  height="100%" >
+								<tr><td>
+								<iframe  name='fsm' style='position:relative: left:0; top:0; height:100%; width:100%'/> </td></tr>
+							</table>
+						</td></tr>
+			</table>
+	</td>
+ </tr>
+</table>
+</td></tr>
+<tr height=20  width="100%">
+	<td background="/themes/default/images/status_bg.gif" id="statu"></td></tr>
+</td></tr>
+</table>
+<script>
+	frm.Close();
+</script>
+</body>
+</html>
+?>;
+}
+}

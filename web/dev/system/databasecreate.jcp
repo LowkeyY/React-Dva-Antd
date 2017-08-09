@@ -1,0 +1,178 @@
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+import com.kinglib.workbench.dblink.*;
+import com.kinglib.database.PersistSchema;
+import com.kinglib.*;
+import java.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.susing.core.KingleSystem;
+
+@class{
+
+public void doGet(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String id = jacper.getString("id","0");
+	jacper.getResponse().setContentType("application/x-json");
+	try{	
+			JSONObject dblinkJSON = new JSONObject("{}");
+
+			String[] rs= conPlat.getRow("select DBLINK_NAME,LINK_TYPE,DB_TYPE,URL,USERNAME,PASSWD,NOTE,LOGIC_NAME from $[plat].SYS_DATABASE  where OBJECT_ID=?",new String[]{""+id});
+			dblinkJSON.put("object_id",id+"");
+			dblinkJSON.put("dblink_name",rs[0]);
+			dblinkJSON.put("link_type",rs[1]);
+			dblinkJSON.put("db_type",rs[2]);
+			dblinkJSON.put("url",rs[3]);
+			dblinkJSON.put("username",rs[4]);
+			dblinkJSON.put("passwd",rs[5]);
+			dblinkJSON.put("note",rs[6]);
+			dblinkJSON.put("logic_name",rs[7]);
+			ObjectNode node=ObjectManager.getObject(id+"");
+			if(node!=null){
+				dblinkJSON.put("lastModifyTime",node.getLastModifyTime());
+				dblinkJSON.put("lastModifyName",node.getLastModifyName());
+			}
+
+		   <?[?>dblinkJSON.toString()<?]?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = String.valueOf(hs.uid);
+
+	String type=jacper.getString("type");
+	
+	String logic_name=jacper.getString("logic_name");	
+	String dblink_name=jacper.getString("dblink_name");		
+	String link_type = jacper.getString("link_type");
+	String db_type = jacper.getString("db_type");
+	String url = jacper.getString("url");
+	String username = jacper.getString("username");
+	String passwd = jacper.getString("passwd");
+	String note = jacper.getString("note");
+
+	ObjectManager OM=ObjectManager.getInstance();
+
+	if (type.equals("save")) {
+		String system_id=jacper.getString("id");
+		try{	
+			conPlat.setAutoCommit(false);	
+			String dblink_id = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				dblink_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				dblink_id =UUID.randomUUID().toString();
+			}
+			ObjectNode systemNode=OM.getObject(system_id);
+			systemNode.addChild(conPlat,dblink_id,logic_name,ObjectType.DBLINK,hs.uid);
+			conPlat.exec("insert into $[plat].SYS_DATABASE ( OBJECT_ID,logic_name,DBLINK_NAME,LINK_TYPE,DB_TYPE,URL,USERNAME,PASSWD,NOTE) values (?,?,?,?,?,?,?,?,?)",new String[]{String.valueOf(dblink_id),logic_name,dblink_name,link_type,db_type,url,username,passwd,note});
+			conPlat.commit();
+			
+			int dtype=2;
+			if(db_type.equals("1")) {
+				dtype=3;
+			}else if(db_type.equals("2")){
+				dtype=1;
+			}else if(db_type.equals("3")){
+				dtype=4;
+			}
+			PersistSchema ps=new PersistSchema(dtype,username,url,username, passwd);
+			<?{success:true,id:'?>dblink_id<?',testResult:?>ps.exist()<?"}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if ( type.equals("updatesave")){
+		String dblink_id = jacper.getString("id");
+		try{	
+			ObjectNode dbLinkNode=OM.getObject(dblink_id);
+			dbLinkNode.updateName(conPlat,logic_name);
+			conPlat.exec("update $[plat].SYS_DATABASE set LOGIC_NAME=?,DBLINK_NAME=?,LINK_TYPE=?,DB_TYPE=?,URL=?,USERNAME=?,PASSWD=?,NOTE=? where OBJECT_ID=?",new String[]{logic_name,dblink_name,link_type,db_type,url,username,passwd,note,dblink_id});
+			
+			int dtype=2;
+			if(db_type.equals("1")) {
+				dtype=3;
+			}else if(db_type.equals("2")){
+				dtype=1;
+			}else if(db_type.equals("3")){
+				dtype=4;
+			}
+			PersistSchema ps=new PersistSchema(dtype,username,url,username, passwd);
+			<?{success:true,id:'?>dblink_id<?',testResult:?>ps.exist()<?}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}else if (type.equals("delete")) {
+		String dblink_id = jacper.getStr("id");
+		ObjectNode dbLinkNode=OM.getObject(dblink_id);
+		try{	
+			DBLinkFactory.getInstance().remove(dblink_id);
+			conPlat.setAutoCommit(false);	
+			dbLinkNode.destroy(conPlat);
+			conPlat.commit();
+			<?{success:true,id:'?>dblink_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if (type.equals("createschema")) {
+		try{			
+		   int dtype=2;
+			if(db_type.equals("1")) {
+				dtype=3;
+			}else if(db_type.equals("2")){
+				dtype=1;
+			}else if(db_type.equals("3")){
+				dtype=4;
+			}
+			PersistSchema ps=new PersistSchema(dtype,username,url,username, passwd);
+			
+			String rootName = jacper.getString("rootName");
+			String rootPass = jacper.getString("rootPass");
+			ps.create(rootName,rootPass);
+			<?{success:true}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.getMessage()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

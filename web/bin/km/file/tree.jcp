@@ -1,0 +1,46 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+import com.social.api.core.model.*; 
+   
+@class{
+
+public void doGet(Jacper jacper){
+
+	boolean isLogin = jacper.setSession();  
+	HttpSession hs = jacper.getSession();
+	String dept_id=jacper.getStr("dept_id");
+
+
+	String hasChild = "0";
+	String forder_id = ""+dept_id;
+
+	<?<root _id="?>forder_id<?">
+	<forder _parent="?>forder_id<?" event="event1">?>;
+  
+	try{
+		Connection conUtils = jacper.getConnection("utils");
+		Dept p=Dept.getDept(dept_id);
+		for(Dept d:p.getChilds()){
+
+			<?<e _id="?>d.getDeptId()<?" _parent="?>forder_id<?" framenum="1" _hasChild ="1"   type="dept" params="pid=?>dept_id<?&amp;archive_id=?>d.getDeptId()<?" title="?>d.getShortName()<?" url="/bin/km/file/tree.jcp?dept_id=?>d.getDeptId()<?"  icon0="/themes/icon/common/group.gif" icon1="/themes/icon/common/group.gif" />?>;
+		}	
+		//get archive depart
+		
+		String[][] adArray=conUtils.get("select c.id,c.name from $[utils].ELECTRONIC_ARCHIVE c where c.dept_id=? ",new String[]{dept_id});
+		for(int i=0;i<adArray.length;i++){
+			String aid=adArray[i][0];
+			String title=adArray[i][1];
+			<?<e _id="?>aid<?" _parent="?>forder_id<?" framenum="1" _hasChild ="0"  type="archive" params="pid=?>dept_id<?&amp;archive_id=?>aid<?" title="?>title<?"  icon0="/themes/icon/common/china.gif" icon1="/themes/icon/common/china.gif" />?>;
+		}
+	}catch(Exception e){
+		e.printStackTrace();
+	}
+	<?</forder>
+	</root>?>;
+}
+} 
+
+
+		

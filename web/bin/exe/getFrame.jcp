@@ -1,0 +1,61 @@
+
+                  
+import java.io.IOException;
+import com.kinglib.*;
+   
+
+import com.kinglib.util.json.*;
+import com.kinglib.util.Log;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.module.*;
+import com.kinglib.i18n.*;
+import com.kinglib.util.event.SystemEvent;
+@class{
+
+public void doGet(Jacper jacper){
+
+		HttpSession hs = jacper.getSession();
+		String objectId=jacper.getStr("parent_id");
+		String userId=String.valueOf(hs.uid);
+		
+		StringBuilder sret = new StringBuilder();
+		if(SystemEvent.fire("MENU_BEFORE_GET_FRAME",jacper , objectId , sret) == false){
+			objectId = sret.length()>0 ? sret.toString() : objectId;
+		};
+		
+		Connection conPlat = jacper.getConnection("plat");
+		Module module =ModuleFactory.getInstance().getModule(conPlat,objectId);
+		conPlat.close();
+		Log.info(objectId,jacper.trans("模块访问"),userId);
+		String ret=module.getModel(userId);
+		sret = new StringBuilder();
+		if(SystemEvent.fire("MENU_GET_FRAME",jacper , objectId , ret , sret) == false){
+			ret = sret.length()>0 ? sret.toString() : ret;
+		};
+		if(I18n.needToTranslate(hs.getString("locale"))){
+			try{
+				JSONObject retJson=new JSONObject(module.getModel(userId));
+				JSONArray panels=retJson.getJSONArray("panels");
+				JSONPart jp=new JSONPart();
+				Translator t=I18n.getLocal(jacper).getTranslator(); 
+				for(int i=0;i<panels.length();i++){
+				   JSONObject retJson1=panels.getJSONObject(i);
+				   JSONArray items=retJson1.getJSONArray("items");
+				   for(int j=0;j<items.length();j++){
+				       JSONObject retJson2=items.getJSONObject(j);
+				       String title=retJson2.getString("title");
+				       jp.join(title,t.trans(title));
+				   }
+				}
+			 jacper.print(ret.substring(0,ret.length()-1)+",\"i18n\":"+jp.toString()+"}");
+			}catch (Exception e) {
+				e.printStackTrace();
+			}
+		}else{  
+		     jacper.print(ret);
+		} 
+	}
+}
+

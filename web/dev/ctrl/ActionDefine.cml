@@ -1,0 +1,24 @@
+<root><class name="dev.ctrl.ActionDefine"><ActionDefine><![CDATA[
+    .bm-edit{
+     	margin:1px 1px 1px 6px;
+    	float: left;
+    	cursor:pointer;	}
+	.bm-delete{
+     	margin:1px 1px 1px 6px;
+    	float: left;
+    	cursor:pointer;	}
+	.bm-down{
+    	margin:1px 1px 1px 6px;
+    	float: left;
+    	cursor:pointer;	}
+	
+	.bm-up{
+    	margin:1px 1px 1px 6px;
+    	float: left;
+    	cursor:pointer;	}
+	
+    .bm-over{
+    	margin:0px 0px 0px 5px;
+    	border:solid 1px gray;
+    }
+]]></ActionDefine></class></root>

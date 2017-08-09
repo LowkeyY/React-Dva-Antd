@@ -1,0 +1,65 @@
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.HTMLPage;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.impl.client.HttpClients;
+import com.kinglib.Connection;
+
+import com.google.gson.Gson;
+import java.util.ArrayList;
+import java.util.List;
+import me.chanjar.weixin.common.bean.WxAccessToken;
+import me.chanjar.weixin.common.bean.WxMenu;
+import me.chanjar.weixin.common.bean.WxMenu.WxMenuButton;
+import me.chanjar.weixin.common.bean.result.WxError;
+import me.chanjar.weixin.common.exception.WxErrorException;
+import me.chanjar.weixin.mp.api.*;
+
+import com.susing.core.KingleSystem;
+
+
+/**
+用于站内选择栏目
+*/
+
+//public class cmsPluginSelectLanmu{
+@class{
+
+	public void doGet(Jacper jacper) {
+		Connection conEdu = jacper.getConnection("education");
+		WxMpServiceImpl wxMpService = new WxMpServiceImpl();
+		String dataIds = jacper.getString("dataId");
+		String sql="select appid,appsecret from CMS_WEIXIN_SET where lanmuid='"+dataIds+"'";
+
+		String[][] rs1=conEdu.get(sql);
+		String appId = rs1[0][0], secret = rs1[0][1];
+		if(appId.equals("")|| appId.equals("XX")){
+			jacper.print("{success:false,message:'微信栏目配置信息错误。'}");
+			return;
+		}
+		WxMpInMemoryConfigStorage config = new WxMpInMemoryConfigStorage();
+		config.setAppId(appId);
+		config.setSecret(secret);
+		wxMpService = new WxMpServiceImpl();
+		wxMpService.setWxMpConfigStorage(config);
+		
+		try {
+			WxMenu wxMenu = wxMpService.menuGet();
+			jacper.print("{data:"+(wxMenu == null ? "{button:[]}" : wxMenu.toJson())+",success:true}");
+		} catch (WxErrorException e) {
+			jacper.print("{success:false,message:'读取菜单失败。'}");
+			e.printStackTrace();
+		}
+		
+		
+		
+	}
+}

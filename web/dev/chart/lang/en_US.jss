@@ -1,0 +1,1 @@
+dev.chart.lang={"确定":"OK","参数提交":"Submit","应用图表导航":"Chart Navigation","图表管理":"Chart Management","取消":"Cancel"}

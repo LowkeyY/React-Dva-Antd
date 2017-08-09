@@ -1,0 +1,101 @@
+
+/*
+ * @(#)/kmap/categorytree.jcp	1.0.0 03/04/02
+ *
+ * Copyright 2003 Bizdict Co.,Ltd. All rights reserved.
+ *
+ * 主程序作者：
+ * @author ch
+ *
+ * 修改者：
+ *
+ * 修改日期:
+ *
+ * 修改理由:
+ *
+ */
+
+
+
+
+import java.io.IOException;
+import com.kinglib.*;
+
+import java.util.*;
+
+@class{
+
+	public void doGet(Jacper jacper){
+		Connection conUtils=jacper.getConnection("utils");
+		Connection conCert=jacper.getConnection("cert");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+		String dept_id=hs.getString("dept_id");
+		String role_id=hs.getString("role_id");
+
+		int id=jacper.getInt("id",jacper.trans("输入错误!"));
+                       
+		String hasChild = "0";
+		String forder_id = ""+id;
+		String href = "",target="";   
+
+		String[][] rs=null;
+
+		String str = "";
+		String[] param = null;		
+		String ps="";
+
+		if(user_id==1||user_id==0){
+			str="select category_id,category_name,son,'3' from $[utils].kmap_category where parent_id=?";
+			param=new String[]{id+""};
+			rs=conUtils.get(str,param,0);
+		}else{
+			String[][] rep=null;
+			try{
+				rep=conCert.getTree("$[cert].dept_base","rtrim(parent_dept,'.')","dept_id","",new String[]{dept_id});
+			}catch(Exception e){
+				return;
+			}
+			if(rep!=null){
+				for(int j=0 ;j<rep.length;j++) ps+=",'"+rep[j][0]+"'";
+				ps=ps.substring(1);
+				ps+=",'"+dept_id+"'";
+			}else{
+				ps+="'"+dept_id+"'";
+			}
+
+			String authType=(String)com.susing.core.KingleSystem.getProperty("auth_type");
+			String tempId="";
+			if(authType.equals("0")){
+				tempId=user_id+"";
+			}else if(authType.equals("1")){
+				tempId=role_id;
+			}	
+
+			str="select a.category_id, max(a.category_name), max(a.son), max(b.auth) from $[utils].kmap_category a ,(select auth_id, max(ctrl) as auth from $[utils].kmap_auth  where (user_id ="+tempId+"  or (user_id = '-999' and dept_id ='"+dept_id+"') or  (user_id = '-999999' and dept_id in ("+ps+"))) group by auth_id) b where (a.auth_id = b.auth_id ) and (a.parent_id = "+id+") group by a.category_id order by a.category_id";
+			param=new String[]{};
+			 rs=conUtils.get(str,param,0);
+		}
+
+		<?<root _id="?>forder_id<?">
+		<forder _parent="?>forder_id<?" event="event1">?>;
+
+		if(rs!=null){
+			for(int i=0;i<rs.length;i++){
+				if(rs[i][2].equals("0")){
+					hasChild=rs[i][2];
+				}else{
+					hasChild="1";
+				}
+
+				href = "categorycreate.jcp?type=view&amp;auth="+rs[i][3]+"&amp;parent_id="+rs[i][0]+"&amp;ran="+Math.random();
+				target =  "centermid1";
+				<?<e _id="?>rs[i][0]<?" _hasChild ="?>hasChild<?" title="?>rs[i][1]<?" target="?>target<?" href="?>href<?" url="categorytree.jcp?id=?>rs[i][0]<?"/>?>;
+			}
+		}
+		<?</forder>
+		</root>?>;
+	}
+}

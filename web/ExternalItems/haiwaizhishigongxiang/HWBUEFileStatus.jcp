@@ -1,0 +1,43 @@
+import gpra.filesystem.upload.HWBulkUploadUnits;
+import gpra.filesystem.upload.HWBulkUploadUnits.HWBUEFStatus;
+
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+
+//public class HWBUEFileStatus {
+@class{
+	public void doPost(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		String key = jacper.getString("key", "");
+		
+		if(key.length() > 0){
+			Object[] result = null;
+			if((result = HWBulkUploadUnits.getStatus(key)) == null){
+				jacper.print("{success:false , message:'参数丢失，请刷联系管理员。'}");
+			} else {
+				HWBUEFStatus status = (HWBUEFStatus) result[0];
+				int currentRow = (Integer) result[1];
+				String message = (String) result[2];
+				if(status == HWBUEFStatus.ERROR){
+					message += status.getTitle();
+					HWBulkUploadUnits.removeCache(key);
+				}
+				JSONObject msg = new JSONObject();
+				try {
+					msg.put("success", true);
+					msg.put("message", message.replaceAll("\\\\", "/"));
+					msg.put("currentRow", currentRow);
+					msg.put("status", status.getStatus());
+					jacper.print(msg.toString());
+				} catch (JSONException e) {
+					jacper.print("{success:false , message:'返回格式错误。'}");
+				}
+			}
+		} else {
+			jacper.print("{success:false , message:'参数丢失，请刷新页面或者联系管理员。'}");
+		}
+	}
+}

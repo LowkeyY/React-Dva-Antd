@@ -1,0 +1,120 @@
+
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.bi.*;
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String parent_id = jacper.getStr("parent_id");
+	
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+			JSONObject textReportJSON = new JSONObject("{}");
+			Object[] report_info = conPlat.getLarge("select report_name,source,object_id from $[plat].app_text_report where object_id=?",new String[]{parent_id});
+
+			String contentValue="";
+			contentValue=report_info[1].toString();
+			contentValue=contentValue.replaceAll("\r\n","");
+			contentValue=contentValue.replaceAll("\n","");
+			contentValue=contentValue.replaceAll("'","\\\\'");
+			contentValue=contentValue.replaceAll("\"","\\\\\"");
+			contentValue=contentValue.replaceAll("script","scr\\\'+\\\'ipt");
+
+			textReportJSON.put("report_name",report_info[0]);
+			textReportJSON.put("content",contentValue);
+			textReportJSON.put("object_id",report_info[2]);
+			ObjectNode node=ObjectManager.getObject(parent_id);
+			if(node!=null){
+				textReportJSON.put("lastModifyTime",node.getLastModifyTime());
+				textReportJSON.put("lastModifyName",node.getLastModifyName());
+			}
+		   <?[?>textReportJSON.toString()<?]?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally {
+		conPlat.close();
+	}
+}
+public void doPost(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;   
+
+	String type = jacper.getStr("type");
+	String parent_id = jacper.getStr("parent_id");
+	String report_name = jacper.getStr("report_name");
+	String content = jacper.getStr("content");
+
+	ObjectManager OM=ObjectManager.getInstance();
+
+	if(type.equals("save")){
+		try {
+			conPlat.setAutoCommit(false);	
+			String object_id="";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+			ObjectNode applicationNode=OM.getObject(parent_id);
+			applicationNode.addChild(conPlat,object_id,report_name,ObjectType.TEXTREPORT,user_id);
+			conPlat.execLarge("INSERT INTO $[plat].app_text_report (object_id,report_name,SOURCE) VALUES (?,?,?)",new Object[]{object_id+"",report_name,content});
+			conPlat.commit();
+			<?{success:true,id:'"?>object_id<?"'}?>;
+		}catch(Exception e) {
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if(type.equals("updatesave")){
+		try{	
+			TextReportFactory TF=TextReportFactory.getInstance();
+			TF.remove(parent_id);
+			conPlat.execLarge("UPDATE $[plat].app_text_report SET  SOURCE = ? WHERE object_id=?",new Object[]{content,parent_id+""});
+			<?{success:true,id:'?>parent_id<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			conPlat.close();
+		}		
+	}else if(type.equals("delete")){
+		try{
+			conPlat.setAutoCommit(false);				
+			ObjectNode textReportNode=OM.getObject(parent_id);
+			textReportNode.destroy(conPlat);
+			conPlat.commit();
+			<?{success:true}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

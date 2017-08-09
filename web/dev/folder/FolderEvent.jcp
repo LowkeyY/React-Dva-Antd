@@ -1,0 +1,87 @@
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.workbench.*;
+
+@class{
+
+	public void doGet(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+
+		String event = jacper.getStr("event");
+
+		String forder_id = jacper.getStr("forder_id");
+		String forder_title = jacper.getStr("title");
+		String top_id = jacper.getStr("top_id");
+		String objectId = jacper.getStr("objectId");
+		ObjectManager OM=ObjectManager.getInstance();
+
+		if(forder_id.equals("")){
+			<?<root><success>false</success><message>?>jacper.trans("请按标准的操作!")<?</message></root>?>;
+			return;
+		}
+		if(event.equals("create")){
+			if(forder_title.equals("")){
+				<?<root><success>false</success><message>?>jacper.trans("没指定新建目录名称")<?</message></root>?>;
+				return;
+			}
+
+			String[][] result = conPlat.get("select forder_id from $[plat].sys__forder where parent_id=? and forder_title=? order by forder_id",new String[]{forder_id,forder_title});
+			if(result.length>0){
+				<?<root><success>false</success><message>?>jacper.trans("无法创建目录")+";\n"+jacper.trans("同一个目录下有重名:")+forder_title<?</message></root>?>;
+				return;
+			}
+			
+			String fid ="";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				fid = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				fid =UUID.randomUUID().toString();
+			}
+			
+			ObjectNode systemNode=OM.getObject(objectId).upTo(ObjectType.SYSTEM);;
+			String systemId=systemNode.getId();
+
+			conPlat.exec("insert into $[plat].sys__forder(parent_id,forder_id,forder_title,object_id) values(?,?,?,?)",new String[]{forder_id,fid,forder_title,systemId+""});	
+			
+			<?<root><success>true</success><message>?>fid<?</message></root>?>;
+		}else if(event.equals("delete")){
+			if(top_id.equals("")){
+				<?<root><success>false</success><message>?>jacper.trans("请按标准操作!")<?</message></root>?>;
+				return;
+			}
+			String[][] result=null;
+			String[][] result1=null;
+
+			StringBuffer sql = new StringBuffer();
+			StringBuffer sql1 = new StringBuffer();
+			
+			if(top_id.equals("200")){
+				sql.append("select ").append("query_name").append(" from $[plat].").append("app_query").append(" where forder_id=?");
+			}else if(top_id.equals("300")){
+				sql.append("select ").append("report_name").append(" from $[plat].").append("app_query_report").append(" where forder_id=?");
+			}
+
+			sql1.append("select forder_title from $[plat].sys__forder where parent_id=?");
+
+			result = conPlat.get(sql.toString(),new String[]{forder_id});
+			result1 = conPlat.get(sql1.toString(),new String[]{forder_id});
+
+			if((result.length+result1.length)>0){
+				<?<root><success>false</success><message>?>jacper.trans("删除目录失败,有子目录或文件存在:")+Strings.arrayJoin(Arr.getColumn(result,0),"\n")<?</message></root>?>;
+				return;
+			}
+			conPlat.exec("delete from $[plat].sys__forder where forder_id=?",new String[]{forder_id});
+			<?<root><success>true</success><message>?>jacper.trans("删除成功!")<?</message></root>?>;
+		}else if(event.equals("update")){
+			conPlat.exec("update $[plat].sys__forder set forder_title=? where forder_id=?",new String[]{forder_title,forder_id});
+			<?<root><success>true</success><message>?>forder_id<?</message></root>?>;
+		}else{
+			<?<root><success>false</success><message>?>jacper.trans("未知事件,请按标准的操作!")<?</message></root>?>;
+			return;
+		}
+		conPlat.close();
+	}
+}

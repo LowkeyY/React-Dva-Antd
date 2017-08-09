@@ -1,0 +1,53 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.LanMu;
+
+import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.UUID;
+import com.susing.core.KingleSystem;
+
+@class{
+	public void doPost(Jacper jacper) {
+
+		HttpSession hs = jacper.getSession();
+		Connection mysqlEdu = jacper.getConnection("cmsmysql");
+		HashSet<String> set = new HashSet<String>();
+
+		String[] ids = jacper.getArray("pmks");
+		
+		
+
+		
+		String like="";
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < ids.length; i++) {
+			if (i > 0){
+				sb.append(',');
+			}
+			like+=" yinyongid like '%"+ids[i]+"%'";
+			sb.append('?');
+		}
+
+		try {
+			String intoGj = "";
+				 intoGj = "delete from gaojianpinglun  where  ";
+			intoGj=intoGj+"id in ("+sb+") or "+like;
+			
+			mysqlEdu.exec(intoGj,ids);				
+		} catch (Exception e) {
+			try {
+				mysqlEdu.rollback();
+			} catch (Exception e1) {
+			}
+			jacper.print("{success:false,message:'删除出错，请联系管理员。'}");
+			e.printStackTrace();
+			return;
+		}
+		
+		jacper.print("{success:true,message:'删除成功。'}");	
+		return;
+	}
+}

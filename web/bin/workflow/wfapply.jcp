@@ -1,0 +1,74 @@
+
+
+import java.io.IOException;
+
+ 
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.workflow.*;
+import java.util.*;
+
+@class{
+
+	public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	Connection conCert = jacper.getConnection("cert");
+	
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	ObjectManager OM=ObjectManager.getInstance();
+	ObjectNode[] flowTypeArray=OM.getObjectsByType(ObjectType.WORKFLOWGROUP);
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{
+		JSONObject workflowJSON = new JSONObject("{}");
+		JSONArray wfJSONArray=new JSONArray();
+		WorkflowFactory workflowFactory =WorkflowFactory.getInstance();
+		workflowFactory.init(conPlat);
+
+		for(int i=0;i<flowTypeArray.length;i++){
+			String workflowCategory=flowTypeArray[i].getId()+"";
+			Object[] instanceArray=workflowFactory.getWorkflowInstanceArray(workflowCategory,user_id+"");
+
+			JSONObject workflowTypeJSON = new JSONObject("{}");
+			workflowTypeJSON.put("WorkflowType",flowTypeArray[i].getName());
+
+			if(instanceArray==null||instanceArray.length==0){
+				workflowFactory.reload(conPlat);
+				instanceArray=workflowFactory.getWorkflowInstanceArray(workflowCategory,user_id+"");
+			}
+			if(instanceArray!=null&&instanceArray.length>0){
+				JSONArray wfListArray=new JSONArray();
+				for(int j=0;j<instanceArray.length;j++){
+					JSONObject workflowItemJSON = new JSONObject("{}");
+					WorkflowInstance workflowInstance=(WorkflowInstance)instanceArray[j];
+					Workflow workflow=workflowFactory.getWorkflow(conPlat,workflowInstance.getWorkflowId());
+					if(workflow.getInitType().equals("2")){
+						workflowItemJSON.put("instanceId",workflowInstance.getInstanceId());
+						workflowItemJSON.put("flowType","0");
+						workflowItemJSON.put("workflowId",workflowInstance.getWorkflowId());
+						workflowItemJSON.put("instanceName",workflowInstance.getInstanceName());
+						wfListArray.put(workflowItemJSON);
+					}
+				}
+				workflowTypeJSON.put("success",true);
+				workflowTypeJSON.put("wfListArray",wfListArray);
+				wfJSONArray.put(workflowTypeJSON);
+			}
+		}
+		workflowJSON.put("workflow",wfJSONArray);
+		jacper.print(workflowJSON.toString());
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+		conCert.close();	
+	}
+ }
+}
+

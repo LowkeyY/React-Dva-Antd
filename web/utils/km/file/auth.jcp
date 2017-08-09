@@ -1,0 +1,96 @@
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+import com.social.api.core.model.CertManager;
+
+@class{
+	public void doGet(Jacper jacper) {
+
+		Connection conUtils = jacper.getConnection("utils");
+
+		String instanceId = jacper.getStr("instanceId");
+
+		String[][] authArray = conUtils.get("select c.user_id,c.dept_id from $[utils].file_auth c where c.folder_id=?",
+				new String[] { instanceId });
+
+		jacper.getResponse().setContentType("application/x-json");
+		try {
+			JSONObject authJSON = new JSONObject();
+			JSONArray authJSONArray = new JSONArray();
+			String[] oneUser;
+			for (int i = 0; i < authArray.length; i++) {
+				JSONObject tempJSON = new JSONObject("{}");
+				String roleName = "";
+				oneUser = authArray[i];
+
+				if (oneUser[0].equals("-9")) {
+					roleName = jacper.trans("当前部门所有人员");
+				} else if (oneUser[0].equals("-99")) {
+					roleName = jacper.trans("当前部门及所有子部门人员");
+				} else {
+					roleName = CertManager.getUser(oneUser[0]).getRealName();
+				}
+				oneUser[0] = oneUser[1] + "_" + oneUser[0];
+				tempJSON.put("user_id", oneUser[0]);
+				tempJSON.put("user_name", roleName);
+				tempJSON.put("dept_name", CertManager.getDept(oneUser[1]).getShortName());
+				tempJSON.put("dept_id", oneUser[1]);
+				authJSONArray.put(tempJSON);
+			}
+			authJSON.put("authArray", authJSONArray);
+			jacper.print(authJSON.toString());
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			conUtils.close();
+		}
+	}
+
+	public void doPost(Jacper jacper) {
+
+		Connection conUtils = jacper.getConnection("utils");
+		String[] ids = jacper.getArray("ids");
+		String instanceId = jacper.getStr("instanceId");
+		String[][] values = new String[ids.length][4];
+		String[] temp = null;
+
+		if (ids.length == 1 && ids[0].equals("")) {
+			conUtils.exec("delete from $[utils].file_auth where folder_id=?", new String[] { instanceId });
+			jacper.print("{success:true}");
+			return;
+		}
+		
+		String userId=String.valueOf(jacper.getSession().uid);
+		for (int i = 0; i < ids.length; i++) {
+			values[i][0] = instanceId;
+			temp = ids[i].split("_");
+			values[i][1] = temp[0];
+			values[i][2] = temp[1];
+			values[i][3] = userId;
+		}
+		try {
+			conUtils.setAutoCommit(false);
+			conUtils.exec("delete from $[utils].file_auth where folder_id=?", new String[] { instanceId });
+			conUtils.exec("insert into $[utils].file_auth(folder_id,dept_id,user_id,owner_id,auth_id) values(?,?,?,?,'id')", values);
+			conUtils.commit();
+			jacper.print("{success:true}");
+		} catch (Exception e) {
+			try {
+				conUtils.rollback();
+			} catch (Exception e1) {
+			}
+			String msg = e.toString().replaceAll("\\'", "\\\\'");
+
+			jacper.print("{success:false,message:'" + msg + "'}");
+		} finally {
+			try {
+				conUtils.setAutoCommit(true);
+			} catch (Exception e2) {
+			}
+			conUtils.close();
+		}
+	}
+}

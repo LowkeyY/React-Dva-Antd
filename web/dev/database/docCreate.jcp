@@ -1,0 +1,138 @@
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.*;
+
+import org.xml.sax.InputSource;
+
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.SQLUtils;
+import com.kinglib.database.MetaTableDesigner;
+import com.kinglib.database.util.BaseException;
+import com.kinglib.scraper.definition.ScraperConfiguration;
+import com.kinglib.scraper.runtime.Scraper;
+import com.kinglib.scraper.runtime.ScraperContext;
+import com.kinglib.scraper.runtime.variables.Variable;
+import com.kinglib.workbench.application.Application;
+import com.kinglib.workbench.application.ApplicationFactory;
+
+@class{
+
+	public void reportError(Jacper jacper, String message) {
+		message=message.replaceAll("\\n","<br>");
+		message=message.replaceAll("\\r","");
+		message=message.replaceAll("\\'","\\\\'");
+		message=message.replaceAll("<","&lt;");
+		message=message.replaceAll(">","&gt;");
+		jacper.print("{success:false,message:'" + message + "'}");
+	}
+
+
+
+	public void doPost(Jacper jacper) {
+
+		HttpSession hs = jacper.getSession();
+		String content = jacper.getStr("content");
+		String object_id = jacper.getStr("object_id");
+		String fileName = jacper.getString("docName");
+
+		if (fileName == null || fileName.length() == 0 || fileName.equals("0")) {
+			fileName = "default";
+		} else {
+			fileName = fileName.replace('.', '_').replace('\\', '_').replace('/', '_');
+		}
+		
+		fileName = "fxhy.xml";
+
+		String path = jacper.getRequest().getSession().getServletContext().getRealPath(jacper.getRequest().getRequestURI());
+		StringBuilder sb = new StringBuilder(path.substring(0, path.lastIndexOf(File.separatorChar)));
+		sb.append(File.separatorChar).append("docTemplate").append(File.separatorChar);
+		path = sb.append(fileName).toString();
+		
+		File file = new File(path);
+		if (!file.exists()) {
+			reportError(jacper, jacper.trans("当前模板的解析文件不存在"));
+			return;
+		}
+
+		FileInputStream fr = null;
+		String template = null;
+		try {
+			byte[] buf = new byte[(int) file.length()];
+			fr = new FileInputStream(file);
+			fr.read(buf);
+			template = new String(buf, "utf-8");
+		} catch (Exception e) {
+			reportError(jacper, jacper.trans("无法读取解析文件,原因:") + e.getMessage());
+			return;
+		} finally {
+			try {
+				if (fr != null)
+					fr.close();
+			} catch (IOException e) {
+			}
+		}
+		String result = null;
+		try {
+			InputSource in = new InputSource(new StringReader(template));
+			Scraper scraper = new Scraper(new ScraperConfiguration(in), ".");
+			scraper.setDebug(false);
+			ScraperContext sct = scraper.getContext();
+			sct.setVar("html", content);
+			scraper.execute();
+			Variable v = sct.getVar("returnValue");
+			if (v == null) {
+				reportError(jacper, jacper.trans("模板解析文件错误,未设置返回变量returnValue的值."));
+				return;
+			}
+			result = v.toString();
+		} catch (Exception e) {
+			reportError(jacper, jacper.trans("解析当前文档错误,原因:") + e.getMessage());
+			return;
+		}
+		try {
+			FileWriter fw=new FileWriter("c:\\a.xml");
+			fw.write(result);
+			fw.close();
+		} catch (Exception e) {
+		}		
+		Connection conPlat = jacper.getConnection("plat");
+		ApplicationFactory appFactory = ApplicationFactory.getInstance();
+		Application app = appFactory.getApplication(conPlat, object_id);
+		if (app == null) {
+			reportError(jacper, jacper.trans("无法获取应用节点."));
+			conPlat.close();
+			return;
+		}
+		String databaseLink = app.getDatabaseLink();
+		String dbLink = databaseLink == null ? "plat" : databaseLink;
+		try {
+			Connection conbase = jacper.getConnection(dbLink);
+			conbase.close();
+		} catch (Exception e) {
+			conPlat.close();
+			reportError(jacper, jacper.trans("无法获取当前应用设置的数据库连接") + dbLink + jacper.trans(",请检查是否设置错误,或未配置连接池."));
+			return;
+		}
+		int curId =0;
+		try {
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				curId =MetaTableDesigner.CreateWithXML(conPlat, result, Integer.parseInt(object_id), dbLink, hs.uid);
+			}else{
+				curId =MetaTableDesigner.CreateWithUUIDXML(conPlat, result, object_id, dbLink, hs.uid);
+			}
+		} catch (BaseException e) {
+			e.printStackTrace();
+			reportError(jacper, e.getMessage());
+			return;
+		} finally {
+			conPlat.close();
+		}
+		
+		jacper.print("{success:true,id:'"+curId+"'}");
+	}
+}

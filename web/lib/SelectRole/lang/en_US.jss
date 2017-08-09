@@ -1,0 +1,1 @@
+lib.SelectRole.lang={"确定":"OK","部门数据错误":"Department data error","必选选择一个职位":"Required to select a position","选择角色":"Select Role","选择职位":"Select Position","取消":"Cancel"}

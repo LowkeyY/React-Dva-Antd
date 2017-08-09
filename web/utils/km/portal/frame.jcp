@@ -1,0 +1,48 @@
+
+/*
+ * @(#)/system/frame.jcp	1.0.0 03/04/25
+ *
+ * Copyright 2003 Bizdict Co.,Ltd. All rights reserved.
+ *
+ * ���������ߣ�
+ * @author lzy
+ *
+ * �޸��ߣ�
+ *
+ * �޸�����:
+ *
+ * �޸�����:   
+ *  
+ */
+
+
+import java.io.IOException;
+import com.kinglib.*;
+
+
+
+@class{
+
+
+	public void doGet(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+		
+		String type=jacper.getStr("type");
+
+		String url1 = "";
+		String url2 = "";
+		url1 = "xmlload.jcp?view=create&";
+		url2 = "create_backup.jcp?type=new&";
+	 
+		<?    
+			<frameset cols="20%,80%" id=rightFrame frameborder=0 FRAMESPACING=0 scrolling="no" border="10">
+				<FRAME SRC="?>url1<?&ran="+Math.random() NAME="appload" frameborder=0 scrolling="no" >
+				<FRAME SRC="?>url2<?ran="+Math.random() NAME="centermid1" frameborder=0 scrolling="no"> 
+			</FRAMESET>
+		?>;
+
+	}
+}
+   

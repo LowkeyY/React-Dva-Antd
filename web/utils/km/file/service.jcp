@@ -1,0 +1,577 @@
+import java.util.*;
+import java.io.File;
+import java.io.IOException;  
+import java.io.InputStream;    
+import java.text.SimpleDateFormat;
+
+import com.susing.*;
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.smartkms.file.*;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import org.apache.commons.io.CopyUtils; 
+
+import com.social.api.core.model.*;
+import de.schlichtherle.util.zip.ZipFile;
+import de.schlichtherle.io.FileInputStream;  
+import de.schlichtherle.io.FileOutputStream;  
+import de.schlichtherle.util.zip.ZipEntry;  
+import de.schlichtherle.util.zip.ZipOutputStream;  
+
+import org.apache.commons.httpclient.*;
+import org.apache.commons.httpclient.methods.*;
+import org.apache.commons.httpclient.params.HttpMethodParams;
+
+
+@class{
+public void doPost(Jacper jacper){
+	String type=jacper.getStr("functionType");
+
+	boolean isLogin = jacper.setSession();  
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	Connection conUtils = jacper.getConnection("utils");
+	Connection conCert = jacper.getConnection("cert");
+
+	jacper.getResponse().setContentType("application/x-json");
+	try{
+		FileConfig fileConf =FileConfigFactory.getInstance().getFileConfig(conUtils,conCert,user_id+"");
+		if(type.equals("CreateFolder")){
+			String parentId=jacper.getStr("parentId");
+			String name=jacper.getStr("name");
+			try{
+				String newFolderId=fileConf.CreateFolder(conUtils,parentId,name);
+				<?{"CurrentStatus":1,"Description":"?>jacper.trans("文件目录创建成功")<?","ReturnValue":"?>newFolderId<?"}?>;
+			}catch(Exception e){
+			e.printStackTrace();
+				<?{"CurrentStatus":0,"Description":"?>e.getMessage()<?"}?>;
+			}
+		}else if(type.equals("RenameFolder")){
+			String folderId=jacper.getStr("folderId");
+			String name=jacper.getStr("name");
+			try{
+				fileConf.RenameFolder(conUtils,folderId,name);
+				<?{"CurrentStatus":1,"Description":"?>jacper.trans("文件目录改名成功")<?","ReturnValue":null}?>;
+			}catch(Exception e){
+				<?{"CurrentStatus":0,"Description":"?>e.getMessage()<?"}?>;
+			}
+		}else if(type.equals("RenameFile")){
+			String fileId=jacper.getStr("fileId");
+			String name=jacper.getStr("name");
+			try{
+				String currentFolder=fileConf.getCurrentFolderId();
+				FileList myFile =FileListFactory.getInstance().getFileList(conUtils,currentFolder);
+				FileItem namedFile=myFile.getFile(fileId);
+				namedFile.rename(conUtils,name);
+				<?{"CurrentStatus":1,"Description":"?>jacper.trans("文件改名成功")<?","ReturnValue":null}?>;
+			}catch(Exception e){
+				<?{"CurrentStatus":0,"Description":"?>e.getMessage()<?"}?>;
+			}
+		}else if(type.equals("CommentFile")){
+			String fileId=jacper.getStr("fileId");
+			String comment=jacper.getStr("comment");
+			try{
+				String currentFolder=fileConf.getCurrentFolderId();
+				FileList myFile =FileListFactory.getInstance().getFileList(conUtils,currentFolder);
+				FileItem namedFile=myFile.getFile(fileId);
+				namedFile.setComment(conUtils,comment);
+				<?{"CurrentStatus":1,"Description":"?>jacper.trans("文件注释成功")<?","ReturnValue":null}?>;
+			}catch(Exception e){
+				<?{"CurrentStatus":0,"Description":"?>e.getMessage()<?"}?>;
+			}
+		}else if(type.equals("CreateAlbum")){
+			String name=jacper.getStr("name");
+			String description=jacper.getStr("description");
+			try{
+				String parentId=fileConf.getCurrentFolderId();
+				String newFolderId=fileConf.CreateAlbum(conUtils,parentId,name,description);
+				<?{"CurrentStatus":1,"Description":"?>jacper.trans("相册创建成功")<?","ReturnValue":"?>newFolderId<?"}?>;
+			}catch(Exception e){
+				<?{"CurrentStatus":0,"Description":"?>e.getMessage()<?"}?>;
+			}
+		}else if(type.equals("EditAlbum")){
+			String albumId=jacper.getStr("albumId");
+			String name=jacper.getStr("name");
+			String description=jacper.getStr("description");
+			try{
+				fileConf.EditAlbum(conUtils,albumId,name,description);
+				<?{"CurrentStatus":1,"Description":"?>jacper.trans("相册修改成功")<?","ReturnValue":null}?>;
+			}catch(Exception e){
+				<?{"CurrentStatus":0,"Description":"?>e.getMessage()<?"}?>;
+			}
+		}else if(type.equals("Delete")){
+			String[] folderIds=jacper.getArray("folderIds");
+			String[] fileIds=jacper.getArray("fileIds");
+			try{
+				fileConf.Delete(conUtils,fileIds,folderIds);
+				<?{"CurrentStatus":1,"Description":"?>jacper.trans("删除成功")<?","ReturnValue":null}?>;
+			}catch(Exception e){
+				<?{"CurrentStatus":0,"Description":"?>e.getMessage()<?"}?>;
+			}
+		}else if(type.equals("Move")){
+			String parentId=jacper.getStr("parentId");
+			String targetFolderId=jacper.getStr("targetFolderId");
+			if(parentId.equals("")) parentId=targetFolderId;
+
+			String[] fileIds=jacper.getArray("fileIds");
+			String[] folderIds=jacper.getArray("folderIds");
+			try{
+				fileConf.Move(conUtils,parentId,fileIds,folderIds);
+				<?{"CurrentStatus":1,"Description":"?>jacper.trans("移动成功")<?","ReturnValue":"?>parentId<?"}?>;
+			}catch(Exception e){
+				e.printStackTrace();
+				<?{"CurrentStatus":0,"Description":"?>e.getMessage()<?"}?>;
+			}
+		}else if(type.equals("Copy")){
+			String targetFolderId=jacper.getStr("targetFolderId");
+			String[] fileIds=jacper.getArray("fileIds");
+			String[] folderIds=jacper.getArray("folderIds");
+			try{
+				fileConf.Copy(conUtils,targetFolderId,fileIds,folderIds);
+				<?{"CurrentStatus":1,"Description":"?>jacper.trans("复制成功")<?","ReturnValue":null}?>;
+			}catch(Exception e){
+				e.printStackTrace();
+				<?{"CurrentStatus":0,"Description":"?>e.getMessage()<?"}?>;
+			}
+		}else if(type.equals("EmptyRecycleBin")){
+			try{
+				fileConf.EmptyRecycleBin(conUtils);
+				<?{"CurrentStatus":1,"Description":"?>jacper.trans("清空回收站成功")<?","ReturnValue":null}?>;
+			}catch(Exception e){
+				<?{"CurrentStatus":0,"Description":"?>e.getMessage()<?"}?>;
+			}
+		}else if(type.equals("Compress")){
+
+			String[] fileIds=jacper.getArray("fileIds");
+			String[] folderIds=jacper.getArray("folderIds");
+			String fileName=jacper.getStr("archiveName");
+			String compressionLevel=jacper.getStr("compressionLevel");
+			String password=jacper.getStr("password");
+			String folderId=jacper.getStr("targetFolderId");
+
+			EFile uf = new EFile();
+
+			FileOutputStream fout = new FileOutputStream(uf.getFile());
+			ZipOutputStream zipOut=new ZipOutputStream(fout,"GBK");
+			zipOut.setLevel(Integer.parseInt(compressionLevel));
+
+			try {  
+				for(int i=0;i<folderIds.length;i++){
+					if(!folderIds[i].equals("")){
+						DirItem  currentItem=fileConf.getDir(folderIds[i]);
+						String dirName=currentItem.getDirName();
+						ArrayList<DirItem> dirList=new ArrayList<DirItem>();
+						currentItem.getFamilyTree(dirList);
+						for(DirItem c : dirList){
+							String fullPath=c.getUrl();
+							String path=fullPath.substring(fullPath.indexOf(dirName),fullPath.length());
+
+							zipOut.putNextEntry(new ZipEntry(path+"/"));
+							FileList fileSubList= FileListFactory.getInstance().getFileList(conUtils,c.getDirId());
+							ArrayList<FileItem> fileSubArrayList=fileSubList.getFileArrayList();
+							for(FileItem cpFile : fileSubArrayList){
+								String subPath=cpFile.getFileName();		
+								zipOut.putNextEntry(new ZipEntry(path+"/"+subPath));
+								Object[] o=conUtils.getLarge("select content from $[utils].files where file_id=?",new String[]{cpFile. getFileId()});
+								EFile iFile=(EFile)o[0];
+								FileInputStream fileIn=  new FileInputStream(iFile.getFile());
+								try{  
+									CopyUtils.copy(fileIn,zipOut);;                            
+								}catch (IOException e){  
+									
+								}finally{  
+									if(fileIn != null)  
+										fileIn.close(); 
+									zipOut.closeEntry();;  
+								}  
+							}
+						}
+					}
+				}
+				FileListFactory zipFileList =FileListFactory.getInstance();
+
+				for(int i=0;i<fileIds.length;i++){
+					if(!fileIds[i].equals("")){
+						FileItem cpFile =zipFileList.getFile(conUtils,fileIds[i]);
+						String path=cpFile.getFileName();	
+						zipOut.putNextEntry(new ZipEntry(path));
+						Object[] o=conUtils.getLarge("select content from $[utils].files where file_id=?",new String[]{fileIds[i]});
+						EFile iFile=(EFile)o[0];
+						FileInputStream fileIn= new FileInputStream(iFile.getFile()); 
+						try{  
+							CopyUtils.copy(fileIn,zipOut);;                            
+						}catch (IOException e){  
+							
+						}finally{  
+							if(fileIn != null)  
+								fileIn.close();  
+							zipOut.closeEntry();; 
+						}  
+					}
+				}
+			}catch (IOException e){  
+			}finally{  
+				 if(zipOut != null){  
+					zipOut.close();;  
+					fout.close();;  
+				}  
+			}  
+			uf.setAttribute("content-length",uf.length()+"");
+			uf.setAttribute("content-type","application/zip");
+
+			String fileId =UUID.randomUUID().toString();
+
+			if ( uf != null ) {
+				fileName=fileName.substring(fileName.lastIndexOf("\\")+1,fileName.length());
+				String fileType=uf.getAttribute("content-type");
+				String fileSize = (int)uf.length()+"";
+				try{	
+					EFile thumbnail=null;
+					conUtils.execLarge("insert into $[utils].files (file_id,forder_id,file_name,file_type,file_size,content,create_user,create_time,update_user,update_time,times)  values(?,?,?,?,?,?,?,$getdate(),?,$getdate(),?)",new  Object[]{fileId,folderId,fileName,fileType,fileSize,uf,user_id,user_id,"0"});
+					FileList newfile =FileListFactory.getInstance().getFileList(conUtils,folderId);
+					SimpleDateFormat tempDate = new SimpleDateFormat("yyyy/MM/dd"+" "+"HH:mm"); 
+					String datetime = tempDate.format(new java.util.Date());
+					Object[] fileArray=new Object[]{fileId,folderId,fileName,fileType,user_id,datetime,user_id,datetime,"0",fileSize,thumbnail,"",uf};
+					newfile.addFile(conUtils,fileId,fileArray);
+					<?{"CurrentStatus":1,"Description":"?>jacper.trans("文件归档成功")<?","ReturnValue":null}?>;
+				}catch(Exception e1){
+					e1.printStackTrace();
+					<?{"CurrentStatus":0,"Description":"?>e1.getMessage()<?","ReturnValue":null}?>;
+				}
+			}
+		}else if(type.equals("Extract")){
+			String fileId=jacper.getStr("fileId");
+			String password=jacper.getStr("password");
+			String folderId=jacper.getStr("targetFolderId");
+
+			DirItem  currentItem=fileConf.getDir(folderId);
+			
+			FileListFactory zipFileList =FileListFactory.getInstance();
+			FileItem cpFile =zipFileList.getFile(conUtils,fileId);
+
+			try{
+				 Object[] o=conUtils.getLarge("select content from $[utils].files where file_id=?",new String[]{cpFile. getFileId()});
+			 	 EFile iFile=(EFile)o[0];
+				 File localfile = iFile.getFile();
+				 try {
+					   String xmlpath = "";
+					   FileOutputStream fout = null; 
+					   byte[] buf = new byte[1024];
+					   ZipFile zip = new ZipFile(localfile, "GBK"); 
+					   String zipname = localfile.getName();
+					   Enumeration zList = zip.entries();
+					   HashMap<String,String> dirMap=new HashMap<String,String>();
+					   int k=0;
+					   while (zList.hasMoreElements()) { 
+							ZipEntry ze = (ZipEntry) zList.nextElement(); 
+							if (ze.isDirectory()) {
+								String name=ze.getName();
+								String shortName=name.substring(0,name.length()-1);
+								String dirName=shortName.substring(shortName.lastIndexOf("\\")+1,shortName.length());
+								
+								try{
+									String newFolderId="";
+									if(k==0){
+										newFolderId=fileConf.CreateFolder(conUtils,folderId,dirName);
+									}else{
+										String fId=dirMap.get(name);
+										newFolderId=fileConf.CreateFolder(conUtils,fId,dirName);
+									}
+									dirMap.put(name,newFolderId);
+									k++;
+								}catch(Exception e){
+								}
+							}
+					   }
+					   while (zList.hasMoreElements()) { 
+							ZipEntry ze = (ZipEntry) zList.nextElement(); 
+							if (ze.isDirectory()) {
+								 continue;
+							}
+							/*
+							String contentType="";
+							String contentLength="";
+				
+							FileOutputStream os=new FileOutputStream(uf.getFile());
+							if(inStream!=null)
+							Files.copyRange(inStream, os,1024);
+
+							uf.setAttribute("content-length",contentLength);
+							uf.setAttribute("content-type",contentType);
+
+							String fileId = UUID.randomUUID().toString();
+
+							if ( uf != null ) {
+								fileName=fileName.substring(fileName.lastIndexOf("\\")+1,fileName.length());
+								String fileType=uf.getAttribute("content-type");
+								String fileSize = (int)uf.length()+"";
+								try{	
+									EFile thumbnail=null;
+									if(fileType.equals("image/pjpeg")||fileType.equals("image/jpeg")||fileType.equals("image/png")||fileType.equals("image/gif")||fileType.equals("image/bmp")){
+										thumbnail=new EFile();
+										java.io.FileInputStream fin=uf.getInputStream();
+										java.io.FileOutputStream srcStream=thumbnail.getOutputStream();
+										ImageTools.encodeJpeg(srcStream,ImageTools.resizeIn(fin,80,60));
+										conUtils.execLarge("insert into $[utils].files (file_id,forder_id,file_name,file_type,file_size,content,create_user,create_time,update_user,update_time,times,thumbnail)  values(?,?,?,?,?,?,?,$getdate(),?,$getdate(),?,?)",new  Object[]{fileId,folderId,fileName,fileType,fileSize,uf,user_id,user_id,"0",thumbnail});
+									}else{
+										conUtils.execLarge("insert into $[utils].files (file_id,forder_id,file_name,file_type,file_size,content,create_user,create_time,update_user,update_time,times)  values(?,?,?,?,?,?,?,$getdate(),?,$getdate(),?)",new  Object[]{fileId,folderId,fileName,fileType,fileSize,uf,user_id,user_id,"0"});
+									}
+									FileList newfile =FileListFactory.getInstance().getFileList(conUtils,folderId);
+									SimpleDateFormat tempDate = new SimpleDateFormat("yyyy/MM/dd"+" "+"HH:mm"); 
+									String datetime = tempDate.format(new java.util.Date());
+									Object[] fileArray=new Object[]{fileId,folderId,fileName,fileType,user_id,datetime,user_id,datetime,"0",fileSize,thumbnail,"",uf};
+									newfile.addFile(conUtils,fileId,fileArray);
+									<?{"CurrentStatus":1,"Description":"URL文件上传成功","ReturnValue":null}?>;
+								}catch(Exception e1){
+									e1.printStackTrace();
+									<?{"CurrentStatus":0,"Description":"?>e1.getMessage()<?","ReturnValue":null}?>;
+								}
+								*/
+						}
+							/*InputStream isze = zip.getInputStream(ze);
+							InputStream is = new BufferedInputStream(isze);
+							fout = new FileOutputStream(getRealFileName(unzippath + "/"+ zipRealName, ze.getName()));
+							int readLen = 0;
+							while ((readLen = is.read(buf, 0, 1024)) != -1) {
+							 fout.write(buf, 0, readLen);
+							}
+							fout.close();
+							is.close();
+							isze.close();*/
+					   }catch (Exception e) {
+							e.printStackTrace();
+					   } 
+				<?{"CurrentStatus":1,"Description":"?>jacper.trans("文件释放成功")<?","ReturnValue":null}?>;
+			}catch(Exception e){
+				e.printStackTrace();
+				<?{"CurrentStatus":0,"Description":"?>e.getMessage()<?","ReturnValue":null}?>;
+			}
+		}else if(type.equals("GetUploadObject")){
+			String folderId=jacper.getStr("folderId");
+			String uploadKey=fileConf.getUploadKey();
+			long maxFileSize=fileConf.getMaxFileSize();
+			long storageLeft=fileConf.getStorageLeft();
+			long bandWidthLeft=fileConf.getBandWidthLeft();
+
+			JSONObject uploadJSON=null;
+			try{
+				uploadJSON = new JSONObject();
+				uploadJSON.put("FolderID",folderId);
+				uploadJSON.put("UploadKey",uploadKey);
+				uploadJSON.put("MaxFileSize",maxFileSize);
+				uploadJSON.put("StorageLeft",storageLeft);
+				uploadJSON.put("BandwidthLeft",bandWidthLeft);
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			<??>uploadJSON.toString()<??>;
+		}else if(type.equals("GetUploadStatus")){
+			jacper.print("{}");
+		}else if(type.equals("UploadFromUrl")){
+			String url=jacper.getStr("url");
+			String folderId=jacper.getStr("folderId");
+			String fileName=jacper.getStr("fileName");
+			
+			HttpClient httpclient = new HttpClient();
+			GetMethod method = new GetMethod(url);
+			method.getParams().setParameter(HttpMethodParams.RETRY_HANDLER,new DefaultHttpMethodRetryHandler(3, false));
+
+			int statusCode = httpclient.executeMethod(method);
+			if (statusCode == HttpStatus.SC_OK) {
+				InputStream  inStream=method.getResponseBodyAsStream();
+				Header[] headers=method.getResponseHeaders();
+				String contentType="";
+				String contentLength="";
+				for(int i=0;i<headers.length;i++){
+					if("Content-Type".equals(headers[i].getName())){
+						contentType=headers[i].getValue();
+					}
+					if("Content-Length".equals(headers[i].getName())){
+						contentLength=headers[i].getValue();
+					}
+				}
+				try{
+					EFile uf = new EFile();
+
+					FileOutputStream os=new FileOutputStream(uf.getFile());
+					if(inStream!=null)
+						Files.copyRange(inStream, os,1024);
+
+					uf.setAttribute("content-length",contentLength);
+					uf.setAttribute("content-type",contentType);
+
+					String fileId = UUID.randomUUID().toString();
+
+					if ( uf != null ) {
+						fileName=fileName.substring(fileName.lastIndexOf("\\")+1,fileName.length());
+						String fileType=uf.getAttribute("content-type");
+						String fileSize = (int)uf.length()+"";
+						try{	
+							EFile thumbnail=null;
+							if(fileType.equals("image/pjpeg")||fileType.equals("image/jpeg")||fileType.equals("image/png")||fileType.equals("image/gif")||fileType.equals("image/bmp")){
+								thumbnail=new EFile();
+								java.io.FileInputStream fin=uf.getInputStream();
+								java.io.FileOutputStream srcStream=thumbnail.getOutputStream();
+								ImageTools.encodeJpeg(srcStream,ImageTools.resizeIn(fin,80,60));
+								conUtils.execLarge("insert into $[utils].files (file_id,forder_id,file_name,file_type,file_size,content,create_user,create_time,update_user,update_time,times,thumbnail)  values(?,?,?,?,?,?,?,$getdate(),?,$getdate(),?,?)",new  Object[]{fileId,folderId,fileName,fileType,fileSize,uf,user_id,user_id,"0",thumbnail});
+							}else{
+								conUtils.execLarge("insert into $[utils].files (file_id,forder_id,file_name,file_type,file_size,content,create_user,create_time,update_user,update_time,times)  values(?,?,?,?,?,?,?,$getdate(),?,$getdate(),?)",new  Object[]{fileId,folderId,fileName,fileType,fileSize,uf,user_id,user_id,"0"});
+							}
+							FileList newfile =FileListFactory.getInstance().getFileList(conUtils,folderId);
+							SimpleDateFormat tempDate = new SimpleDateFormat("yyyy/MM/dd"+" "+"HH:mm"); 
+							String datetime = tempDate.format(new java.util.Date());
+							Object[] fileArray=new Object[]{fileId,folderId,fileName,fileType,user_id,datetime,user_id,datetime,"0",fileSize,thumbnail,"",uf};
+							newfile.addFile(conUtils,fileId,fileArray);
+							<?{"CurrentStatus":1,"Description":"?>jacper.trans("URL文件上传成功")<?","ReturnValue":null}?>;
+						}catch(Exception e1){
+							e1.printStackTrace();
+							<?{"CurrentStatus":0,"Description":"?>e1.getMessage()<?","ReturnValue":null}?>;
+						}
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+					<?{"CurrentStatus":0,"Description":"?>e.getMessage()<?","ReturnValue":null}?>;
+				}
+			 }
+		}else if(type.equals("GetAllTags")){
+			JSONArray tagsJSONArray=new JSONArray();;
+			try{
+				FileTagFactory tagInstance=FileTagFactory.getInstance();
+				HashMap<String,FileTag> fileHashmap= tagInstance.getFileTag(conUtils,user_id+"");
+				for(FileTag c : fileHashmap.values()){
+					JSONObject tagJSON = new JSONObject();
+					tagJSON.put("Name",c.getName());
+					tagJSON.put("Count",c.getCount());
+					tagsJSONArray.put(tagJSON);
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			jacper.print(tagsJSONArray);
+		}else if(type.equals("GetTags")){
+			JSONObject tagJSON = new JSONObject();
+			tagJSON.put("CurrentStatus",1);
+			tagJSON.put("Description",jacper.trans("提取成功"));
+			String[] fileIds=jacper.getArray("fileIds");
+			String[] folderIds=jacper.getArray("folderIds");
+			try{
+				FileTagFactory tagInstance=FileTagFactory.getInstance();
+				HashMap<String,FileTag> fileHashmap= tagInstance.getFileTag(conUtils,user_id+"");
+				JSONArray tagsJSONArray=new JSONArray();
+				HashSet<String> tagSet=new HashSet<String>();
+				for(FileTag c : fileHashmap.values()){
+					ArrayList<String> folderList=c.getFolderList();
+					ArrayList<String> fileList=c.getFileList();
+					for(int i=0;i<folderList.size();i++){
+						String folder=folderList.get(i);
+						for(int j=0;j<folderIds.length;j++){
+							if(folderIds[j].equals(folder))
+								tagSet.add(c.getName());
+						}
+					}
+					for(int i=0;i<fileList.size();i++){
+						String file=fileList.get(i);
+						for(int j=0;j<fileIds.length;j++){
+							if(fileIds[j].equals(file))
+								tagSet.add(c.getName());
+						}
+					}
+				}
+				String tagString="";
+				for(String item:tagSet){
+					tagString+=","+item;
+
+				}
+				if(tagString.length()>1)
+					tagJSON.put("ReturnValue",tagString.substring(1));
+				
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			jacper.print(tagJSON);
+		}else if(type.equals("AddTags")){
+			String[] fileIds=jacper.getArray("fileIds");
+			String[] folderIds=jacper.getArray("folderIds");
+			String tagsString=jacper.getStr("tags");
+			String[] tags=tagsString.split(",");
+			FileTagFactory tagInstance=FileTagFactory.getInstance();
+			HashMap<String,FileTag> fileHashmap= tagInstance.getFileTag(conUtils,user_id+"");
+			for(int i=0;i<tags.length;i++){
+				fileHashmap.remove(user_id+"_"+tags[i]);
+				if(fileIds!=null&&fileIds.length>0)
+					tagInstance.createFileTag(conUtils,user_id+"",tags[i],fileIds);
+				if(folderIds!=null&&folderIds.length>0){
+					tagInstance.createFolderTag(conUtils,user_id+"",tags[i],folderIds);
+				}
+			}
+			<?{"CurrentStatus":1,"Description":"?>jacper.trans("添加成功")<?","ReturnValue":null}?>;
+		}else if(type.equals("RemoveTag")){
+			String tagName=jacper.getStr("tag");
+			FileTagFactory tagInstance=FileTagFactory.getInstance();
+			tagInstance.dropTag(conUtils,user_id+"",tagName);
+			<?{"CurrentStatus":1,"Description":"?>jacper.trans("删除成功")<?","ReturnValue":null}?>;
+		}else if(type.equals("SavePathState")){
+			String state=jacper.getStr("state");
+			fileConf.savePathState(conCert,state);
+			jacper.print("{success:true}");
+		}else if(type.equals("GetFileManagerSettings")){
+			JSONObject  fileBaseJson=fileConf.getFileBaseJSON();
+			<??>fileBaseJson.toString()<??>;
+		}else if(type.equals("GetCompletePathList")){
+			JSONArray  fullFileJson=fileConf.getFullPathJSON();
+			<??>fullFileJson.toString()<??>;
+		}else if(type.equals("SaveFileManagerSetting")){
+			String settingType=jacper.getStr("settingType");
+			String settingValue=jacper.getStr("settingValue");
+			if(settingType.equals("3")){
+				fileConf.setUploaderType(conCert,settingValue);
+			}else if(settingType.equals("0")){
+				fileConf.setCurrentView(conCert,settingValue);
+			}
+			<?{"CurrentStatus":1,"Description":"?>jacper.trans("设置成功")<?","ReturnValue":null}?>;
+		}else if(type.equals("EmailFiles")){
+			<?{"CurrentStatus":1,"Description":"?>jacper.trans("功能尚未实现")<?","ReturnValue":null}?>;
+		}else if(type.equals("SendEmail")){
+			<?{"CurrentStatus":1,"Description":"?>jacper.trans("功能尚未实现")<?","ReturnValue":null}?>;
+		}else if(type.equals("PublishFile")){
+		
+			String fileId=jacper.getString("fileId");
+			String[] fileIds=new String[]{fileId};
+			String[] folderIds=new String[0];
+			String folderId=jacper.getString("folderId");
+			try{
+					fileConf.copyFile(conUtils, fileId, folderId);
+					<?{"CurrentStatus":1,"Description":"?>jacper.trans("发布成功")<?","ReturnValue":null}?>;
+			}catch(Exception e){ 
+				e.printStackTrace();
+				<?{"CurrentStatus":0,"Description":"?>e.getMessage()<?"}?>;
+			}
+		}else if(type.equals("UnPublishFile")){
+			<?{"CurrentStatus":1,"Description":"?>jacper.trans("功能尚未实现")<?","ReturnValue":null}?>;
+		}else if(type.equals("PublishFolder")){
+			<?{"CurrentStatus":1,"Description":"?>jacper.trans("功能尚未实现")<?","ReturnValue":null}?>;
+		}else if(type.equals("UnPublishFolder")){
+			<?{"CurrentStatus":1,"Description":"?>jacper.trans("功能尚未实现")<?","ReturnValue":null}?>;
+		}else if(type.equals("GetSharedItem")){
+			<?{"CurrentStatus":1,"Description":"?>jacper.trans("功能尚未实现")<?","ReturnValue":null}?>;
+		}else if(type.equals("SaveSharedItem")){
+			<?{"CurrentStatus":1,"Description":"?>jacper.trans("功能尚未实现")<?","ReturnValue":null}?>;
+		}else if(type.equals("SendSharingNotificationEmails")){
+			<?{"CurrentStatus":1,"Description":"?>jacper.trans("功能尚未实现")<?","ReturnValue":null}?>;
+		}else if(type.equals("EmailPublishLink")){
+			<?{"CurrentStatus":1,"Description":"?>jacper.trans("功能尚未实现")<?","ReturnValue":null}?>;
+		}else if(type.equals("GetSubUsers")){
+			<?{"CurrentStatus":1,"Description":"?>jacper.trans("功能尚未实现")<?","ReturnValue":null}?>;
+		}
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conUtils.close();
+		conCert.close();
+	}
+}
+}

@@ -1,0 +1,176 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.search.SearchUnits;
+import gpra.filesystem.space.HWSpaceFactory;
+import gpra.filesystem.space.HWSpaceNode;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.hankcs.hanlp.HanLP;
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+
+
+/**    
+ * 
+ *<此处填写该类的简介或功能描述>
+ *
+ * @version 1.0   
+ *
+ * @author  qiaolin
+ *
+ * @date: Oct 31, 2016日3:55:54 PM 
+ *
+ */
+
+//public class htmlFileinfoAndRelevantPanel {
+@class{
+	public void doPost(Jacper jacper) {
+		Connection con =jacper.getConnection(HWUnits.HW_DBLINK);
+		JSONObject result = new JSONObject();
+		String fileId = jacper.getStr("fileId");
+		try {
+			result.put("success", true);
+			result.put("dataHtml", getFileinfoHtml(con , fileId) + getRelevantHtml(con , jacper.getStr("text") , fileId));
+			jacper.print(result);
+		} catch (JSONException e) {
+			jacper.print("{'success':false}");
+		}
+	}
+	
+	public String getRelevantHtml(Connection con , String text , String fileId){
+		String html = "";
+		StringBuilder prints = new StringBuilder();
+		long begin = System.currentTimeMillis();
+		if(text.length() > 0){
+			List<String> keywordList = HanLP.extractKeyword(text, 5);
+			StringBuilder addWhere = new StringBuilder(" f.file_info_name like ?");
+			ArrayList<String> values = new ArrayList<String>();
+			for(String keyword : keywordList){
+				addWhere.append(values.size() > 0 ? " or f.file_info_name like ?" : "");
+				values.add("%"+keyword.replaceAll("%", "")+"%");
+			}
+			StringBuilder sql = new StringBuilder("select f.file_info_name , '1' , f.file_id from DIR_FILE_BASE f where f.att_128 = '1' and (" + addWhere.toString() + ")");
+			
+			String[][] rows = con.get(sql.toString() , 
+					values.size() > 0 ? values.toArray(new String[values.size()]) : new String[]{"%"+text.replaceAll("%", "")+"%"} , 500);
+			
+			prints.append("query use("+(System.currentTimeMillis() - begin)+"ms);");
+			long beginNew = System.currentTimeMillis();
+			rows = SearchUnits.getRelevantByText(text , fileId , rows , 10);
+			prints.append("Relevant use("+(System.currentTimeMillis() - beginNew)+"ms);");
+			
+			html = createHtmlPage(rows);	
+			prints.append("total use("+(System.currentTimeMillis() - beginNew)+"ms).");
+		}
+		System.out.println(prints.insert(0, "htmlFileinfoAndRelevantPanel.jcp -69- " + (prints.length() > 0 ? "info :" : " error!")));
+		return html;
+	}
+	
+	public String createHtmlPage(String[][] datas){
+		if(datas == null || datas.length == 0)
+			return "";
+		StringBuilder page = new StringBuilder();
+		for (String[] data : datas) {
+			if(data.length < 3)
+				continue;
+			page.append("<p><a href=\"javascript:void(0);\" file_id=\""+data[2]+"\">" + data[0] + "</a></p>");
+		}
+		return page.length() > 0 ? page.insert(0, "<h2>相关文件</h2>").toString() : "";
+	}
+	
+	public String getFileinfoHtml(Connection con , String fileId){
+		StringBuilder prints = new StringBuilder() , html = new StringBuilder();
+		long begin = System.currentTimeMillis();
+		if(fileId.length() > 0){
+			try {
+				String getsql = "select b.file_info_name,b.file_size,b.file_type,d.datum_name,c.name,$date_str(b.region_id,111),b.is_secrecy,b.file_dir,b.space_id,b.file_uploader from dir_file_base b "+
+							    " left join DIR_DATUM_BASE d on b.file_class=d.datum_id "+
+							    " left join dir_file_classified c on b.country_id=c.id "+
+							    " where file_id='"+fileId+"'";
+				String[] rs = con.getRow(getsql);
+				prints.append("query use("+(System.currentTimeMillis() - begin)+"ms);");
+				long beginNew = System.currentTimeMillis();
+				if(rs!=null && rs.length>0){
+					String fileSize="";
+					double count=0.0;
+					if(!rs[1].equals("")){
+						count=Double.parseDouble(rs[1])/1024.00;
+					}
+					if(count>1024){
+						fileSize="MB";
+						count=count/1024.00;
+						if(count>1024){
+							fileSize="GB";
+							count=count/1024.00;
+							if(count>1024){
+								fileSize="TB";
+							}
+						}
+					}else{
+						fileSize="KB";
+					}
+					java.text.DecimalFormat df =new java.text.DecimalFormat("#.00");  
+					
+					String gxfs="";
+					if(rs[6].equals("0")){
+						gxfs="办公厅共享";
+					}else{
+						gxfs="处室内共享";
+					}
+					String dir="";
+					
+					String dirString= rs[7];
+					
+					HWSpaceNode space = HWSpaceFactory.getSpaceById(rs[8]);
+					
+					String dir_name= HWUnits.translateFileDir2Name(con, dirString);
+					if(!dirString.equals(dir_name)){
+						dir = space.getSpaceName() + dir_name.replaceAll("/", " - ");
+					}
+					User user = CertManager.getUser(rs[9]);
+					String userInfo = "";
+					if(user != null){
+						String userDeptName = user.getDept() == null ? "" : user.getDept().getName();
+						userInfo = new StringBuilder("<p>"+
+						  "<span>上传用户 : <font>"+user.getRealName()+(userDeptName.length() > 0 ? "(" + userDeptName + ")":"")+"</font></span>"+
+						  "</p>").toString();
+					}					
+					html.append("<h3>"+
+							  rs[0]+
+							  "</h3>"+
+							  "<p>"+
+							  "<span>大小 : <font>"+(df.format(count)+fileSize)+"</font></span> - <span>类型 : <font>"+rs[2]+"</font></span>"+
+							  "</p>"+
+							  userInfo
+							  +
+							  "<p>"+
+							  "<span>核心分类 : <font>"+rs[4]+"</font></span>"+
+							  "</p>"+
+							  "<p>"+
+							  "<span>主题词分类 : <font>"+rs[3]+"</font></span>"+
+							  "</p>"+
+							  "<p>"+
+							  "<span>共享方式 : <font>"+gxfs+"</font></span>"+
+							  "</p>"+
+							  "<p>"+
+							  "<span>生成日期 : <font>"+rs[5]+"</font></span>"+
+							  "</p>"+
+							  "<p>"+
+							  "<span>所属目录 : <font>"+dir+"</font></span>"+
+							  "</p>");
+					prints.append("total use("+(System.currentTimeMillis() - beginNew)+"ms);");
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		System.out.println(prints.insert(0, "htmlFileinfoAndRelevantPanel.jcp -162- " + (prints.length() > 0 ? "info :" : " error!")));
+		return html.toString();
+	}
+}

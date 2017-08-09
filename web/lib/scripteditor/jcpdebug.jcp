@@ -1,0 +1,98 @@
+
+import java.io.IOException;
+import com.kinglib.*;
+
+
+import com.kinglib.util.Strings;
+import bsh.Interpreter;
+import java.util.HashMap;
+import java.util.Map;
+import java.io.*;
+import com.susing.core.*;
+import com.susing.jacper.*;
+import org.w3c.dom.*;
+
+@class{
+public void doPost(Jacper jacper){
+
+		String content = jacper.getStr("content");
+		String fileName = jacper.getStr("fullName");
+
+		String classDir ="";
+		String rootDir = "";
+		Element jcpConfig = (Element)KingleSystem.getProperty("jacper-config");
+		if(jcpConfig != null){
+			classDir =jcpConfig.getAttribute("class-path");
+			NodeList list = jcpConfig.getElementsByTagName("path");
+			String[][] pathInfo = new String[list.getLength()][2];
+			for(int i=0;i<pathInfo.length;i++){
+				Element el = (Element)list.item(i);
+				pathInfo[i][0] =el.getAttribute("url-starts");
+				pathInfo[i][1] = el.getAttribute("source-path");
+				if(pathInfo[i][0].equals("/"))  rootDir=pathInfo[i][1];
+			}
+		}
+
+		String tempdir = KingleSystem.getTempDirectory();
+		int rootLen = rootDir.length();
+
+		PrintStream out=System.out;
+		PrintStream ps=null;
+		try{
+			ps=new PrintStream(jacper.getResponse().getOutputStream(),false,"utf-8");
+			System.setOut(ps);
+		}catch(Exception ea){
+			jacper.print(jacper.trans("运行失败,系统内部错误"));
+		}
+
+		try{
+
+			File file = new File(rootDir+fileName); 
+			file.delete();
+			OutputStreamWriter out1 = new OutputStreamWriter(new FileOutputStream(rootDir+fileName),"UTF-8");
+			out1.write(content);
+			out1.flush();
+			out1.close();
+
+			HashMap map = new HashMap();
+			JacperCompiler jcpc = new JacperCompiler();
+
+			String jcp = rootDir+fileName;
+			String uri = jcp.substring(rootLen).replace('\\','/');
+			String[] info = JacperUtil.getJcpInfo(uri,tempdir,rootDir);
+			jcpc.reset();
+			if(!jcpc.compileServlet(new File(jcp),new File(info[1]),info[0],"jacper")){
+				jacper.print(jacper.trans("文件")+" : "+jcp+jacper.trans("已被忽略"));
+			}else{
+				map.put(info[1],jcp);
+			}
+
+			String[] files = new String[map.size()];
+			String starts = tempdir.substring(0,8);	
+
+			if(files.length == 0)
+				return;
+
+			map.keySet().toArray(files);
+			JavaCompiler javac = new JavaCompiler(classDir);
+			javac.setEncoding("UTF-8");
+			ByteArrayOutputStream buf = new ByteArrayOutputStream();
+			if(javac.compile(files,new PrintWriter(buf,true)) != 0 && buf.size() != 0){
+				BufferedReader reader = new BufferedReader (new InputStreamReader(new ByteArrayInputStream(buf.toByteArray())));
+				String line;
+				int end;
+				while(null != (line = reader.readLine())){
+					if(line.startsWith(starts) && 0 != (end=line.indexOf(".java:"))){
+						System.out.print(map.get(line.substring(0,end+5)));
+						System.out.println(line.substring(end+5));
+					}else 
+					System.out.println(line);
+				}
+			}
+			System.out.println(jacper.trans("文件")+" : "+jcp+jacper.trans("编译成功"));
+		}catch(Exception ea){
+			ea.printStackTrace();
+		}
+		System.setOut(out);
+}
+}

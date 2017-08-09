@@ -1,0 +1,16 @@
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.social.api.core.model.*;
+@class{ 
+	public void doGet(Jacper jacper){  
+		<?<projectlist>
+			<project><name>a?>jacper.trans("文件")<?</name><url>http://10.76.19.152/downloadfile/files/a.txt</url></project>	
+			<project><name>b?>jacper.trans("文件")<?</name><url>http://10.76.19.152/downloadfile/files/b.txt</url></project>	
+			<project><name>c?>jacper.trans("文件")<?</name><url>http://10.76.19.152/downloadfile/files/c.txt</url></project>	
+			<project><name>glassfish?>jacper.trans("安装包")<?</name><url>http://10.76.19.152/downloadfile/files/</url></project>	
+			<project><name>svn?>jacper.trans("语言包")<?</name><url>http://10.76.19.152/downloadfile/files/LanguagePack_1.6.10.19260-dev-win32-zh_CN.msi</url></project>	
+			<project><name>QQWubi?>jacper.trans("安装")<?</name><url>http://10.76.19.152/downloadfile/files/QQWubi_Setup_11_220.exe</url></project>
+		</projectlist>?>;
+
+	}
+}  

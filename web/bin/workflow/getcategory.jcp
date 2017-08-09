@@ -1,0 +1,124 @@
+
+import java.io.IOException;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.workbench.*;
+
+import com.social.api.core.model.User;
+import com.social.api.core.model.User;
+import com.social.api.core.model.User;
+import com.social.api.core.model.UserType;
+
+@class{
+	public void doGet(Jacper jacper){
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		String role_id= hs.getString("role_id");
+
+		Connection conWork = jacper.getConnection("work");
+		Connection conPlat = jacper.getConnection("plat");
+        jacper.getResponse().setContentType("application/x-json");
+
+		String roleString1="";
+		String roleString="";
+		String sql="";
+		
+		String[] param=null;
+		
+		String extendCondition=" and h.workflowphy_name not like '_DO_NOT_DISPLAY_%'";
+		try{
+			JSONObject wfJSON=new JSONObject("{}");
+			wfJSON.put("totalCount",5);
+			wfJSON.put("id","optionCode");
+			JSONArray JSONArray1 = new JSONArray();
+			JSONObject dataJSON = new JSONObject("{}");
+
+			dataJSON.put("optionCode","apply");
+			dataJSON.put("name",jacper.trans("工作申请"));
+			dataJSON.put("wfNum","-1");
+			dataJSON.put("icon","/themes/icon/xp48b/pageIn.gif");
+			JSONArray1.put(dataJSON);
+
+			
+			dataJSON = new JSONObject("{}");
+			dataJSON.put("optionCode","send");
+			dataJSON.put("name",jacper.trans("已申请工作"));
+			param=new String[]{user_id+""};
+			sql="SELECT  count(a.id) from $[work].wfentry a,$[work].currentstep c,$[plat].workflow_base h,$[plat].workflow_instance i where i.workflowid=h.object_id and a.name=i.instance_id and a.id=c.entry_id  and a.state=1 and  a.caller=?"+extendCondition;
+			String[] totalNum=conWork.getRow(sql,param);
+			dataJSON.put("wfNum",totalNum[0]);
+			dataJSON.put("icon","/themes/icon/xp48b/fileTransfer.gif");
+			JSONArray1.put(dataJSON);
+			
+			dataJSON = new JSONObject("{}");
+			dataJSON.put("optionCode","wait");
+			dataJSON.put("name",jacper.trans("待审批工作"));
+			param=new String[]{"a:"+role_id,user_id+""};
+			String[][] wf=conWork.get("SELECT distinct(strategy_id) from  $[plat].SYS_STRATEGY_ROLE  where role_id=?",new String[]{role_id});
+			if(wf!=null&&wf.length!=0){
+				roleString="";
+				for(int i=0;i< wf.length;i++){
+					roleString+=",'r:"+wf[i][0]+"'";
+					roleString1+=",'d:"+wf[i][0]+"'";
+				}
+				roleString=roleString.substring(1,roleString.length());
+				roleString1=roleString1.substring(1,roleString1.length());
+
+				sql="SELECT  i.instance_id,a.caller,c.owner from $[work].wfentry a,$[work].currentstep c,$[plat].workflow_base h,$[plat].workflow_instance i where i.workflowid=h.object_id and a.name=i.instance_id and a.id=c.entry_id  and a.state=1  and (c.owner=? or c.owner=? or c.owner in ("+roleString+") or (c.owner in ("+roleString1+")))"+extendCondition;
+			}else{
+				sql="SELECT  i.instance_id,a.caller,c.owner from $[work].wfentry a,$[work].currentstep  c,$[plat].workflow_base h,$[plat].workflow_instance i  where  i.workflowid=h.object_id and a.name=i.instance_id  and a.id=c.entry_id and a.state=1  and (c.owner=? or c.owner=?)"+extendCondition;
+			}
+
+			String[][] waitList=conWork.get(sql,param);
+			boolean deptLimit=false;
+			int limit=0;
+			for (int i = 0; i < waitList.length; i++){
+				if(waitList[i][2].indexOf('d')!=-1){
+					deptLimit=true;
+					User u = User.getUser(waitList[i][1]);
+					String parrentDept=u.getAllDeptId();
+					String deptId=hs.getString("dept_id");
+					if(parrentDept.indexOf(deptId)==-1){
+						limit++;
+					}
+				}
+			}
+			int total=waitList.length-limit;
+			dataJSON.put("wfNum",total);
+			dataJSON.put("icon","/themes/icon/xp48b/fileAdd.gif");
+			JSONArray1.put(dataJSON);
+
+			dataJSON = new JSONObject("{}");
+			dataJSON.put("optionCode","authed");
+			dataJSON.put("name",jacper.trans("已审批工作"));
+			param=new String[]{user_id+""};
+			sql="SELECT  count(i.instance_id) from $[work].wfentry a join $[work].historystep  b on a.id=b.entry_id join  $[plat].workflow_instance i on a.name=i.instance_id join $[plat].workflow_base h  on i.workflowid=h.object_id join  $[plat].object_base d on  h.object_id=d.object_id left join $[work].currentstep c on a.id=c.entry_id where   a.state>0 and  b.caller=? and b.step_id<>1"+extendCondition;
+			totalNum=conWork.getRow(sql,param);
+			dataJSON.put("wfNum",totalNum[0]);
+			dataJSON.put("icon","/themes/icon/xp48b/fileDown.gif");
+			JSONArray1.put(dataJSON);
+
+			dataJSON = new JSONObject("{}");
+			dataJSON.put("optionCode","finish");
+			dataJSON.put("name",jacper.trans("已结案工作"));
+			param=new String[]{user_id+""};
+			sql="SELECT count(k.instance_id) from $[work].wfentry  a,$[plat].workflow_base h,$[plat].workflow_instance k  where   k.workflowid=h.object_id and a.name=k.instance_id   and a.caller=? and a.state=4"+extendCondition;
+			totalNum=conWork.getRow(sql,param);
+			dataJSON.put("wfNum",totalNum[0]);
+			dataJSON.put("icon","/themes/icon/xp48b/packages.gif");
+			JSONArray1.put(dataJSON);
+
+			wfJSON.put("dataItem", JSONArray1);
+			<?(?>wfJSON.toString()<?)?>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conWork.close();
+			conPlat.close();
+		}
+	}
+}

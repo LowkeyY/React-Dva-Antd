@@ -1,0 +1,116 @@
+<root><class name="lib.upload.Base"><Base><![CDATA[.x-form-file-wrap {
+	position: relative;
+	height: 22px;
+}
+
+.x-form-file-wrap .x-form-file {
+	position: absolute;
+	right: 0;
+	-moz-opacity: 0;
+	filter: alpha(opacity :   0);
+	opacity: 0;
+	z-index: 2;
+	height: 22px;
+}
+
+.x-form-file-wrap .x-form-file-btn {
+	position: absolute;
+	right: 0;
+	z-index: 1;
+}
+
+.x-form-file-wrap .x-form-disk-btn {
+	position: absolute;
+	right: 65;
+	z-index: 4;
+}
+
+.x-form-file-wrap .x-form-file-text {
+	position: absolute;
+	left: 0;
+	z-index: 3;
+	color: #777;
+}
+
+
+
+.widget-uf-input-file {
+	position: absolute;
+	display: block;
+	height: 21px;
+	border: none;
+	cursor: pointer;
+}
+
+.widget-uf-mask {
+	z-index: 20000;
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
+.widget-uf-mask .inner {
+	position: absolute;
+	top: 0;
+	left: 0;
+	-moz-opacity: 0.8;
+	opacity: .80;
+	filter: alpha(opacity = 80);
+	background-color: #000;
+	width: 100%;
+	height: 100%;
+}
+
+.widget-uf-mask .tool .b {
+	margin-left: 5px;
+}
+
+.widget-uf-zoomlayer {
+	position: absolute;
+}
+
+.widget-uf-zoomlayer .tz-img-body {
+	cursor: move;
+	margin: 5px;
+}
+
+.widget-uf-canvas {
+	background-color: white;
+	border: solid 1px gray;
+	vertical-align: middle;
+}
+
+.widget-uf-canvas TABLE {
+	border-collapse:collapse;
+}
+
+.widget-uf-canvas TD {
+	line-height: 0px
+}
+
+.widget-uf-canvas .tz-img-Pkt {
+	text-align: center;
+	vertical-align: middle;
+	display: table-cell;
+}
+
+.widget-uf-canvas .tz-img-Pkp {
+	display: none;
+}
+
+.widget-uf-canvas .tz-img-tip {
+	left: 45%;
+	position: absolute;
+	top: 35%;
+	display: none;
+}
+
+.widget-uf-canvas .tz-img-close {
+	position: absolute;
+	display: none; 
+}
+
+.widget-uf-canvas .slide-row {
+	display: none;
+}
+]]></Base></class></root>

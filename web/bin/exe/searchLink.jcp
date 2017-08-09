@@ -1,0 +1,63 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.util.RandomStr;
+import com.kinglib.database.*;
+import com.kinglib.bi.*;
+import com.kinglibx.query.*;
+import com.kinglib.workbench.search.*;
+import java.util.*;
+
+@class{
+public void doPost(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+	String[] key=jacper.getArray("key");
+    String objectId=jacper.getStr("objectId");
+    String node=jacper.getStr("node");
+
+	Program program=ProgramFactory.getInstance().getProgram(conPlat,objectId);
+	String searchType=program.getSearchType();
+
+	try{	
+		JSONArray jarr=new JSONArray();
+		SearchIndexFactory SIF=SearchIndexFactory.getInstance();
+		if(node.indexOf("xnode")!=-1){
+			if(key!=null&&key.length>0){
+				for(int i=0;i<key.length;i++){
+					JSONObject keyJSON = new JSONObject();
+					HashMap linkMap=SIF.getLinkMap(searchType);
+					if(linkMap!=null){
+					ArrayList linkList=(ArrayList)linkMap.get(key[i]);
+						if(linkList!=null){
+							String[] links=new String[linkList.size()];
+							linkList.toArray(links);
+							keyJSON.put("id",key[i]);
+							keyJSON.put("text",key[i]);
+							keyJSON.put("leaf",false);
+							keyJSON.put("iconCls","forum-parent");
+							keyJSON.put("cls","forum-ct");
+							JSONArray jarr1=new JSONArray();
+							for(int k=0;k<links.length;k++){
+								JSONObject childJSON = new JSONObject();
+								childJSON.put("id",links[k]);
+								childJSON.put("text",links[k]);
+								childJSON.put("leaf",true);
+								childJSON.put("cls","forum");
+								childJSON.put("icon","/themes/icon/all/bullet_red.gif");
+								jarr1.put(childJSON);
+							}
+							keyJSON.put("children",jarr1);
+							jarr.put(keyJSON);
+						}
+					}
+				}
+			}
+		}
+		jacper.print(jarr);
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}}

@@ -1,0 +1,98 @@
+
+import javax.servlet.http.*;
+import com.susing.*;
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+import org.apache.poi.hssf.usermodel.HSSFFont;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFCell;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.util.Region;
+import org.apache.poi.hssf.usermodel.*;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+import com.kinglib.core.jacper.*;
+import java.io.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.program.*;
+
+import com.kinglib.util.json.*;
+
+@class{
+	public void doPost(Jacper jacper){	//下载表格式
+		
+		Param  param = new Param(jacper);
+		String objectId=param.getString("objectId");
+		String tabId = ProgramFactory.getInstance().getProgram(param.getConnection("plat"),objectId).getTabId();
+
+		MetaTable mt = MetaFactory.getObject(tabId);
+		if(mt==null){
+			<?
+			<script>
+				alert("?>jacper.trans("不存在")<?object_id=?>objectId+jacper.trans("对应的表")<?!");
+			</script>
+			?>;
+			return;
+		}else{
+			EFile ef=new EFile();
+			try{
+				OutputStream os=ef.getOutputStream();
+				HSSFWorkbook workbook = new HSSFWorkbook();
+				HSSFSheet sheet = workbook.createSheet();
+				HSSFRow firstRow = sheet.createRow((short)0);
+				HSSFRow secondRow = sheet.createRow((short)1);
+				
+				int i=0;
+				for(MetaColumn mc:mt.getColumns()){
+
+					HSSFCell firstCell = firstRow.createCell((short) i);
+					HSSFCell secondCell = secondRow.createCell((short) i);
+					firstCell.setCellType(HSSFCell.CELL_TYPE_STRING);
+					secondCell.setCellType(HSSFCell.CELL_TYPE_STRING);
+					
+					firstCell.setCellValue(mc.getLname());
+				
+					if(mc.getDataType().equals("int")){
+						secondCell.setCellValue(mc.getLength()+"");
+					}else if(mc.getDataType().equals("float")){
+						secondCell.setCellValue(mc.getLength()+"."+mc.getDecimalDigits());
+					}else if(mc.getDataType().equals("smalldatetime")||mc.getDataType().equals("datetime")){
+						if(mc.getSpecialSet().equals("3")){
+								secondCell.setCellValue("yyyy");
+						}else if(mc.getSpecialSet().equals("5")){
+								secondCell.setCellValue("yyyy/mm");
+						}else if(mc.getSpecialSet().equals("8")){
+								secondCell.setCellValue("yyyy/mm/dd hh24:mi");
+						}else if(mc.getSpecialSet().equals("9")){
+								secondCell.setCellValue("yyyy/mm/dd hh24:mi.ss");
+						}else{
+								secondCell.setCellValue("yyyy/mm/dd");
+						}
+					}else{
+						secondCell.setCellValue(""+mc.getLength()+"");
+					}
+					i++;      
+				}
+				workbook.write(os);
+				os.close();
+				
+				System.out.println("文件生成...");
+				HttpServletResponse res = jacper.getResponse();
+				res.setContentType("application/vnd.ms-excel");
+				res.setHeader("Content-Disposition", "attachment;filename="+new String("数据录入".getBytes(),"iso-8859-1")+".xls");
+				res.setHeader("Content-Length", ef.length()+"");
+				res.setHeader("Accept-ranges", "bytes");
+				Files.copyRange(ef.getInputStream(), res.getOutputStream(),1024);
+			}catch(Exception e){
+				<?
+				<script>
+				alert("?>jacper.trans("下载数据格式失败")<?!\n?>jacper.trans("原因")<?:?>e.getMessage()<?");
+				</script>
+				?>;
+			}
+		}
+	} 
+
+}

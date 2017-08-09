@@ -1,0 +1,100 @@
+
+import java.io.IOException;
+
+
+import com.kinglib.*;
+import org.w3c.dom.*;
+import com.susing.core.*;
+import java.io.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	String _id = jacper.getString("_id");
+	String level = jacper.getString("level");
+	String _name = jacper.getString("name");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String app_type=jacper.getStr("app_type");
+
+	String endicon="";
+	String starticon="";
+	if(level==null) level="0";
+	Connection conPlat = jacper.getConnection("plat");
+	
+	String homeDir="";
+	Element jcpConfig = (Element)KingleSystem.getProperty("jacper-config");
+	if(jcpConfig != null){
+		NodeList list = jcpConfig.getElementsByTagName("path");
+		String[][] pathInfo = new String[list.getLength()][2];
+		for(int i=0;i<pathInfo.length;i++){
+			Element el = (Element)list.item(i);
+			pathInfo[i][0] =el.getAttribute("url-starts");
+			pathInfo[i][1] = el.getAttribute("source-path");
+			if(pathInfo[i][0].equals("/"))  homeDir=pathInfo[i][1];
+		}
+	}
+
+	<?<root _id="?>_id<?">?>;
+	<?<forder _parent="?>_id<?" event="event1">?>;	
+	if (level.equals("0")) {		
+		    String usrPath="/"+"usr";
+			String[][] rs = conPlat.get("select a.system_id,a.system_name,a.system_pname from $[plat].system_base a ",new String[]{},0);		
+			if(rs!=null){			
+				for(int i=0;i<rs.length;i++){		
+					File file = new File(homeDir+usrPath+"/"+rs[i][2]);
+					String[] fileList=file.list(); 
+					int subChild=0;
+					String hasChild = "0";
+					if(fileList!=null){
+						for(int j=0;j<fileList.length;j++){
+							String fileFullName=homeDir+usrPath+"/"+rs[i][2]+"/"+fileList[j];
+							File subFile = new File(fileFullName); 
+							if(subFile.isDirectory()&&!subFile.getName().equals(".svn")){
+									subChild++;
+							}
+						}
+					}
+					if(subChild>0) hasChild="1";
+					<?<e _id="?>rs[i][0]<?" _parent="top" title="?>rs[i][1]<?" _hasChild ="?>hasChild<?" icon0="/themes/icon/xp/axx.gif" icon1="/themes/icon/xp/axx.gif"   program="System"  params="parent_id=?>_id<?"  currentDirectory="?>homeDir+usrPath+"/"+rs[i][2]<?"  filePath="?>rs[i][1]<?"  url="/dev/script/tree.jcp?_id=?>rs[i][0]<?&amp;level=1&amp;parent_id=?>_id<?&amp;dir=?>usrPath+"/"+rs[i][2]<?"/>?>;
+				}
+			}
+	}else  if (level.equals("1")){
+		String dir=jacper.getStr("dir");
+		String parent_id = jacper.getString("parent_id");
+		try { 
+			File file = new File(homeDir+"/"+dir);
+		
+			String[] fileList=file.list(); 
+			for(int i=0;i<fileList.length;i++){
+				String fileFullName=homeDir+"/"+dir+"/"+fileList[i];
+				File subFile = new File(fileFullName); 
+				if(subFile.isDirectory()&&!subFile.getName().equals(".svn")){
+						String hasChild = "0";
+						String subDirName=subFile.getName();
+						String[] subFileList=subFile.list(); 
+						if(subFileList.length>0){
+							for(int t=0;t<subFileList.length;t++){
+								File subFile1 = new File(homeDir+dir+"/"+fileList[i]+"/"+subFileList[t]); 
+								if(subFile1.isDirectory()&&!subFile1.getName().equals(".svn")){
+									hasChild = "1";
+									break;
+								}
+							}
+						}
+					starticon="/themes/icon/xp/folder0.gif";
+					endicon="/themes/icon/xp/folder.gif";
+					<?<e _id="?>subDirName<?" _parent="?>_id<?" title="?>subDirName<?"  icon0="?>starticon<?" icon1="?>endicon<?"    program="application"  type="view"  params="parent_id=?>_id<?"    currentDirectory="?>homeDir+"/"+dir+"/"+fileList[i]<?" filePath="?>fileList[i]<?"  url="/dev/script/tree.jcp?_id=?>subDirName<?&amp;level=1&amp;parent_id=?>parent_id<?&amp;dir=?>dir+"/"+fileList[i]<?" _hasChild="?>hasChild<?"/>?>;
+				}
+			}
+		}catch(Exception ex){ 
+			ex.printStackTrace();
+		}
+	}
+	conPlat.close();
+	<?</forder></root>?>;
+}}
+

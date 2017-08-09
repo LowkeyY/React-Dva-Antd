@@ -1,0 +1,127 @@
+
+
+import java.io.*;
+import javax.servlet.*;
+import javax.servlet.http.*;
+import java.util.*;
+import java.util.zip.*;
+
+import com.kinglib.*;
+import com.susing.*;
+import com.susing.core.*;
+import com.susing.util.*;
+import  com.susing.js.*;
+
+@class{
+
+	private static final String separator = File.separator;	
+	private String path;
+	private String jsDebug="0";
+	private String cache;
+
+	public void init(){
+		path = (String)KingleSystem.getProperty("js_lib");
+		jsDebug = (String)KingleSystem.getProperty("js_debug");
+	}
+
+	public void service(ServletRequest request,ServletResponse response)throws IOException{
+			
+			KingleServletRequest req = (KingleServletRequest)request;
+			KingleServletResponse res = (KingleServletResponse)response;
+			String method = req.getMethod();
+
+			String param = req.getQueryString(); 
+			File srcFile =null;
+			File jsFile = null;
+
+			String[] jsarr = param.split(",");
+
+			Hashtable<String,StringBuffer> libHash = new Hashtable<String,StringBuffer>();
+			HashSet<String> libSet = new HashSet<String>();
+
+			long lastModified=0;
+
+			try{	
+					for(int i=0;i<jsarr.length;i++){	
+						JavaScriptFactory JSF=JavaScriptFactory.getInstance();
+						com.susing.js.JavaScript js=JSF.getJavaScript(jsarr[i],libSet,libHash);
+						libSet=js.getLibSet();
+						libHash=js.getLibs();
+						jsFile = js.getJavaScriptFile();
+						boolean modified=false;
+						if(jsDebug.equals("1")){
+							String[] arr = jsarr[i].split("\\.");
+							srcFile = new File(path+separator+Strings.arrayJoin(arr,separator)+".jss");
+							modified = needUpdate(srcFile,jsFile);
+							if(modified){
+								js.setCharSet("UTF-8");
+								js.setPreserveAllSemiColons(true);
+								js.setDisableOptimizations(true);
+								js.setLineBreakPos(-1);
+								js.setMunge(false);
+								js.compile(srcFile);
+								JSF.remove(jsarr[i]);
+								libSet.remove(jsarr[i]);
+								libHash.remove(jsarr[i]);
+								js=JSF.getJavaScript(jsarr[i],libSet,libHash);
+								libSet=js.getLibSet();
+								libHash=js.getLibs();
+								jsFile = js.getJavaScriptFile();
+							}
+						}
+						if(!jsDebug.equals("1")||(!modified &&jsFile.exists())){
+								long headerValue =0;
+								try{
+									headerValue = req.getDateHeader("If-Modified-Since");
+								}catch(Exception e){}
+									long lastModifiedTime = jsFile.lastModified();
+									if (headerValue != -1 && (lastModifiedTime <= headerValue + 1000)){
+											res.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
+											return;
+								}
+						}
+						if(lastModified<js.LastModified())  lastModified=js.LastModified();
+					}
+
+					res.setHeader("Last-Modified",FastHttpDateFormat.getDate(lastModified));
+					res.setContentType("text/xml;charset=UTF-8");
+					Iterator it=libSet.iterator(); 
+					StringBuffer content=new StringBuffer();
+					content.append("<root>");
+					while(it.hasNext()){
+						String libName=(String)it.next();
+						content.append("<class name=\""+libName+"\"><![CDATA[");
+						StringBuffer contentBuffer=(StringBuffer)libHash.get(libName);
+						content.append(contentBuffer);
+						content.append("]]>");
+						content.append("</class>");
+					}
+					content.append("</root>");	
+					InputStreamReader in = null;
+					try{
+						res.getWriter().write(content.toString());
+						//in = new InputStreamReader(new ByteArrayInputStream(content.toString().getBytes()));
+						//Files.stringCopyRange(in,res.getWriter(),4096);
+					}catch(IOException ie){
+						throw new KingleException("文件流操作错误",ie,"文件流操作错误");
+					}finally{
+						try{
+							if(in != null)
+								in.close();
+						}catch(Exception ex){
+							throw new KingleException("文件流无法关闭",ex,"文件流无法关闭");
+						}
+					}
+			}catch(Throwable e){
+				PrintWriter pw = res.getWriter();
+				res.setXML();
+				KingleException.printErrorXML("整理文件出错","整理类时出现错误",e,pw);
+				return;
+			}
+	}
+	private boolean needUpdate(File suks,File jsFile){
+			if(Files.isUpdated(suks,jsFile))
+				return true;
+		return false;
+	}
+}

@@ -1,0 +1,77 @@
+
+
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.util.*;
+import java.util.*;
+import java.sql.SQLException;
+import com.kinglibx.query.Database;
+import com.susing.core.KingleSystem;
+
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	String table = jacper.getString("table");
+	String server = jacper.getString("server");
+
+	if(!jacper.isXML())
+		jacper.setXML();
+	if(server == null){
+		showRoot(jacper);
+	}else{
+		showDB(jacper,server); 
+	}
+}
+
+private void showRoot(Jacper jacper){
+<?<root _id="0"  _parent="0">
+	<forder _hasChild="1" _parent="0">?>;
+	String[] keyArr =KingleSystem.getConnectionNames();
+	String[] initInfo;
+	for(int i=0;i<keyArr.length;i++) {	
+		if(!keyArr[i].equals("plat") && !keyArr[i].equals("cert")&& !keyArr[i].equals("work")){
+			String connectAlias=keyArr[i];
+
+			<?<e _id="?>keyArr[i]<?" title="?>connectAlias<?" url="/dev/database/tree.jcp?server=?>keyArr[i]<?"  icon0="/themes/icon/database/database.gif" icon1="/themes/icon/database/database.gif"/>?>;
+		}
+	}
+<?</forder></root>?>;
+}
+
+private void showDB(Jacper jacper,String server){
+
+	Connection conTemp = jacper.getConnection(server);
+	String catalog="";
+	String schema=conTemp.parseObjectName(server).toUpperCase();
+	try{
+		catalog=conTemp.getCatalog();
+	}catch(SQLException se){se.printStackTrace();}
+
+	String[][] data = Database.getTables(conTemp,catalog,schema);
+	conTemp.close();
+	MetaTable[] mts=MetaFactory.getMetaTables(server);
+	HashMap<String,MetaTable> nameMap=new HashMap<String,MetaTable>(mts.length*2);
+	for(MetaTable mt:mts)
+		nameMap.put(mt.getPname().toLowerCase(),mt);
+
+	<?
+	<root _id="?>server<?">
+	<forder  icon0="/themes/icon/database/table.gif" icon1="/themes/icon/database/table.gif" event="sys_tab" _hasChild="0">?>;
+	String table,name,resourceId;
+	boolean described=false;
+	MetaTable tab=null;
+	for(int i=0;i<data.length;i++){
+		if(data[i][3].equals("TABLE") && data[i][2].indexOf("$")==-1){
+			tab=nameMap.get(data[i][2].toLowerCase());
+			described=(tab!=null);
+			name=(described)?tab.getLname()+"("+data[i][2]+")":data[i][2];
+			String tableName=data[i][2];
+			resourceId=(described)?tab.getObjectId():data[i][2]+"_"+server;
+			<?<e _id="?>resourceId<?" _parent="?>server<?" title="?>name<?" server="?>server<?"  tableName="?>tableName<?" schema="?>schema<?" described="?>described<?"/>?>;
+		}
+	}
+	<?</forder></root>?>;
+}
+}

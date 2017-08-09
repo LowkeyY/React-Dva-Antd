@@ -1,0 +1,18 @@
+
+
+import com.kinglib.*;
+
+@class{
+	public void doGet(Jacper jacper){
+	 	Connection con=jacper.getConnection("work");
+	 	con.exec("delete from $[work].CURRENTSTEP_PREV");
+	 	con.exec("delete from $[work].HISTORYSTEP_PREV");
+	 	con.exec("delete from $[work].PROPERTYENTRY");
+	 	con.exec("delete from $[work].WFLIST_STORE");
+	 	con.exec("delete from $[work].HISTORYSTEP");
+	 	con.exec("delete from $[work].CURRENTSTEP");
+	 	con.exec("delete from $[work].WFENTRY");
+	 	con.close();
+	 	jacper.print("finished!");
+	}
+}

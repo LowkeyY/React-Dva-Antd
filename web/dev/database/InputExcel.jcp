@@ -1,0 +1,200 @@
+import com.kinglib.*;
+import com.kinglib.HttpSession;
+import com.kinglib.database.util.BaseException;
+import org.apache.poi.hssf.usermodel.HSSFFont;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFCell;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.util.Region;
+import org.apache.poi.hssf.usermodel.*;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.lang.StringBuffer;
+import javax.servlet.http.*;
+import javax.servlet.ServletInputStream;
+import javax.servlet.http.HttpServletRequest;
+import java.io.InputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.*;
+
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+import com.susing.upload.*;
+import com.susing.EFile;
+import com.kinglib.util.parser.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.database.MetaTableDesigner;
+import com.kinglib.workbench.application.Application;
+import com.kinglib.workbench.application.ApplicationFactory;
+
+
+//public class InputExcel{
+@class{
+		public void doPost(Jacper jacper){
+		
+			Connection conPlat = jacper.getConnection("plat");
+			Param param = new Param(jacper);
+			param.put("jacper",jacper);
+			
+			String parent_id = jacper.getString("parent_id");
+			
+			
+			ObjectNode node = ObjectManager.getObject(parent_id).upTo(ObjectType.APPLICATION);
+			
+			
+			EFile uf=null;
+			String cel = null;
+			String message = "";
+			boolean success = true;
+			int rowIndex = 2;          //起始行数  
+        	int rowCount = 0;              //总行数  
+        	
+		try{	
+				ApplicationFactory appFactory = ApplicationFactory.getInstance();
+				Application app = appFactory.getApplication(conPlat,String.valueOf(node.getId()));
+				String databaseLink = app.getDatabaseLink();
+				String dbLink = databaseLink == null ? "plat" : databaseLink;
+				
+				HttpSession hs = jacper.getSession();
+				FileUpload upload = new FileUpload(param.getInt("userId"));
+				upload.parseRequest(param.getRequest());
+				upload.appendParamToMap(param);
+				uf = param.getEFile("xslFile");
+			
+				FileInputStream fs=uf.getInputStream();
+				POIFSFileSystem ps = new POIFSFileSystem(fs);
+  
+				HSSFWorkbook wb = new HSSFWorkbook(ps);  
+				HSSFSheet sheet = wb.getSheetAt(0);
+				rowCount = sheet.getLastRowNum();
+
+				HSSFRow row = sheet.getRow((short)1); 
+				HSSFCell cells = row.getCell(4);
+				cel=cells.getStringCellValue();
+				
+				String[] sr = cel.split("/"); 
+			
+				StringBuffer sb = new StringBuffer();
+				sb.append("<tables>");
+				sb.append("<table name=\"").append(sr[1].trim()).append("\" ").append(" title=\"").append(sr[0].trim()).append("\">");
+				
+				for(int i=rowIndex;i<=rowCount;i++){
+					
+					HSSFRow rows = sheet.getRow(i); 
+					if(rows==null){
+						break;
+					}
+					
+					HSSFCell  cell0 =  rows.getCell(0);  
+                	HSSFCell  cell1 =  rows.getCell(1);  
+                	HSSFCell  cell2 =  rows.getCell(2);  
+	                HSSFCell  cell3 =  rows.getCell(3);  
+	                HSSFCell  cell4 =  rows.getCell(4);  
+	                HSSFCell  cell5 =  rows.getCell(5);  
+	                HSSFCell  cell6 =  rows.getCell(6);  
+	                HSSFCell  cell7 =  rows.getCell(7);  
+	                HSSFCell  cell8 =  rows.getCell(8);  
+	                HSSFCell  cell9 =  rows.getCell(9); 
+	                
+	                if(cell0 == null || cell1 == null || cell2 == null || 
+	                	cell3 == null || cell4 == null || cell6 == null || cell7 == null)
+	                	continue;
+	                
+	                String nameCell = "";
+	                if(cell0.getCellType()==HSSFCell.CELL_TYPE_STRING){
+	                	nameCell = cell0.getRichStringCellValue().getString();
+	                }
+	                String codeCell = "";
+	                if(cell1.getCellType()==HSSFCell.CELL_TYPE_STRING){
+	                	codeCell=cell1.getRichStringCellValue().getString();
+	                }
+	                String typeCell = "";
+	                if(cell2.getCellType()==HSSFCell.CELL_TYPE_STRING){
+	                	typeCell=cell2.getRichStringCellValue().getString();
+	                }
+	                String lengthCell ="";
+	                if(cell3.getCellType()==HSSFCell.CELL_TYPE_NUMERIC){
+	                	lengthCell=String.valueOf(cell3.getNumericCellValue());    
+
+					}
+	                String decimalsCell ="";
+	                if(cell4.getCellType()==HSSFCell.CELL_TYPE_NUMERIC){
+	                	decimalsCell=String.valueOf(cell4.getNumericCellValue()); 
+	                }
+	                String unitCell = "";
+	                if(cell5 != null && cell5.getCellType()==HSSFCell.CELL_TYPE_NUMERIC){
+	                	unitCell =String.valueOf(cell5.getNumericCellValue()); 
+	                }
+	                String keyCell = "";
+	                if(cell6.getCellType()==HSSFCell.CELL_TYPE_BOOLEAN){
+	                	keyCell = String.valueOf(cell6.getBooleanCellValue()); 
+					}
+	                String notNullCell = "";
+	                if(cell7.getCellType()==HSSFCell.CELL_TYPE_BOOLEAN){
+	                	notNullCell = String.valueOf(cell7.getBooleanCellValue()); 
+	                }
+	                String defaultValueCell ="";
+	                if(cell8 != null && cell8.getCellType()==HSSFCell.CELL_TYPE_STRING){
+	                	defaultValueCell=cell8.getRichStringCellValue().getString();
+	                }
+	                
+	                String memoCell = "";
+	                if(cell9 != null && cell9.getCellType()==HSSFCell.CELL_TYPE_STRING){
+	                	memoCell= cell9.getRichStringCellValue().getString();
+	                }
+	                
+	                sb.append("<row>");
+	                
+	               
+	               	sb.append("<name>").append(codeCell).append("</name>");
+	               	sb.append("<title>").append(nameCell).append("</title>");
+	                sb.append("<type>").append(typeCell).append("</type>");
+					
+					if(lengthCell.length()>0 && lengthCell.indexOf(".")!=-1){
+	                	 sb.append("<length>").append(lengthCell.substring(0,(lengthCell.lastIndexOf(".")))).append("</length>");
+	                }else{
+						 sb.append("<length>").append(lengthCell).append("</length>");
+	                }
+	               
+	        	    if(decimalsCell.length()>0 && !decimalsCell.equals("")){
+	                	sb.append("<digitalDecimals>").append(decimalsCell.substring(0,(decimalsCell.lastIndexOf(".")))).append("</digitalDecimals>");
+	                }else{
+	                	sb.append("<digitalDecimals>").append(decimalsCell).append("</digitalDecimals>");
+	                }
+	                if(unitCell.length()>0 && !unitCell.equals("")){
+	                	sb.append("<unit>").append(unitCell.substring(0,(unitCell.lastIndexOf(".")))).append("</unit>");
+	                }else{
+	                	sb.append("<unit>").append(unitCell).append("</unit>");
+	                }
+	                sb.append("<primaryKey>").append(keyCell).append("</primaryKey>");
+	                sb.append("<notNull>").append(notNullCell).append("</notNull>");
+	                sb.append("<defaultValue>").append(defaultValueCell).append("</defaultValue>");
+	                sb.append("<memo>").append(memoCell).append("</memo>");
+	               	sb.append("</row>");
+				}
+				sb.append("</table></tables>");
+				int curId =0;
+				String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+				if(idType==null||idType.equals("0")){
+					curId =MetaTableDesigner.CreateWithXML(conPlat, sb.toString(), Integer.parseInt(parent_id), dbLink, hs.uid);
+				}else{
+					curId =MetaTableDesigner.CreateWithUUIDXML(conPlat, sb.toString(), parent_id, dbLink, hs.uid);
+				}
+				<?{success:true,message:?>jacper.trans("'数据上传成功'")<?}?>;
+			}catch(Exception e){
+				e.printStackTrace();
+				jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+				
+			}finally{
+				conPlat.close();
+			} 
+			
+		}
+}

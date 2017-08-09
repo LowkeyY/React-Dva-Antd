@@ -1,0 +1,30 @@
+import com.kinglib.*;
+import com.kinglib.ums.SendMail;
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.HWUnits.HWSpaceConfig;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import gpra.filesystem.HWUnits;
+@class{
+	public void doPost(Jacper jacper) {
+		try {
+			Connection conDocmgr = jacper.getConnection(HWUnits.HW_DBLINK);
+			String fileid = jacper.getString("fileid", "");
+			String sql = "update dir_file_base set att_128='0' where file_id='"+fileid+"'";
+			
+			String sql2= "update DIR_DATUM_FILE_REVIEWED set FILE_AUDIT='0' where FILE_ID='"+fileid+"'";
+			
+			conDocmgr.exec(sql);
+			conDocmgr.exec(sql2);
+			
+			jacper.print("{success:true}");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+}

@@ -1,0 +1,36 @@
+
+import java.io.IOException;
+
+
+import com.kinglib.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = hs.uid+"";
+
+	
+	String type=jacper.getStr("type");
+	String haschild = "";
+
+	<?<root _id="top">
+		<forder _parent="top" event="event1">
+						?>; 
+		String[][] rs = conPlat.get("select system_id,system_name,sys_version from $[plat].system_base",new String[]{},0);
+		if ( rs != null ) {
+				for ( int i=0; i<rs.length; i++ ) {										
+						haschild = "0";
+					<?
+					<e _id="?>rs[i][0]<?" _parent="top"  framenum="1" title="?>rs[i][1]<?" version="?>rs[i][2]<?"  url="sysTree.jcp?_id=?>rs[i][0]<?" _hasChild="?>haschild<?" icon0="/themes/icon/xp/axx.gif" icon1="/themes/icon/xp/axx.gif"/>
+					?>;
+				}
+		}
+	<?</forder></root>?>;
+}
+}
+

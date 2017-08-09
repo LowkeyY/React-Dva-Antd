@@ -1,0 +1,27 @@
+import com.kinglib.dictionary.*;
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.bi.*;
+@class{
+	public void doPost(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		jacper.getResponse().setContentType("application/x-json");
+		try{
+			JSONObject ret = new JSONObject("{success:true}");
+			Dict typeDict = DictFactory.getInstance().getDict(conPlat,"8");
+			String typeArray = typeDict.getJavascriptArray();
+			ret.put("dataItem",typeArray);
+			//jacper.print(ret.toString());
+			jacper.print(typeArray.toString());
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+	public void doGet(Jacper jacper){
+		doPost(jacper);
+	}
+}

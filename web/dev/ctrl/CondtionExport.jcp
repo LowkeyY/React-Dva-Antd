@@ -1,0 +1,68 @@
+
+import com.kinglib.*;    
+
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+
+@class{
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String parent_id = jacper.getStr("parent_id");
+	String type = jacper.getStr("type");
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+		JSONObject widgetJSON = new JSONObject("{}");
+		String[] rs=null;
+		if(type.equals("search")){
+			rs=conPlat.getRow("select export_item from $[plat].prg_base a where a.object_id=?",new String[]{parent_id});
+		}else{
+			rs=conPlat.getRow("select export_item from $[plat].search_category a where a.object_id=?",new String[]{parent_id});
+		}
+		if(rs!=null)
+			widgetJSON.put("exportitem",rs[0]);
+	   <?[?>widgetJSON.toString()<?]?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+		Connection conPlat=jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		int user_id = (int)hs.uid;
+
+		String parent_id = jacper.getStr("parent_id");
+		String exportitem = jacper.getStr("exportitem");
+		String type = jacper.getStr("type");
+
+		try{	
+			conPlat.setAutoCommit(false);	
+			if(type.equals("search")){
+				conPlat.exec("UPDATE $[plat].search_category SET export_item =? WHERE object_id =?",new String[]{exportitem,parent_id});
+			}else{
+				conPlat.exec("UPDATE $[plat].prg_base SET export_item =? WHERE object_id =?",new String[]{exportitem,parent_id});
+			}
+			<?{success:true}?>;
+			conPlat.commit();
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}	
+	}
+}

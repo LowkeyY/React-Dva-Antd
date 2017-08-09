@@ -1,0 +1,86 @@
+
+import com.kinglib.*;
+
+
+import com.kinglib.workbench.*;
+import com.kinglib.util.json.*;
+
+@class{
+	public void doGet(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		String id=jacper.getStr("node");
+		String app_type=jacper.getStr("app_type");
+		String level=jacper.getStr("level");
+		String icon="/themes/icon/xp/menu.gif";	
+		String[] rrss=null;		
+		String[][] rs=null;
+		boolean allowSelect=true;
+
+		if(level.equals("1")){	
+			allowSelect=false;
+			ObjectNode currentNode=ObjectManager.getObject(id);
+			if(currentNode==null){
+				jacper.print("{success:false,message:'"+jacper.trans("定制错误,原因参见控制台")+"'}");
+				return;
+			}
+			ObjectNode sysNode=currentNode.upTo(ObjectType.SYSTEM);
+			String systemId=sysNode.getId();
+			allowSelect=false;
+
+			rs = conPlat.get("select max(a.top_id),max(a.top_title),max(a.icon_url),count(b.top_id)+count(c.app_id),'','' from $[plat].sys_top a left outer join $[plat].sys_top b on a.top_id=b.parent_top left outer join $[plat].sys_application  c on a.top_id=c.parent_app where a.portal_id=? and a.parent_top=0 group by a.top_id ",new String[]{systemId+""},0);		
+			icon="";			
+			for(int i=0;i<rs.length;i++){
+				rs[i][4]="top"; //app_type
+				rs[i][5]="2"; //level
+			}
+		}else if(level.equals("2")&&app_type.equals("top")){
+			String[][] rs1= conPlat.get("select max(a.top_id),max(a.top_title),max(a.icon_url),count(b.top_id)+count(c.app_id),'','' from $[plat].sys_top a  left outer join $[plat].sys_top b on a.top_id=b.parent_top left outer join $[plat].sys_application  c on a.top_id=c.parent_app where a.parent_top=?  group by a.top_id",new String[]{id+""},0);
+			icon="";
+			for(int i=0;i<rs1.length;i++){			
+				rs1[i][4]="top"; //app_type
+				rs1[i][5]="2"; //level
+			}
+			String[][] rs2 = conPlat.get("select max(a.app_id),max(a.app_title),max(a.icon_url),count(c.app_id),'','' from $[plat].sys_application a  left  outer join $[plat].sys_application c on a.app_id=c.parent_app  where a.parent_app=?  group by a.app_id",new String[]{id+""},0);				
+			for(int i=0;i<rs2.length;i++){		
+				rs2[i][2]="/xp/menu.gif";	
+				rs2[i][4]="application"; //app_type
+				rs2[i][5]="2"; //level
+			}
+			rs=new String[rs1.length+rs2.length][6];
+			if(rs1.length>0)
+				System.arraycopy(rs1, 0, rs, 0, rs1.length);
+			if(rs2.length>0)
+				System.arraycopy(rs2, 0, rs, rs1.length, rs2.length);
+		}else if(level.equals("2")&&app_type.equals("application")){
+			rs = conPlat.get("select max(a.app_id),max(a.app_title),max(a.icon_url),count(c.app_id),'','' from $[plat].sys_application a  left outer join $[plat].sys_application c on a.app_id=c.parent_app  where a.parent_app=?  group by a.app_id",new String[]{id+""},0);				
+			for(int i=0;i<rs.length;i++){	
+				rs[i][2]="/xp/menu.gif";	
+				rs[i][4]="application"; //app_type
+				rs[i][5]="2"; //level
+			}
+		}
+		try{
+			JSONArray treeJSONArray=new JSONArray();
+			for(int i=0;i<rs.length;i++){
+				JSONObject resultJSON = new JSONObject("{}");
+				resultJSON.put("text",rs[i][1]);
+				resultJSON.put("leaf",rs[i][3].equals("0"));
+				resultJSON.put("app_type",rs[i][4]);
+				resultJSON.put("id",rs[i][0]);
+				resultJSON.put("icon","/themes/icon"+rs[i][2]);
+				resultJSON.put("level",rs[i][5]);
+				resultJSON.put("allowSelect",allowSelect);
+				treeJSONArray.put(resultJSON);
+			}			
+			jacper.print(treeJSONArray.toString());
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		conPlat.close();
+	}
+}

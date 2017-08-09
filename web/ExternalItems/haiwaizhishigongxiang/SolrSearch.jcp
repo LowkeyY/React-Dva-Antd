@@ -1,0 +1,308 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONPart;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.HWUnits.HWSpaceConfig;
+import gpra.filesystem.search.SearchRunningQueue;
+import gpra.filesystem.search.SearchUnits;
+import gpra.filesystem.space.HWSpaceFactory;
+import gpra.filesystem.space.HWSpaceNode;
+import gpra.filesystem.task.HWTaskWorkSearch;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.SolrRequest.METHOD;
+import org.apache.solr.client.solrj.impl.HttpSolrServer;
+import org.apache.solr.client.solrj.response.QueryResponse;
+import org.apache.solr.common.SolrDocument;
+import org.apache.solr.common.SolrDocumentList;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+
+//public class SolrSearch{
+@class{
+	public void doPost(Jacper jacper) {
+		
+		HttpSession hs = jacper.getSession();
+		String textQuery = jacper.getString("textQuery");
+		Connection con = jacper.getConnection(HWUnits.HW_DBLINK);
+		if(textQuery != null && textQuery.length() > 0){
+			SearchUnits.saveMyselfrecord(con, textQuery, String.valueOf(hs.uid) , jacper.getRequest().getRemoteAddr());
+			SearchRunningQueue.add(new HWTaskWorkSearch(textQuery));
+		}
+		int startRow = jacper.getInt("start", 0);
+		int rowCount = jacper.getInt("limit", 20);
+		String SOLR_URL = "http://"+jacper.getRequest().getServerName()+":"+jacper.getRequest().getServerPort()+"/"+HWUnits.getSolrWebName()+"/"+HWSpaceConfig.SOLR_NAME.toString()+"/";
+		System.out.println(SOLR_URL);
+		HttpSolrServer solrServer = null;
+		solrServer = new HttpSolrServer(SOLR_URL);
+		String baseSpace = HWSpaceFactory.getBaseSpace().getSpaceId();
+		StringBuilder messageSN = new StringBuilder();
+		String spaceId = jacper.getString("selectSpace" , "");
+		if(spaceId == null || "".equals(spaceId))
+			spaceId = baseSpace + "-all";
+		
+		messageSN.append(spaceId+"::");
+		boolean containSon = spaceId.endsWith("-all");
+		spaceId = spaceId.replaceAll("-all$", "");
+		
+		HWSpaceNode currentNode = HWSpaceFactory.getSpaceById(spaceId);
+		
+		if(currentNode == null){
+			jacper.print("{resultTitle:'请重新选择空间！'}");
+			return;
+		}
+		int level = currentNode.getLevel();
+		ArrayList<HWSpaceNode> children = HWSpaceFactory.getSpaceByParentId(spaceId);
+		
+		messageSN.append(level < 3 && children.size() > 0 && !containSon ? (level == 2 ?"所公共空间" : currentNode.getSpaceName()) : level == 1 ? "所有空间" : currentNode.getSpaceName());
+		SolrQuery query = new SolrQuery();
+		query.setHighlight(true);
+		String q = "" , messageRT = "";
+		
+		if (!spaceId.equals(baseSpace)) {
+			q = "(content:" + textQuery + " OR title:" + textQuery + ") AND (spaceid:" + spaceId;
+			if(containSon && children.size() > 0)
+				for(HWSpaceNode node : children)
+					q += " OR spaceid:" + node.getSpaceId() + " ";
+			q += ")";
+		} else 
+			q = "(content:" + textQuery + " OR title:" + textQuery + ")" + (containSon ? "" : " AND (spaceid:" + spaceId + ")");
+		
+		messageRT = "在<font color='#008000'>"+((currentNode.getLevel() == 1 && containSon) ? "所有空间" : currentNode.getSpaceName() + (currentNode.getLevel() < 3 && containSon ? "及所有子空间" : ""))+"</font>中";
+
+		System.out.println("SolrSearch -- text : " + q + " , SOLR_URL : " + SOLR_URL + " , spaceId : " + spaceId);
+		query.setQuery(q);
+		query.setFields("id");
+		query.setStart(startRow);
+		query.setRows(rowCount);
+		query.setIncludeScore(true);
+		query.addHighlightField("content");
+		query.addHighlightField("id");
+		query.setHighlightSimplePre("<font color=\"red\">");
+		query.setHighlightSimplePost("</font>");
+
+		try {
+			long begin = System.currentTimeMillis();
+			QueryResponse rsp = solrServer.query(query, METHOD.POST);
+			Map<String, Map<String, List<String>>> m = rsp.getHighlighting();
+			System.out.println("查询耗时：" + (System.currentTimeMillis() - begin)+ "ms");
+			long begin1 = System.currentTimeMillis();
+			JSONPart result = trans(getQueryResponseIds(rsp.getResults()) , m, con);
+			result.join("selectNode", messageSN.toString());
+			result.join("totalCount", rsp.getResults().getNumFound());
+			result.join("resultTitle", new StringBuilder("系统为您"+messageRT+"找到相关结果"+rsp.getResults().getNumFound()+"个").toString());
+			System.out.println("包装数据耗时："+ (System.currentTimeMillis() - begin1) + "ms");
+			System.out.println("总耗时：" + (System.currentTimeMillis() - begin)+ "ms");
+			jacper.print(result);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void doGet(Jacper jacper) {
+		doPost(jacper);
+	}
+
+	public String getSolrWebName() {
+		String name = "GRIS 2.0";
+		StringBuilder sb = new StringBuilder();
+		for (char c : name.toCharArray())
+			sb.append(String.valueOf((int) c));
+		return sb.toString();
+	}
+	
+	public String[] getQueryResponseIds(SolrDocumentList slist){
+		ArrayList<String> rows = new ArrayList<String>();
+		for(SolrDocument sd : slist){
+			//System.out.println(sd.getFieldValue("id") + ":" + sd.getFieldValue("score"));
+			rows.add(String.valueOf(sd.getFieldValue("id")));
+		}
+		return rows.toArray(new String[rows.size()]);
+	}
+		
+	public String getCurrentNodeName(HWSpaceNode currentNode) {
+		return currentNode.getSpaceName();
+	}
+
+	public JSONPart trans(String[] ids , Map<String, Map<String, List<String>>> map, Connection con) {
+		JSONPart result = new JSONPart();
+		HashMap<String, JSONPart> caches = new HashMap<String, JSONPart>();
+		ArrayList<String> keys = new ArrayList<String>();
+		JSONArray data = new JSONArray();
+		try {
+			for (String key : ids) {
+				if(!map.containsKey(key))
+					continue;
+				key = key.split("::")[0];
+				Map<String, List<String>> o = map.get(key);
+				String content = "content";
+				if (!o.containsKey(content)) {
+					content = "";
+				} else {
+					content = String.valueOf(o.get(content));
+					content = content.replaceAll("\\[", "").replaceAll("\\]",
+							"");
+				}
+				JSONPart json = new JSONPart();
+				json.join("content", content);
+				json.join("key", key);
+				caches.put(key, json);
+				keys.add(key);
+			}
+			HashMap<String, JSONPart> joinAtts = keys.size() > 0 ? getAtts(con,
+					keys.toArray(new String[keys.size()]))
+					: new HashMap<String, JSONPart>();
+			for (String key : keys)
+				data.put(caches.get(key).join(
+						joinAtts.containsKey(key) ? joinAtts.get(key)
+								: new JSONPart()));
+			result.join("data", data);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return result;
+	}
+	
+	public JSONPart trans_old(Map<String, Map<String, List<String>>> map,
+			Connection con) {
+		JSONPart result = new JSONPart();
+		HashMap<String, JSONPart> caches = new HashMap<String, JSONPart>();
+		ArrayList<String> keys = new ArrayList<String>();
+		JSONArray data = new JSONArray();
+		try {
+			for (Entry e : map.entrySet()) {
+				String key = e.getKey().toString();
+				key = key.split("::")[0];
+				Object o;
+				String content;
+				if ((o = ((Map) e.getValue()).get("content")) == null) {
+					content = "";
+				} else {
+					content = o.toString();
+					content = content.replaceAll("\\[", "").replaceAll("\\]",
+							"");
+				}
+				JSONPart json = new JSONPart();
+				json.join("content", content);
+				json.join("key", key);
+				caches.put(key, json);
+				keys.add(key);
+			}
+			HashMap<String, JSONPart> joinAtts = keys.size() > 0 ? getAtts(con,
+					keys.toArray(new String[keys.size()]))
+					: new HashMap<String, JSONPart>();
+			for (String key : keys)
+				data.put(caches.get(key).join(
+						joinAtts.containsKey(key) ? joinAtts.get(key)
+								: new JSONPart()));
+			result.join("data", data);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return result;
+	}
+
+	public HashMap<String, JSONPart> getAtts(Connection con, String[] keys) {
+		HashMap<String, JSONPart> atts = new HashMap<String, JSONPart>();
+		String[][] rows = con.get("select b.file_id , b.file_size , b.file_type , p.file_perview_url ,b.file_dir , b.space_id , b.file_info_name , b.file_uploader , b.country_id , b.file_class from DIR_FILE_BASE b "
+								+ "left outer join dir_file_physical p on b.phy_file_id = p.phy_file_id where b.file_id in ("
+								+ HWUnits.getWildcardByArray(keys) + ")", keys);
+		if (rows != null && rows.length > 0) {
+			String[] dirs = new String[rows.length];
+			ArrayList<String> spaces = new ArrayList<String>();
+			HashMap<String, String> caches = new HashMap<String, String>();
+			for (int i = 0; i < rows.length; i++) {
+				dirs[i] = rows[i][4];
+				spaces.add(rows[i][5]);
+			}
+			add2Cache(con, "select s.space_id , s.space_name , n.dir_id , n.dir_name from dir_space_base s "
+					+ "left outer join dir_node_base n on s.space_id = n.space_id where s.space_id in ("
+					+ HWUnits.getWildcardByArray(spaces.size()) + ")", spaces.toArray(new String[spaces.size()]) , caches);
+			dirs = translatePaths(con, dirs , caches);
+			HashMap<String, String> types = translateTypes(con);
+			for (int i = 0; i < rows.length; i++) {
+				String[] row = rows[i];
+				String key = row[0];
+				JSONPart value = new JSONPart();
+				value.join("f_size", row[1]);
+				value.join("f_type", row[2]);
+				value.join("f_url", !"".equals(row[3]));
+				value.join("f_space", caches.containsKey(row[5]) ? caches.get(row[5]) : "");
+				value.join("title", row[6]);
+				value.join("f_path", dirs[i]);
+				User u = CertManager.getUser(row[7]);
+				if(u != null){
+					String userDeptName = u.getDept() != null ? u.getDept().getName() : "";
+					value.join("f_uploader", u.getRealName()+(userDeptName.length() > 0 ? "("+userDeptName+")" :""));
+				}
+				value.join("f_type_hx", types.containsKey(row[8]) ? types.get(row[8]) : "");//核心分类
+				value.join("f_type_ztc", types.containsKey(row[9]) ? types.get(row[9]) : "");//主题词分类
+				atts.put(key, value);
+			}
+		}
+		return atts;
+	}
+
+	public String[] translatePaths(Connection con, String[] keys , HashMap<String, String> caches) {
+		ArrayList<String> dirs = new ArrayList<String>();
+		for (String key : keys)
+			for (String ck : key.split("/"))
+					dirs.add(ck);
+		add2Cache(con, "select i.node_id , i.node_value from dir_node_info i where i.node_id in ("
+						+ HWUnits.getWildcardByArray(dirs.size()) + ")", dirs
+						.toArray(new String[dirs.size()]), caches);
+		String result[] = new String[keys.length];
+		for (int i = 0; i < keys.length; i++) {
+			StringBuilder sb = new StringBuilder();
+			for (String key : keys[i].split("/")) {
+				if("".equals(key) || HWSpaceFactory.getSpaceById(key) != null)
+					continue;
+				if(!caches.containsKey(key)){
+					sb.setLength(0);
+					break;
+				}
+				sb.append((sb.length() > 0 ? " - " : "") + caches.get(key));
+			}
+			result[i] = sb.toString();
+		}
+		return result;
+	}
+	
+	public HashMap<String, String> translateTypes(Connection con){
+		HashMap<String, String> types = new HashMap<String, String>();
+		add2translateTypes(types , con.get("select c.id , c.name from DIR_FILE_CLASSIFIED c"));
+		add2translateTypes(types , con.get("select d.datum_id , d.datum_name from DIR_DATUM_BASE d"));
+		return types;
+	}
+	
+	public void add2translateTypes (HashMap<String, String> types , String[][] rows){
+		if(rows == null || rows.length == 0)
+			return;
+		for(String[] row : rows)
+			types.put(row[0], row[1]);
+	}
+	public void add2Cache(Connection con, String sql, String[] param, HashMap<String, String> caches) {
+		if ("".equals(sql) || param == null || param.length == 0)
+			return;
+		try {
+			String rows[][] = con.get(sql, param);
+			if (rows != null && rows.length > 0)
+				for (String[] row : rows) {
+					for(int i = 0 ; i < row.length ; i += 2)
+						caches.put(row[i], row[i+1]);
+				}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

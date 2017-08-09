@@ -1,0 +1,173 @@
+
+import java.io.IOException;
+
+
+import com.kinglib.*;
+import java.util.*;
+
+import com.kinglib.database.*;
+import com.kinglib.workflow.Workflow;
+import com.kinglib.workflow.basic.BasicWorkflow;
+import com.kinglib.workflow.query.WorkflowQuery;
+import com.kinglib.workflow.InvalidActionException;
+import com.kinglib.workflow.InvalidEntryStateException;
+import com.kinglib.workflow.InvalidInputException;
+import com.kinglib.workflow.InvalidRoleException;
+import com.kinglib.workflow.WorkflowException;
+import com.kinglib.workflow.config.DefaultConfiguration;
+import com.kinglib.workflow.spi.Step;
+import com.kinglib.workflow.loader.ActionDescriptor;
+import com.kinglib.workflow.loader.WorkflowDescriptor;
+import com.kinglib.propertyset.PropertySet;
+import com.kinglib.propertyset.PropertySetManager;
+import com.kinglib.ui.workflow.*;
+import com.kinglib.workbench.workflow.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.workflow.spi.*;
+
+@class{
+	public void doPost(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String userId = hs.uid+"";
+		
+		Workflow wf = new BasicWorkflow(userId);
+		String instanceId = jacper.getStr("instanceId");
+		String workflowId = jacper.getStr("workflowId");
+		long entryID = jacper.getLong("entryId",-1);
+		String action = jacper.getStr("action");
+		int actionId = jacper.getInt("actionId", 0);
+
+		WorkflowFactory WF=WorkflowFactory.getInstance();
+		com.kinglib.workbench.workflow.Workflow workflow=WF.getWorkflow(conPlat,workflowId);
+		String initType=workflow.getInitType();
+		try {
+			String[] WorkflowList=null;
+			if(instanceId.equals("")){
+				instanceId=workflow.getInstanceId(userId);
+				if(instanceId==null){
+					instanceId=workflow.getFirstInstance();
+				}
+			}
+
+
+			if(instanceId.equals("")){
+				<?{success:false,message:"?>jacper.trans("未设定流程实例,或您没有流程实例权限!")<?"}?>;
+			}else{
+				WorkflowDescriptor wd = wf.getWorkflowDescriptor(instanceId);
+
+				if(entryID==-1){
+					List initialActList = wd.getInitialActions();
+					int initId = 0;
+					for (Iterator iterator = initialActList.iterator(); iterator.hasNext();) {
+						ActionDescriptor initalActionObject = (ActionDescriptor) iterator.next();
+						initId = initalActionObject.getId();
+					}
+					entryID = wf.initialize(instanceId, initId, null);
+					jacper.getConnection("work").exec("UPDATE $[work].wfentry SET caller = ?,state=1,start_date=$getdate() WHERE id= ?",new String[] {userId,entryID + "" });
+				}else{
+					try{
+						wf.changeEntryState(entryID, WorkflowEntry.ACTIVATED);
+					}catch (Exception e){
+						e.printStackTrace();
+					}	
+				}
+
+				PropertySet ps = null;
+				try {
+					ps = wf.getPropertySet(entryID);
+					RandomStore RS=RandomStore.getInstance();
+					String key=instanceId+"-"+userId;
+					Connection conWork = jacper.getConnection("work");
+					String workflowToken=RS.getRandom(conWork,key);
+					RS.remove(conWork,key);
+					ps.setString("initer", userId);
+					ps.setString("flowToken", workflowToken);
+					String comment = jacper.getStr("comment");
+					if(actionId!=0){
+						  if (comment.equals("")){
+							  wf.doAction(entryID, actionId, null);	
+						  }else{
+							  wf.doAction(entryID, actionId, null,comment);			  
+						  }
+					 }
+
+					if(initType.equals("1")){
+						String programType=jacper.getString("programType");
+						if(programType.equals("ProgramInput")||programType.equals("ProgramLinkInput")){
+							if(jacper.getString("pItem")!=null)
+								ps.setString("exportItem", jacper.getString("pItem"));
+							if(jacper.getString("pData")!=null){
+								ps.setString("dataId", jacper.getString("pData"));
+								ps.setString("exportData", jacper.getString("pData"));
+							}
+							if(jacper.getString("pTab")!=null)
+								ps.setString("exportTab", jacper.getString("pTab"));
+						}else{
+							String dataArrString=jacper.getString("data");
+							String[] dataArr=dataArrString.split(",");
+							String objectId=jacper.getString("objectId");
+						    ProgramFactory PF=ProgramFactory.getInstance();
+							if(!objectId.equals("")){
+								Program program= PF.getProgram(conPlat, objectId);
+								String tabId= program.getTabId();
+								MetaTable mt = MetaFactory.getObject(tabId);
+								MetaColumn[] MCA= mt.getColumnArray();
+								String updateSql="";
+								String dbLink=mt.getDblink();
+								String tabName=mt.getPname();
+
+								for(int i=0;i<MCA.length;i++){
+									if(MCA[i].getSpecialSet()==SpecialSet.WorkflowSign){
+										updateSql="update $["+dbLink+"]."+tabName+" set "+MCA[i].getPname()+"=?  where ";
+										break;
+									}
+								}
+								if(!updateSql.equals("")){
+									Connection conTemp = jacper.getConnection(dbLink);
+									MetaColumn[] pkCloumns=mt.getPrimaryKeys();								
+									String condtionString="";
+									for (int i=0;i<pkCloumns.length;i++){
+										if(i==0){
+											condtionString+=pkCloumns[i].getPname()+"=? ";
+										}else{
+											condtionString+=" and "+pkCloumns[i].getPname()+"=? ";
+										}
+									}
+									updateSql=updateSql+condtionString;
+									for(int i=0;i<dataArr.length;i++){
+										String[] pkArray=dataArr[i].split("::");
+										String[] dataArray=new String[pkArray.length+1];
+										System.arraycopy(new String[]{workflowToken},0,dataArray,0,1);
+										System.arraycopy(pkArray,1,dataArray,0,pkArray.length);
+										conTemp.exec(updateSql,dataArray);			
+									}
+								}else{
+									<?{success:false,message:"?>jacper.trans("审批表中未设定流程标示字段,不能申请")<?!"}?>;
+								}
+							}else{
+								<?{success:false,message:"?>jacper.trans("程序定义错误")<?!"}?>;
+							}
+						}
+					}
+				}catch (Exception e){
+					e.printStackTrace();
+				}	
+				<?{success:true}?>;
+			}
+		} catch (InvalidActionException e) {
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		} catch (InvalidRoleException e) {
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		} catch (InvalidInputException e) {
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		} catch (InvalidEntryStateException e) {
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		} catch (WorkflowException e) {
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}
+  }
+}

@@ -1,0 +1,73 @@
+/**
+ * 
+ * 列表模块中，用于以Excel模板填写的方式批量上传数据。
+ * 
+ * @version 1.0
+ * 
+ * @author tz
+ * 
+ * @date: 2012-11-19日下午02:39:02
+ *    
+ */
+
+import com.kinglib.Err;
+import com.kinglib.Jacper;
+import com.kinglib.JacperFile;
+import com.kinglib.ui.core.list.ExcelTemplate;
+import com.kinglib.ui.core.utils.Param;
+import com.susing.upload.*;
+import com.susing.KingleServletResponse;
+
+@class{
+
+    
+	public void doPost(Jacper jacper) { 
+	
+		Param param=new Param(jacper);
+		String userId =param.getString("userId");
+		if (FileUpload.isMultipartContent(jacper.getRequest().getContentType())) {// 上传数据
+		
+		
+			try {
+				FileUpload upload = new FileUpload(Integer.parseInt(userId));
+				upload.setSize(param.getString("totalMax"),param.getString("totalMin"));
+				upload.parseRequest(param.getRequest());
+				upload.appendParamToMap(param);
+				FileExtend.verifyFileTip(param, upload.getFileNames());  
+				String objectId = param.getString("objectId");
+				ExcelTemplate et = new ExcelTemplate(param, objectId);
+				et.save(param);
+				jacper.print("{success:true}");
+			} catch (Exception e) {
+				jacper.print(Err.parse(e).toJSON(userId));
+				e.printStackTrace();
+			} finally {
+				param.releaseResources();
+			}
+			
+			
+			
+		}else{// 下载表模板
+		
+		
+			String objectId = param.getString("objectId");
+			ExcelTemplate et = new ExcelTemplate(param, objectId);
+			String name;
+			try {
+				name = new String(et.getTitle().getBytes("gb2312"), "iso-8859-1");
+				KingleServletResponse res = jacper.getResponse();
+				res.setContentType("application/vnd.ms-excel");
+				res.setHeader("Content-Disposition", "attachment;filename=" + name + ".xls");
+				res.setHeader("Accept-ranges", "bytes");
+				et.getModel(param, res.getOutputStream());
+			} catch (Exception e) {
+				e.printStackTrace();//无法回到原始页面。
+			} finally {
+				param.releaseResources();
+			}
+			
+			
+		}
+	}
+	
+}

@@ -1,0 +1,295 @@
+   
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.social.api.core.model.*;
+import com.kinglib.util.json.*;
+import com.susing.upload.*;
+import com.susing.EFile;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.ui.grid.*;
+import com.susing.core.*;
+import com.kinglib.util.UserData;
+import com.kinglib.ui.core.utils.Param;
+
+@class{
+public void doPost(Jacper jacper){
+	
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	String what=jacper.getStr("what");
+	String task=jacper.getStr("task");
+
+	Param param=new Param(jacper);
+	try{
+		if (FileExtend.isFileUpload(param)) {
+			what=param.getStr("what");
+			task=param.getStr("task");
+		}
+	}catch(Exception e){
+		return;
+	}
+	
+	Connection conCert = jacper.getConnection("cert");
+
+	if(task.equals("load")){
+		if(what.equals("themes")){		
+			try{
+				JSONObject themesJSON = new JSONObject("{}");
+				JSONArray themesJSONArray=new JSONArray();
+				String[][] rs = conCert.get("select id,name,path_to_thumbnail,path_to_file from $[cert].sys_themes  order by id asc",new String[]{},0);
+				for(int i=0;i<rs.length;i++){
+					JSONObject itemJSON = new JSONObject("{}");
+					itemJSON.put("id",rs[i][0]);
+					itemJSON.put("name",jacper.trans(rs[i][1])+"b");
+					itemJSON.put("pathtothumbnail",rs[i][2]);
+					itemJSON.put("pathtofile",rs[i][3]);
+					themesJSONArray.put(itemJSON);
+				}
+				themesJSON.put("images",themesJSONArray);
+				jacper.getResponse().setContentType("application/x-json");
+				<??>themesJSON.toString()<??>;
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conCert.close();
+			}
+		}else if(what.equals("wallpapers")){
+			try{
+				JSONObject wallpapersJSON = new JSONObject("{}");
+				JSONArray wallpapersJSONArray=new JSONArray();
+				String[][] rs = conCert.get("select id,name,path_to_thumbnail,path_to_file from $[cert].sys_wallpapers where user_id=0 or user_id=? order by user_id asc",new String[]{user_id+""},0);
+				for(int i=0;i<rs.length;i++){
+					JSONObject itemJSON = new JSONObject("{}");
+					itemJSON.put("id",rs[i][0]);
+					itemJSON.put("name",jacper.trans(rs[i][1]));
+					String pathToThumbnail="system/download.jcp?thumbnail=true&id="+rs[i][0];
+					if(!rs[i][2].equals(""))
+						pathToThumbnail=rs[i][2];
+					String pathToFile="system/download.jcp?thumbnail=false&id="+rs[i][0];
+					if(!rs[i][3].equals(""))
+						pathToFile=rs[i][3];
+					itemJSON.put("pathtothumbnail",pathToThumbnail);
+					itemJSON.put("pathtofile",pathToFile);
+					wallpapersJSONArray.put(itemJSON);
+				}
+				wallpapersJSON.put("images",wallpapersJSONArray);
+				jacper.getResponse().setContentType("application/x-json");
+				<??>wallpapersJSON.toString()<??>;
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conCert.close();
+			}
+		}else if(what.equals("profile")){
+			try{
+				JSONObject userJSON = new JSONObject("{}");
+				
+				String[] rs = conCert.getRow("SELECT  a.duty,a.photo_name FROM  $[cert].user_base a where a.user_id=?",new String[]{user_id+""});
+				
+				User user = User.getUser(user_id+"");
+				String inActive = "";
+				String subAdmin = "";
+				if(user!=null){
+					userJSON.put("real_name",user.getRealName());
+					userJSON.put("email",user.getEmail());
+					userJSON.put("phone",user.getPhone());
+					userJSON.put("phone_home",user.getPhoneHome());
+					userJSON.put("celler",user.getCeller());
+					userJSON.put("duty",rs[0]);
+					userJSON.put("msn",user.getMsn());
+					if(!rs[1].equals("")){
+						JSONObject file=new JSONObject("{}");
+						//此处设置文件名
+						file.put("value",rs[1]);
+						//注册的sql语句格式 select blob字段,文件名,文件类型,文件长度 from $[库名].表名 where 条件。 除第一个字段外，其它均可省略
+						String sql="select photo,'preview.jpg' from $[cert].user_base b where user_id ="+user_id;
+						file.put("id",FileExtend.getId(sql));
+						userJSON.put("photo",file);
+					}
+				}
+				jacper.getResponse().setContentType("application/x-json");
+				<?[?>userJSON.toString()<?]?>;
+				
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conCert.close();
+			}
+
+		}else if(what.equals("log")){
+
+			String sort = jacper.getStr("sort");
+			String dir = jacper.getStr("dir");
+
+			String sql= "select $date_str(login_date,111),count(session_id),sum($minutediff(login_date,update_date)),$ceiling(sum($minutediff(login_date,update_date))/count(distinct(session_id ))) from $[cert].user_logs where usr_id="+user_id+" and login_date between $getdate()-30 and $getdate()  group by $date_str(login_date,111)";
+
+			int startRow = jacper.getInt("start",0);
+			int rowCount = jacper.getInt("limit",0);
+
+			Grid gd=new Grid(sql,jacper.trans("日期"),	new String[]{jacper.trans("日期"),jacper.trans("当日访问人次"),jacper.trans("当日使用时间")+"("+jacper.trans("分钟")+")",jacper.trans("单次停留")+"("+jacper.trans("分钟")+")"});
+			JSONObject gridJSON=gd.getJSON(conCert,null,startRow,rowCount,dir,sort);
+			jacper.getResponse().setContentType("application/x-json");
+
+			<?(?>gridJSON.toString()<?)?>;
+
+			conCert.close();
+
+		}
+	}else if(task.equals("save")){
+
+		if(what.equals("quickstart")||what.equals("autorun")||what.equals("shortcut")){
+			String ids=jacper.getStr("ids");
+			try{
+				JSONArray idsJSONArray=new JSONArray(ids);
+				if (!UserData.has(user_id+"", "desktopLaunchers", "main")) {
+					JSONObject launcherObj=new JSONObject();
+					launcherObj.put(what,idsJSONArray);
+					JSONPart launchersPart=new JSONPart(launcherObj);
+					UserData.set(user_id+"", "desktopLaunchers", "main", launchersPart.toJSONString());
+				}else{
+					JSONPart launchersPart= new JSONPart(UserData.get(user_id+"", "desktopLaunchers", "main"));
+					JSONObject launcherObj=launchersPart.toJSONObject();
+					launcherObj.remove(what);
+					launcherObj.put(what,idsJSONArray);
+					launchersPart=new JSONPart(launcherObj);
+					System.out.println(launchersPart.toJSONString());
+					UserData.set(user_id+"", "desktopLaunchers", "main", launchersPart.toJSONString());
+				}
+			}catch(Exception e){
+				try {
+					conCert.rollback();
+				}catch(Exception e1) {}
+			}finally{
+				try {
+					conCert.setAutoCommit(true);
+					conCert.close();
+				}catch(Exception e2) {}
+			}
+			
+			<?{'success': true}?>;
+		}else if(what.equals("appearance")){
+			String backgroundcolor=jacper.getStr("backgroundcolor");
+			String theme=jacper.getStr("theme");
+			String transparency=jacper.getStr("transparency");
+			String wallpaper=jacper.getStr("wallpaper");
+			String wallpaperposition=jacper.getStr("wallpaperposition");
+			String fontcolor=jacper.getStr("fontcolor");
+
+			try{
+					JSONObject stylesJSON=new JSONObject();
+					
+					boolean isTransparency = true;
+
+					if (transparency.equals("false"))
+						isTransparency = false;
+
+					stylesJSON.put("transparency", isTransparency);
+					stylesJSON.put("backgroundcolor", backgroundcolor);
+					stylesJSON.put("wallpaperposition", wallpaperposition);
+					stylesJSON.put("fontcolor", fontcolor);
+					
+
+					JSONObject themeJSON = new JSONObject();
+					themeJSON.put("id",Integer.parseInt(theme));
+					String[] rs = conCert.getRow("SELECT  a.name,a.path_to_file FROM  $[cert].sys_themes a where a.id=?",new String[]{theme+""});
+					themeJSON.put("name", rs[0]);
+					themeJSON.put("pathtofile", rs[1]);
+					stylesJSON.put("theme", themeJSON);
+	
+					JSONObject wallpaperJSON = new JSONObject();
+					wallpaperJSON.put("id", Integer.parseInt(wallpaper));
+					rs = conCert.getRow("SELECT  a.name,a.path_to_file FROM  $[cert].sys_wallpapers a where a.id=?",new String[]{wallpaper+""});
+					wallpaperJSON.put("name", rs[0]);
+					wallpaperJSON.put("pathtofile", rs[1]);
+
+
+					stylesJSON.put("wallpaper", wallpaperJSON);
+					JSONPart stylesPart=new JSONPart(stylesJSON);
+
+					
+					UserData.set(user_id+"", "desktopConfig", "main", stylesPart.toJSONString());
+
+				<?{'success': true}?>;
+			}catch(Exception e){
+				try {
+					conCert.rollback();
+				}catch(Exception e1) {}
+			}finally{
+				try {
+					conCert.setAutoCommit(true);
+					conCert.close();
+				}catch(Exception e2) {}
+			}
+			
+		}else if(what.equals("password")){
+			String oldpasswd=jacper.getStr("oldpasswd");
+			User user = User.getUser(user_id+"");
+			String oldPwd=user.getPassword();
+			if(Password.authenticatePassword(oldPwd,oldpasswd)){
+				String passwd=jacper.getStr("passwd");
+				String newPwd=Password.createPassword(passwd);
+				user.updatePassword(param);
+				<?{'success': true}?>;
+			}else{
+				conCert.close();
+				<?{'success': false,message:'?>jacper.trans("旧密码与系统密码不符")<?'}?>;
+			}
+		}else if(what.equals("profile")){
+			EFile uf=null;
+			try{
+				if (FileExtend.isFileUpload(param)) {
+					uf=param.getEFile("photo");
+				}
+			}catch(Exception e){
+				<?{success:false,message:"?>e.getMessage()<?"}?>;
+				return;
+			}
+			String real_name = param.getStr("real_name");
+			String phone = param.getStr("phone");
+			String phone_home = param.getStr("phone_home");
+			String email = param.getStr("email");
+			String celler = param.getStr("celler");
+			String duty = param.getStr("duty");
+			String msn = param.getStr("msn");
+			String id="";
+			String fileName = "";
+
+
+			try{						
+					JSONObject items = new JSONObject("{}");
+					conCert.exec("UPDATE $[cert].user_base SET real_name=?,phone=?,phone_home=?,email=?,celler =?, duty=?, msn=? WHERE user_id=? ",new String[]{real_name,phone,phone_home,email,celler,duty,msn,user_id+""});						
+					
+					if(uf!=null){
+						//新建
+						conCert.execLarge("UPDATE $[cert].user_base SET photo=?,photo_name=? WHERE user_id=? ",new Object[]{uf,uf.getAttribute("file-name"),user_id+""});
+						id = FileExtend.getId("select photo from $[cert].user_base where user_id="+user_id);
+						fileName = uf.getAttribute("file-name");
+
+						items.put("id",id);
+						items.put("value",fileName);
+					}else if(param.getStr("photo_text").equals("")) {
+						//删除
+						conCert.execLarge("UPDATE $[cert].user_base SET photo=?,photo_name=? WHERE user_id=? ",new Object[]{null,null,user_id+""});
+					}
+
+					User user = User.getUser(user_id+"");
+				
+					user.setCeller(celler);
+					user.setMsn(msn);
+					user.setPhone(phone);
+					user.setPhoneHome(phone_home);
+					user.setRealName(real_name);
+					user.setEmail(email);
+					<?{success:"true",items:?>items<?}?>;
+			}catch(Exception e){
+				e.printStackTrace();
+				<?{success:"false","message":"?>e.toString()<?"}?>;
+			}finally{
+				conCert.close();
+			}
+		}
+	}
+}
+}

@@ -1,0 +1,182 @@
+            
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.workbench.module.Module;
+import com.kinglib.ui.tree.*;
+
+import com.kinglib.workbench.program.ProgramType;
+                
+@class{
+
+public void doGet(Jacper jacper){    		
+	
+	String temp_id=jacper.getString("_id");
+	String objectId = jacper.getString("objectId");
+	String parenttype= jacper.getStr("parenttype");
+	String type= jacper.getStr("type");
+
+	String forder_id=null;
+
+	int level_num= jacper.getInt("level_num",1);
+
+	if (temp_id!=null){
+	  forder_id = temp_id.substring(0,temp_id.indexOf("__"));
+	}
+
+	int arrtree_length = 0;
+	
+	String[][] arrtree=null;
+	String hasChild ="1";   
+	String[] buf1=null;  
+	if ((type.equals("")||type==null)){
+		temp_id="top";
+	}
+
+	Connection conPlat = jacper.getConnection("plat"); 
+	Tree tempTree =TreeFactory.getInstance().getTree(conPlat,objectId);
+	arrtree=tempTree.getData(jacper,conPlat);
+	TreeConfig[] data=tempTree.getLevelConfig(level_num);
+	type=tempTree.getType();
+	
+	conPlat.close();
+
+
+	String[][] target = new String[2][3];
+	String[] target_Type = new String[2];
+	String[][] target_task =new String[2][3];
+	String[][] task_type = new String[2][3];
+	String[][] taskStatus = new String[2][3];
+
+	target[0] = data[0].getTarget().split(",");
+	target_Type[0] = data[0].getTargetType();
+	target_task[0] = data[0].getTargetTask().split(",");
+	task_type[0] = data[0].getTaskType().split(",");
+	taskStatus[0] = data[0].getTaskStatus().split(":");
+
+	if (data.length>1){
+
+		 target[1] = data[1].getTarget().split(",");
+		 target_Type[1] = data[1].getTargetType();
+		 target_task[1] = data[1].getTargetTask().split(",");
+		 task_type[1] = data[1].getTaskType().split(",");
+		 taskStatus[1] = data[1].getTaskStatus().split(":");
+	}
+	
+	<?<root _id="?>temp_id<?">
+	<forder _parent="?>temp_id<?" event="event1">?>; 
+	String targets="";
+	String tree_herf="";
+	String framenum="";
+	String oldParentType=parenttype;
+
+	for(int i=0;i<arrtree.length;i++){	
+		if(data[0].getTreeType().equals("2")){														
+				level_num=Integer.parseInt(arrtree[i][6]);
+				type=arrtree[i][5];		
+
+				if (type.equals("2")){
+					if (task_type!=null&&!task_type[0][0].equals("")){ 
+						for ( int h=0; h<target[0].length; h++ ) {	 
+								int k=h+1;		
+								tree_herf+="herfs"+k+"=\""+task_type[0][h]+"?objectId="+target[0][h]+"&amp;fromType="+target_Type[0]+"&amp;fromId="+target[0][h]+"&amp;exportItem="+data[0].getExportitem()+"&amp;exportTab="+data[0].getTabId()+"&amp;exportData="+arrtree[i][1]+"&amp;dataId="+arrtree[i][4]+"&amp;pageType="+taskStatus[0][h]+"&amp;s=1&amp;programType="+ProgramType.parseProgramType(task_type[0][h])+"\" ";
+								targets+="target"+k+"=\""+target_task[0][h]+"\" ";											
+						}
+						framenum=target[0].length+"";
+					}else{
+						framenum="0";
+					}
+				}else{
+					if (data.length>1&&task_type!=null&&!task_type[1][0].equals("")){ 
+							for ( int h=0; h<target[1].length; h++ ) {	 
+									int k=h+1;										tree_herf+="herfs"+k+"=\""+task_type[1][h]+"?objectId="+target[1][h]+"&amp;fromType="+target_Type[1]+"&amp;fromId="+target[1][h]+"&amp;exportItem="+data[1].getExportitem()+"&amp;exportTab="+data[1].getTabId()+"&amp;exportData="+arrtree[i][1]+"&amp;dataId="+arrtree[i][4]+"&amp;pageType="+taskStatus[1][h]+"&amp;s=2&amp;programType="+ProgramType.parseProgramType(task_type[1][h])+"\" ";
+									targets+="target"+k+"=\""+target_task[1][h]+"\" ";
+							}
+							framenum=target[0].length+"";
+						}else{
+							framenum="0";
+						}
+															
+				}  
+		}else{
+			level_num= Integer.parseInt(arrtree[i][6])+1;
+			if (task_type!=null){ 
+					if (data.length>1){ 
+						if(oldParentType.equals("2")){
+							if(!task_type[1][0].equals("")){
+								for ( int h=0; h<target[1].length; h++ ) {	 
+									int k=h+1;	
+									
+									tree_herf+="herfs"+k+"=\""+task_type[1][h]+"?objectId="+target[1][h]+"&amp;fromType="+target_Type[1]+"&amp;fromId="+target[1][h]+"&amp;exportItem="+data[1].getExportitem()+"&amp;exportTab="+data[1].getTabId()+"&amp;exportData="+arrtree[i][1]+"&amp;dataId="+arrtree[i][4]+"&amp;pageType="+taskStatus[1][h]+"&amp;s=3&amp;programType="+ProgramType.parseProgramType(task_type[1][h])+"\" ";
+									targets+="target"+k+"=\""+target_task[1][h]+"\" ";
+								}
+								framenum=target[1].length+"";									
+							}	
+						}else{
+							type=arrtree[i][5];		
+							//if(level_num%2==0){							
+								if(!task_type[0][0].equals("")){
+									for ( int h=0; h<target[0].length; h++ ) {	 
+											int k=h+1;		
+											tree_herf+="herfs"+k+"=\""+task_type[0][h]+"?objectId="+target[0][h]+"&amp;fromType="+target_Type[0]+"&amp;fromId="+target[0][h]+"&amp;exportItem="+data[0].getExportitem()+"&amp;exportTab="+data[0].getTabId()+"&amp;exportData="+arrtree[i][1]+"&amp;dataId="+arrtree[i][4]+"&amp;pageType="+taskStatus[0][h]+"&amp;s=4&amp;programType="+ProgramType.parseProgramType(task_type[0][h])+"\" ";
+											targets+="target"+k+"=\""+target_task[0][h]+"\" ";
+										}
+										framenum=target[0].length+"";
+								}
+						/*	}else{
+								for ( int h=0; h<target[1].length; h++ ) {	 
+									int k=h+1;	
+								
+									tree_herf+="herfs"+k+"=\""+task_type[1][h]+"?objectId="+target[1][h]+"&amp;fromType="+target_Type[1]+"&amp;fromId="+target[1][h]+"&amp;exportItem="+data[1].getExportitem()+"&amp;exportTab="+data[1].getTabId()+"&amp;exportData="+arrtree[i][1]+"&amp;dataId="+arrtree[i][4]+"&amp;pageType="+taskStatus[1][h]+"&amp;s=5&amp;programType="+ProgramType.parseProgramType(task_type[1][h])+"\" ";
+									targets+="target"+k+"=\""+target_task[1][h]+"\" ";
+								}
+								boolean flag = false;
+								for ( int h=0; h<target[1].length; h++ )  
+									if ( !target[0][h].equals("") )
+										flag = true;
+								if ( flag )
+									framenum=target[0].length+"";	
+								else framenum = "0";
+																	
+							}*/
+						}
+					}else{
+						if(!task_type[0][0].equals("")){
+							for ( int h=0; h<target[0].length; h++ ) {	 
+								int k=h+1;					
+							
+								tree_herf+="herfs"+k+"=\""+task_type[0][h]+"?objectId="+target[0][h]+"&amp;fromType="+target_Type[0]+"&amp;fromId="+target[0][h]+"&amp;exportItem="+data[0].getExportitem()+"&amp;exportTab="+data[0].getTabId()+"&amp;exportData="+arrtree[i][1]+"&amp;dataId="+arrtree[i][4]+"&amp;pageType="+taskStatus[0][h]+"&amp;s=6&amp;programType="+ProgramType.parseProgramType(task_type[0][h])+"\" ";
+								targets+="target"+k+"=\""+target_task[0][h]+"\" ";
+								}
+								framenum=target[0].length+"";
+							}		
+					}
+			}else{
+						framenum="0";
+			}
+		}
+
+				
+		if (Integer.parseInt(arrtree[i][3])>1)	arrtree[i][3]="1";
+
+		parenttype=data[0].getTreeType();
+		String endicon="";
+		String starticon="";
+
+		String starticon1 = jacper.getStr("starticon");
+		
+		if (!arrtree[i][9].equals("0")&&!arrtree[i][9].equals("")) {
+			starticon=endicon="/themes/icon"+arrtree[i][9];				
+		}else  if (!arrtree[i][7].equals("")&&!arrtree[i][8].equals("")) {
+			starticon="/themes/icon"+arrtree[i][7];
+			endicon="/themes/icon"+arrtree[i][8];				
+		}else if ( !starticon1.equals("") ){
+			starticon=endicon=starticon1;
+		}
+		<?<e  _parent="?>temp_id<?" _id="?>arrtree[i][1]<?__?>level_num<?" _hasChild ="?>arrtree[i][3]<?" icon0="?>starticon<?" icon1="?>endicon<?" title="?>arrtree[i][0]<?" ?>targets<? ?>tree_herf<?  levelNum="?>level_num<?" framenum="?>framenum<?" url="/bin/exe/tree.jcp?_id=?>arrtree[i][1]<?__?>level_num<?&amp;objectId=?>objectId<?&amp;type=?>type<?&amp;parenttype=?>parenttype<?&amp;level_num=?>level_num<?&amp;starticon=?>starticon<?"/>?>;
+		tree_herf="";
+		targets="";  
+	}
+	<?</forder>
+	</root>?>;
+}
+}

@@ -1,0 +1,236 @@
+
+import java.io.OutputStream;
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.database.Column;
+import com.kinglib.database.DataType;
+import com.kinglib.ui.core.CustomizeFactory;
+import com.kinglib.ui.core.CustomizeObject;
+import com.kinglib.ui.core.list.List;
+import com.kinglib.ui.core.list.ListColumn;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.ui.program.ProgramSingleQuery;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workbench.program.ProgramType;
+import com.kinglib.workbench.ProgramNode;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.ui.core.utils.ICombineValueColumn;
+import com.kinglib.ui.program.ProgramListQueryColumn;
+import java.util.Iterator;
+import java.util.Date;
+
+import org.apache.poi.hssf.util.HSSFColor;
+import org.apache.poi.hssf.usermodel.HSSFFont;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFCell;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.util.Region;
+import org.apache.poi.hssf.usermodel.*;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+
+import javax.servlet.http.*;
+@class{
+		public void doPost(Jacper jacper){
+
+		Param param = new Param(jacper);
+		param.put("jacper",jacper);
+		String name="Download";
+		int totalRow = 0;
+		String message = "";
+		boolean success = true;
+	
+		String objectId = param.getString("objectId");
+		ProgramNode pNode=(ProgramNode)ObjectManager.getObject(objectId);
+		if(pNode==null)
+			return;
+
+		ProgramType pType=pNode.getProgramType();
+		String sheetName=pNode.getName();
+		String[] widths = param.getStr("widths").replaceAll(",,",",").split(",");
+		try{				
+			CustomizeObject program=CustomizeFactory.getCustomizeObject(param,pType.toString(),objectId);
+			param.put("local",param.getConnection(program.getLocalLink()));
+			String cheads=param.getStr("heads");
+			String[] heads = cheads.replaceAll(",,",",").split(",");
+			String[] hindex=param.getStr("index").replaceAll(",,",",").split(",");
+			//填充sb和column，也就是Excel的主体。
+			
+			name = new String(sheetName.getBytes("gb2312"),"iso-8859-1");
+			if(name.indexOf(".") == -1)
+				name += ".xls";
+			HttpServletResponse res = jacper.getResponse();
+			res.setContentType("application/vnd.ms-excel");
+			res.setHeader("Content-Disposition", "attachment;filename=" + name);
+			res.setHeader("Accept-ranges", "bytes");
+
+			OutputStream fileOut =res.getOutputStream();
+
+			HSSFWorkbook workbook = new HSSFWorkbook();
+			HSSFSheet worksheet = workbook.createSheet(sheetName);
+
+			if(pType==ProgramType.SIMPLEQUERY){
+				HSSFRow row1 = worksheet.createRow((short) 0);
+
+				for (int h=0;h<widths.length;h++){
+					HSSFCellStyle cellStyle = workbook.createCellStyle();
+					cellStyle.setBorderTop(CellStyle.BORDER_THIN);
+					cellStyle.setBorderBottom(CellStyle.BORDER_THIN);
+					cellStyle.setBorderLeft(CellStyle.BORDER_THIN);
+					cellStyle.setBorderRight(CellStyle.BORDER_THIN);
+
+					HSSFFont font = workbook.createFont();   
+					font.setFontHeightInPoints((short)12);   
+					font.setFontName("宋体");   
+					cellStyle.setFont(font);
+					worksheet.setDefaultColumnStyle(h,cellStyle);
+					int width=Integer.parseInt(widths[h])*256/5;
+					worksheet.setColumnWidth(h,width);						
+				}
+
+				for (int h=0;h<widths.length;h++){
+						HSSFCell cell = row1.createCell((short) h);
+						cell.setCellValue(heads[h]);						
+				}
+				JSONObject json=((ProgramSingleQuery)program).getData(param).toJSONObject().getJSONObject("source");
+				totalRow=json.length();
+				int m=1;
+				if ( totalRow> 0) {
+					Iterator it = json.keys();
+					String kname = "";
+					while (it.hasNext()) {
+						kname = (String) it.next();
+						HSSFRow row2 = worksheet.createRow((short)m);
+						HSSFCell cell1 = row2.createCell((short) 0);
+						cell1.setCellValue(kname);		
+						HSSFCell cell2 = row2.createCell((short) 1);
+						cell2.setCellValue(json.getString(kname));		
+						m++;
+					}
+				}
+			}else{
+						
+				List list=(List)program;
+				param.put("type","excel");
+				param.put("DataPartMode","puredata");
+				
+				boolean haveNumberCol=true;
+				if(pType==ProgramType.CROSSINPUT || pType==ProgramType.LISTINPUT||pType==ProgramType.LISTQUERY||pType==ProgramType.LIST){
+					haveNumberCol=false;
+				}
+				
+				int[] pos = new int[haveNumberCol?widths.length-1:widths.length];
+
+				if(list!=null){
+					Column[] cs = list.getColumns();
+					String lname=null;
+					for(int s=0;s<cs.length;s++){	
+						for(int z=haveNumberCol?1:0;z<pos.length;z++){
+							lname=(pType==ProgramType.LISTQUERY)?((ProgramListQueryColumn)cs[s]).getTitle():cs[s].getPname();
+							if(hindex[z].equals(lname)){
+								pos[haveNumberCol?z-1:z] = s;
+								break;
+							}
+						}
+					}
+
+
+
+					HSSFRow row1 = worksheet.createRow((short) 0);
+					for (int h=haveNumberCol?1:0;h<widths.length;h++){
+							HSSFCellStyle cellStyle = workbook.createCellStyle();
+							cellStyle.setBorderTop(CellStyle.BORDER_THIN);
+							cellStyle.setBorderBottom(CellStyle.BORDER_THIN);
+							cellStyle.setBorderLeft(CellStyle.BORDER_THIN);
+							cellStyle.setBorderRight(CellStyle.BORDER_THIN);
+
+							HSSFFont font = workbook.createFont();   
+							font.setFontHeightInPoints((short)12);   
+							font.setFontName("宋体");   
+							cellStyle.setFont(font);
+							worksheet.setDefaultColumnStyle(h,cellStyle);
+							int width=Integer.parseInt(widths[h])*256/5;
+							worksheet.setColumnWidth(h,width);				
+					}
+					for (int h=haveNumberCol?1:0;h<widths.length;h++){
+							HSSFCell cell = row1.createCell((short) h);
+							cell.setCellValue(heads[h]);						
+					}
+					
+					String listData = list.getData(param).toString();										
+					listData = listData.substring(1,listData.lastIndexOf("}"));
+					listData =listData.replaceAll("\\\\", "\\\\\\\\");
+					listData =listData.replaceAll("\\\\\\\\\"", "\\\\\"");
+					JSONArray rows=new JSONArray(listData);
+					JSONArray cols;
+					String dataType=null;
+					totalRow = rows.length()+1;
+					Column curCol=null;
+					int offset=1;
+					
+					if( pType==ProgramType.LISTQUERY){
+						offset=0;
+				    }
+					for ( int i=0; i<rows.length(); i++ ) {
+						cols = rows.getJSONArray(i);
+						HSSFRow row2 = worksheet.createRow((short)(i+1));
+						for ( int j=0; j<pos.length; j++ ) {
+								HSSFCell cell = row2.createCell((short)j);
+								curCol=cs[pos[j]];
+
+								if(((ICombineValueColumn)curCol).isCombine()){
+									cell.setCellType(Cell.CELL_TYPE_STRING);
+									cell.setCellValue(cols.getJSONObject(pos[j]+offset).getString("text"));	
+								}else{
+									if(curCol.getDataType()==DataType.FLOAT){
+										cell.setCellType(Cell.CELL_TYPE_NUMERIC);
+										if(!cols.getString(pos[j]+offset).equals("")){
+										try{
+											cell.setCellValue(cols.getDouble(pos[j]+offset));
+											}catch(Exception e){
+												cell.setCellType(Cell.CELL_TYPE_STRING);
+												cell.setCellValue(cols.getString(pos[j]+offset));
+											}
+										}
+									}else if(curCol.getDataType()==DataType.INT){
+										cell.setCellType(Cell.CELL_TYPE_NUMERIC);
+										if(!cols.getString(pos[j]+offset).equals("")){
+											try{
+												cell.setCellValue(cols.getInt(pos[j]+offset));	
+											}catch(Exception e){
+												cell.setCellType(Cell.CELL_TYPE_STRING);
+												cell.setCellValue(cols.getString(pos[j]+offset));
+											}
+										}
+									}else{
+										cell.setCellType(Cell.CELL_TYPE_STRING);
+										cell.setCellValue(cols.getString(pos[j]+offset));	
+									}
+								}
+						}
+					}
+				}
+			}
+			workbook.write(fileOut);
+			fileOut.flush();
+			fileOut.close();
+		}catch(Exception e){
+			e.printStackTrace();
+			success=false;
+			message=e.getMessage();
+		}finally {
+			param.closeAllConnection();
+		}
+		if(!success){
+			<?<script>alert("?>jacper.trans("Excel生成错误,原因是")<?:?>message<?");window.close();</script>?>;
+			return;
+		}
+	}
+	public void doGet(Jacper jacper){
+	   doPost(jacper);
+	}
+}
+

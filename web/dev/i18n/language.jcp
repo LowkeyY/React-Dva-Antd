@@ -1,0 +1,64 @@
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.i18n.develop.LanguageManager;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.i18n.I18n;
+import com.kinglib.util.json.JSONPart;
+
+import java.util.Locale;
+
+
+@class{
+	public void doGet(Jacper jacper) {
+
+		Connection con = jacper.getConnection("plat");
+		try {
+
+			StringBuilder buf = new StringBuilder("[");
+
+			String[][] result = con.get("select locale from $[plat].i18n_template where locale not in(select locale from $[plat].i18n_language) order by locale", null);
+			Locale cur = I18n.getLocal(jacper).getLocale();
+			if (result != null && result.length > 0) {
+				for (String[] row : result) {
+					Locale loc = new Locale(row[0].substring(0, 2), row[0].substring(3, 5));
+					if (buf.length() > 1)
+						buf.append(",");
+					JSONPart jp = new JSONPart();
+					jp.join("value", row[0]);
+					jp.join("text", loc.getDisplayName(cur) + "---" + loc.getDisplayName(loc));
+					buf.append(jp.toString());
+				}
+			}
+			buf.append("]");
+			jacper.print(buf.toString());
+		} catch (Exception e) {
+			jacper.print("{success:false}");
+			e.printStackTrace();
+		} finally {
+			con.close();
+		}
+	}
+
+	public void doPost(Jacper jacper) {
+		String type = jacper.getString("type", "");
+		String locale = jacper.getStr("locale");
+		Param param = new Param(jacper);
+		LanguageManager lm = LanguageManager.getInstance();
+		try {
+			if (type.equals("save")) {
+				lm.addLanguage(param, locale);
+			} else if (type.equals("update")) {
+				lm.updateLanguage(param, locale);
+			} else if (type.equals("delete")) {
+				lm.removeLanguage(param, locale);
+			}
+			jacper.print("{success:true}");
+		} catch (Exception e) {
+			jacper.print("{success:false}");
+			e.printStackTrace();
+		} finally {
+			param.releaseResources();
+		}
+	}
+} 

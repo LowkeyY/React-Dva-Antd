@@ -1,0 +1,73 @@
+                
+import com.kinglib.*;
+
+
+import com.susing.core.KingleSystem;
+import com.kinglib.workbench.*;
+import com.kinglib.bi.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.application.*;
+import com.kinglibx.query.Database;
+import java.sql.SQLException;
+@class{
+
+	public void doGet(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String objectId = jacper.getStr("id");
+		Connection conApp=null;
+		Connection conPlat=jacper.getConnection("plat");
+		try{
+			ObjectManager OM=ObjectManager.getInstance();
+			ObjectNode applicationNode=OM.getObject(objectId);
+			ApplicationFactory appFactory=ApplicationFactory.getInstance();
+			Application app=appFactory.getApplication(conPlat,objectId+"");
+			String dbLink=app.getDatabaseLink();
+			conApp=jacper.getConnection(dbLink);
+				
+			String catalog="";
+			String schema=conApp.parseObjectName(dbLink).toUpperCase();
+			try{
+				catalog=conApp.getCatalog();
+			}catch(SQLException se){}
+
+			String[][] data = Database.getTables(conApp,catalog,schema);
+			boolean created=false;
+			for(int i=0;i<data.length;i++){
+				if(data[i][2].toLowerCase().equals("second_dict")){
+					created=true;
+					break;
+				}
+			}
+			if(!created){
+				conApp.setAutoCommit(false);
+				if (conPlat.getType() == com.susing.EasyConnection.SQLSERVER) {
+					conApp.exec("create table $["+dbLink+"].second_dict(index_id int, option_id varchar(36) not null, option_code varchar(255) not null,option_value varchar(255), allow_used varchar(5) not null,is_default varchar(5) not null,primary key(index_id,option_id,option_code))",new String[]{});
+				} else if (conPlat.getType() == com.susing.EasyConnection.ORACLE) {
+					conApp.exec("create table $["+dbLink+"].second_dict(index_id number(10), option_id varchar2(36) not null, option_code varchar2(255) not null,option_value varchar2(255), allow_used varchar2(5) not null,is_default varchar2(5) not null,primary key(index_id,option_id,option_code))",new String[]{});
+				} else if (conPlat.getType() == com.susing.EasyConnection.MYSQL) {
+					conApp.exec("create table $["+dbLink+"].second_dict(index_id int, option_id varchar(36) not null, option_code varchar(255) not null,option_value varchar(255), allow_used varchar(5) not null,is_default varchar(5) not null,primary key(index_id,option_id,option_code))",new String[]{});
+				} else if (conPlat.getType() == com.susing.EasyConnection.POSTGRESQL) {
+					conApp.exec("create table $["+dbLink+"].second_dict(index_id int, option_id varchar(36) not null, option_code varchar(255) not null,option_value varchar(255), allow_used varchar(5) not null,is_default varchar(5) not null,primary key(index_id,option_id,option_code))",new String[]{});
+				}
+				conApp.commit();
+			}
+			jacper.print("{success:true}");	
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conApp.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+			if(conPlat!=null)
+				conPlat.close();
+				if(conApp!=null)
+					conApp.close();
+				conApp.setAutoCommit(true);
+			}catch(Exception e2) {}
+		}
+}
+}

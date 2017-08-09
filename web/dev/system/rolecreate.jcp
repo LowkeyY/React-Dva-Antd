@@ -1,0 +1,119 @@
+
+
+
+
+import com.kinglib.*;
+import java.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.social.api.core.model.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String id = jacper.getString("id","0");
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+			JSONObject roleJSON = new JSONObject("{}");
+			String[] rs = conPlat.getRow("select group_id,strategy_name,note,$date_str(create_date,111),creator from $[plat].sys_strategy where strategy_id=?",new String[]{""+id});      
+			if(rs!=null){
+				roleJSON.put("strategy_id",id+"");
+				roleJSON.put("group_id",rs[0]);
+				roleJSON.put("strategy_name",rs[1]);
+				roleJSON.put("note",rs[2]);
+				roleJSON.put("create_date",rs[3]);
+				roleJSON.put("creator",rs[4]);
+			}
+		   <?[?>roleJSON.toString()<?]?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = String.valueOf(hs.uid);
+
+	String type=jacper.getString("type");
+
+	String strategy_name=jacper.getString("strategy_name");
+	String note=jacper.getString("note");
+	CertManager cache=CertManager.getInstance();
+	ObjectManager OM=ObjectManager.getInstance();
+
+	if (type.equals("save")){
+		try{	
+			String group_id=jacper.getString("id");
+			String strategy_id = "";	
+
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				strategy_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				strategy_id =UUID.randomUUID().toString();
+			}
+
+			ObjectNode groupNode=OM.getObject(group_id);
+			groupNode.addChild(conPlat,strategy_id,strategy_name,ObjectType.STRATEGY,hs.uid);
+
+			conPlat.exec("insert into $[plat].sys_strategy ( group_id,strategy_id,strategy_name,note,creator,create_date) values (?,?,?,?,?,$getdate())",new String[]{group_id,strategy_id,strategy_name,note,user_id});
+			cache.loadStrategy(new Strategy(strategy_id,strategy_name,group_id));
+			<?{success:true,id:'?>strategy_id<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}else if (type.equals("updatesave")){
+		try{	
+			String strategy_id = jacper.getString("id");
+			ObjectNode strategyNode=OM.getObject(strategy_id);
+			strategyNode.updateName(conPlat,strategy_name);
+			conPlat.exec("update $[plat].sys_strategy set strategy_name=?,note=?,creator=?,create_date=$getdate() where strategy_id=?",new String[]{strategy_name,note,user_id,strategy_id});
+			Strategy st= cache.getStrategy(strategy_id);
+			if(st!=null){
+				st.setName(strategy_name);
+			}
+			<?{success:true,id:'?>strategy_id<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}else if(type.equals("delete")) {
+		String strategy_id = jacper.getString("id");
+		ObjectNode strategyNode=OM.getObject(strategy_id);
+		try{	
+			conPlat.setAutoCommit(false);	
+			strategyNode.destroy(conPlat);
+			cache.removeStrategy(strategy_id);
+			conPlat.commit();
+			<?{success:true,id:'?>strategy_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

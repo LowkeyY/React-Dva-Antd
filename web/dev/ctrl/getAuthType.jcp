@@ -1,0 +1,66 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.util.json.*;
+
+@class{
+private static int id=0;
+public void doPost(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+	String[][] groups = conPlat.get("SELECT b.option_code, b.option_value from $[plat].second_dict b WHERE b.option_id=?",new String[]{"6"});
+	try{
+		JSONObject optionJSON = new JSONObject("{success:true}");
+		JSONArray jarr=new JSONArray();
+		try{
+
+			JSONObject items = new JSONObject("{}");
+			items.put("value","1");
+			items.put("text",jacper.trans("显示所有数据"));
+			jarr.put(items);
+
+			items = new JSONObject("{}");
+			items.put("value","2");
+			items.put("text",jacper.trans("显示本部门数据"));
+			jarr.put(items);
+
+			items = new JSONObject("{}");
+			items.put("value","3");
+			items.put("text",jacper.trans("显示本人数据"));
+			jarr.put(items);
+
+			items = new JSONObject("{}");
+			items.put("value","4");
+			items.put("text",jacper.trans("显示下属部门数据"));
+			jarr.put(items);
+
+			items = new JSONObject("{}");
+			items.put("value","5");
+			items.put("text",jacper.trans("显示上级下属数据"));
+			jarr.put(items);
+
+			for(int i=0;i<groups.length;i++){
+				items = new JSONObject("{}");
+				items.put("value","6:"+groups[i][0]);
+				items.put("text",jacper.trans("显示关联权限")+"/"+groups[i][1]);
+				jarr.put(items);
+			}
+			optionJSON.put("items",jarr);
+			optionJSON.put("totalCount",groups.length+5);
+		}catch(Exception e){}
+		<??>optionJSON.toString()<??>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+public void doGet(Jacper jacper){
+	doPost(jacper);
+}
+}
+
+
+		

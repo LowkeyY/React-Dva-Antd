@@ -1,0 +1,21 @@
+
+import com.kinglib.Jacper;
+
+import gpra.filesystem.search.SearchRunningQueue;
+import gpra.filesystem.task.HWTaskWorkUserTimer;
+
+import javax.servlet.http.HttpSession;
+
+//public class onPreviewWindowClose {
+@class{
+	public void doGet(Jacper jacper){
+
+		String fileId = jacper.getStr("fileId");
+		if(fileId.length() > 0){
+			String userId = String.valueOf(jacper.getSession().uid);
+			String useraddr = jacper.getRequest().getRemoteAddr();
+			HttpSession session = jacper.getRequest().getSession();	
+			SearchRunningQueue.add(new HWTaskWorkUserTimer(userId , useraddr , fileId , session , System.currentTimeMillis()));
+		}
+	}
+}

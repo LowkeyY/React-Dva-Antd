@@ -1,0 +1,235 @@
+/* StatusBar */
+.x-statusbar .x-status-text {
+    height: 21px;
+    line-height: 21px;
+    padding: 0 4px;
+    cursor: default;
+}
+
+.x-statusbar .x-status-busy {
+    padding-left: 25px !important;
+    background: transparent no-repeat 3px 2px;
+}
+
+.x-statusbar .x-status-text-panel {
+    border-top: 1px solid #99BBE8;
+    border-right: 1px solid #fff;  
+    border-bottom: 1px solid #fff;
+    border-left: 1px solid #99BBE8;
+    padding: 2px 8px 2px 5px;
+}
+.x-grid3-hd-row td.ux-filtered-column {   
+    font-style: italic;  
+    font-weight: bold;
+}		
+
+.ux-filtered-column.sort-asc .x-grid3-sort-icon {
+	background-image: url(/bin/exe/filter/img/sort_filtered_asc.gif) !important;
+}
+
+.ux-filtered-column.sort-desc .x-grid3-sort-icon {
+	background-image: url(/bin/exe/filter/img/sort_filtered_desc.gif) !important;
+}
+
+.ux-gridfilter-text-icon {
+	background-image: url(/bin/exe/filter/img/find.png) !important;
+}
+
+/* Temporary Patch for Bug ??? */
+.x-menu-list-item-indent .x-menu-item-icon {
+	position: relative;
+    top: 3px;
+    left: 3px;
+	margin-right: 10px;
+}
+li.x-menu-list-item-indent {
+	padding-left:0px;
+}
+li.x-menu-list-item div {
+	display: block;
+}
+.ux-rangemenu-gt {
+	background-image: url(/bin/exe/filter/img/greater_than.png) !important;
+}
+.ux-rangemenu-lt {
+	background-image: url(/bin/exe/filter/img/less_than.png) !important;
+}
+.ux-rangemenu-eq {
+	background-image: url(/bin/exe/filter/img/equals.png) !important;
+}
+.x-grid3-summary-table{border-bottom:1px solid #EEEEEE;border-top:1px solid #EEEEEE;color:#333;background:#f1f2f4;}
+.x-grid3-summary-row{border-left:1px solid #fff;border-right:1px solid #fff;border-bottom:1px solid #EEEEEE;border-top:1px solid #EEEEEE;color:#333;background:#f1f2f4;}
+.x-grid3-summary-row .x-grid3-cell-inner{font-weight:bold;padding-bottom:4px;}
+.x-grid3-cell-first .x-grid3-cell-inner{padding-left:16px;}
+.x-grid-hide-summary .x-grid3-summary-row{display:none;}
+.x-grid3-summary-msg{padding:4px 16px;font-weight:bold;}
+.x-grid3-gridsummary-row-inner{overflow:hidden;width:100%;}/* IE6 requires width:100% for hori. scroll to work */
+.x-grid3-gridsummary-row-offset{width:10000px;}
+.x-grid-hide-gridsummary .x-grid3-gridsummary-row-inner{display:none;}
+.codemirror-iframe {
+	background: white;
+	color: black;
+}
+.CodeMirror-line-numbers {
+	width: 1.8em;
+	color: #aaa;
+	background-color: #eee;
+	text-align: right;
+	padding-right: .3em;
+	font-size: 10pt;
+	font-family: monospace;
+	padding-top: .4em;
+	line-height: normal;
+}
+
+
+.x-form-spinner-proxy{
+	/*background-color:#ff00cc;*/
+}
+.x-form-field-wrap .x-form-spinner-trigger {
+    background:transparent url('/lib/spinner/spinner.gif') no-repeat 0 0;
+}
+
+.x-form-field-wrap .x-form-spinner-overup{
+    background-position:-17px 0;
+}
+.x-form-field-wrap .x-form-spinner-clickup{
+    background-position:-34px 0;
+}
+.x-form-field-wrap .x-form-spinner-overdown{
+    background-position:-51px 0;
+}
+.x-form-field-wrap .x-form-spinner-clickdown{
+    background-position:-68px 0;
+}
+
+
+.x-trigger-wrap-focus .x-form-spinner-trigger{
+    background-position:-85px 0;
+}
+.x-trigger-wrap-focus .x-form-spinner-overup{
+    background-position:-102px 0;
+}
+.x-trigger-wrap-focus .x-form-spinner-clickup{
+    background-position:-119px 0;
+}
+.x-trigger-wrap-focus .x-form-spinner-overdown{
+    background-position:-136px 0;
+}
+.x-trigger-wrap-focus .x-form-spinner-clickdown{
+    background-position:-153px 0;
+}
+.x-trigger-wrap-focus .x-form-trigger{
+    border-bottom: 1px solid #7eadd9;
+}
+
+.x-form-field-wrap .x-form-spinner-splitter {
+	line-height:1px;
+	font-size:1px;
+    background:transparent url('/lib/spinner/spinner-split.gif') no-repeat 0 0;
+	position:absolute;
+	cursor: n-resize;
+}
+.x-trigger-wrap-focus .x-form-spinner-splitter{
+    background-position:-14px 0;
+}
+.x-cp-rgbpicker,.x-cp-huepicker,.x-cp-opacitypicker,.x-cp-slider{
+    position:absolute;cursor:pointer;_cursor:hand;background-repeat:no-repeat;margin:0;padding:0;border:0
+}
+.x-cp-slider{
+    left:-15px;top:-15px;width:15px;height:15px;background-image:url(/lib/ColorPicker/images/slider-rgb.gif)!important
+}
+.x-cp-rgbpicker{
+    left:6px;top:6px;width:182px;height:182px;background-image:url(/lib/ColorPicker/images/mask.png);background-color:red;_background-image:none;_filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='/lib/ColorPicker/images/mask.png',sizingMethod='scale')
+}
+.x-cp-huepicker{
+    left:196px;top:6px;width:9px;height:183px;background-image:url(/lib/ColorPicker/images/hue.png)!important
+}
+.x-cp-opacitypicker{
+    left:6px;top:196px;width:183px;height:9px;background-image:url(/lib/ColorPicker/images/opacity.png)!important
+}
+.x-cp-clearfloat{
+    clear:both
+}
+.x-cp-formcontainer{
+    position:absolute;margin:0;padding:0;border:0;top:6px;left:215px;width:116px
+}
+.x-cp-formcontainer input{
+    text-align:center
+}
+.x-cp-formcontainer .x-form-item{
+    margin-bottom:3px
+}
+.x-cp-formcontainer .x-form-text{
+    height:17px
+}
+.x-cp-preview{
+    background-image:url(/lib/ColorPicker/images/opacity-back.gif)!important;background-repeat:no-repeat;background-position:0 22px
+}
+.x-cp-inverse{
+    background-image:url(/lib/ColorPicker/images/inverse.png)!important
+}
+.x-cp-webSafe{
+    background-image:url(/lib/ColorPicker/images/webSafe.png)!important
+}
+.x-cp-previewbox{
+    width:73px;height:21px
+}
+.x-cp-tooltipcolorbox{
+    width:30;height:16;border:solid 1px black
+}
+.x-form-field-wrap .x-form-colorfield-palette{
+    background-image:url('/lib/ColorPicker/images/trigger-palette.gif')
+}
+.x-form-field-wrap .x-form-colorfield-picker{
+    background-image:url('/lib/ColorPicker/images/trigger-picker.gif')
+}
+.x-form-colorfield-colorMask{
+    position:absolute
+}
+.x-form-tscheckbox{
+	height:13px;width:13px;background:url('/lib/tristate/checkbox.gif') no-repeat 0 0;vertical-align:bottom
+}
+.x-checkbox-checked .x-form-tscheckbox{
+	background-position:0 -13px
+}
+.x-checkbox-undef .x-form-tscheckbox{
+	background-position:0 -26px
+}
+.x-item-disabled .x-form-tscheckbox{
+	background-position:-39px 0
+}
+.x-form-check-over .x-form-tscheckbox{
+	background-position:-13px 0
+}
+.x-form-check-down .x-form-tscheckbox{
+	background-position:-26px 0
+}
+.x-checkbox-checked .x-form-check-over .x-form-tscheckbox{
+	background-position:-13px -13px
+}
+.x-checkbox-checked .x-form-check-down .x-form-tscheckbox{
+	background-position:-26px -13px
+}
+.x-checkbox-checked.x-item-disabled .x-form-tscheckbox{
+	background-position:-39px -13px
+}
+.x-checkbox-undef .x-form-check-over .x-form-tscheckbox{
+	background-position:-13px -26px
+}
+.x-checkbox-undef .x-form-check-down .x-form-tscheckbox{
+	background-position:-26px -26px
+}
+.x-checkbox-undef.x-item-disabled .x-form-tscheckbox{
+	background-position:-39px -26px
+}
+.potal-message-new {
+	cursor:pointer;font-weight: bolder;
+}
+.potal-message-read {
+	cursor:default;font-weight: normal;
+}
+
+.x-icon-tickets-1{
+	background:url('/themes/types/medium/published_files.gif') no-repeat 0 0;
+}

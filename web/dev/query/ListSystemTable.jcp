@@ -1,0 +1,175 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import java.util.*;
+import com.kinglibx.query.Database;
+import com.susing.core.KingleSystem;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import com.susing.sql.DataSourceFactory;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.application.*;
+@class{
+
+public void doGet(Jacper jacper){
+	
+	String catalog = jacper.getString("catalog");
+	String schema = jacper.getString("schema");
+	String table = jacper.getString("table");
+	String server = jacper.getString("server");
+
+	if(!jacper.isXML())
+		jacper.setXML();
+
+	if(table != null){
+		if(catalog == null && schema == null){
+			jacper.setError(jacper.trans("参数不全"));
+			return;
+		}
+		showTable(jacper,server,catalog,schema,table);
+	}else if(catalog == null && schema == null){
+		showRoot(jacper,server);
+	}else{
+		showDB(jacper,server,catalog,schema);
+	}
+}
+
+
+private void showRoot(Jacper jacper,String server){
+
+	String parent_id = jacper.getStr("parent_id");
+	ObjectManager OM=ObjectManager.getInstance();
+<?
+<root _id="_sysdb">
+	<forder _hasChild="1" _parent="_sysdb">?>;
+		Connection conPlat = jacper.getConnection("plat");
+
+		HashSet<String[]> baseSet=new HashSet<String[]>();
+
+		String[] cs= KingleSystem.getConnectionNames();		
+		HashMap ct= KingleSystem.getConnectionTypes();		
+
+		for(int i=0;i<cs.length;i++){
+			String connectType=(String)ct.get(cs[i]);
+			if(cs[i].equals("plat") || cs[i].equals("utils")|| cs[i].equals("work")|| cs[i].equals("cert")||connectType.equals("private")) continue;
+			try{
+				String schemaString=DataSourceFactory.getConnectionMap(cs[i]);
+				String catalog="";
+				String schema="";
+				if(schemaString.indexOf(".")==-1){
+					schema=schemaString;
+				}else{
+					String[] schemaArray=schemaString.split(".");
+					catalog=schemaArray[0];
+					schema=schemaArray[1];
+				}
+				server = cs[i];
+				String base = getBase(catalog,schema);
+				String[] tempArray=new String[4];
+				tempArray[0]=base;
+				tempArray[1]=server;
+				tempArray[2]=catalog;
+				tempArray[3]=schema;
+				baseSet.add(tempArray);
+			}catch(Exception e){e.printStackTrace();}
+		}
+
+		 ObjectNode systemNode=OM.getObject(parent_id).upTo(ObjectType.SYSTEM);;
+		 ObjectNode[] groupNodes=systemNode.getChilds(ObjectType.APPLICATIONGROUP);
+		 String dbLink="";
+		 for(int j=0;j<groupNodes.length;j++){
+			ObjectNode[] appNodes=groupNodes[j].getChilds(ObjectType.APPLICATION);
+			for(int k=0;k<appNodes.length;k++){
+				 String appId=appNodes[k].getId();
+				 ApplicationFactory appFactory=ApplicationFactory.getInstance();
+				 Application app=appFactory.getApplication(conPlat,appId+"");
+				 if(!dbLink.equals(app.getDatabaseLink())){
+					dbLink=app.getDatabaseLink();
+					 try{
+						String schemaString=DataSourceFactory.getConnectionMap(dbLink);
+						String catalog="";
+						String schema="";
+						if(schemaString.indexOf(".")==-1){
+							schema=schemaString;
+						}else{
+							String[] schemaArray=schemaString.split(".");
+							catalog=schemaArray[0];
+							schema=schemaArray[1];
+						}
+						server = dbLink;
+						String base = getBase(catalog,schema);
+						String[] tempArray=new String[4];
+						tempArray[0]=base;
+						tempArray[1]=server;
+						tempArray[2]=catalog;
+						tempArray[3]=schema;
+						baseSet.add(tempArray);
+					}catch(Exception e){e.printStackTrace();}
+				}
+			}
+		}
+		for(Iterator<String[]> baseIterator = baseSet.iterator();baseIterator.hasNext();){
+			String[] baseArray = baseIterator.next();
+			<?<e _id="?>baseArray[0]<?_?>baseArray[1]<?" title="?>baseArray[1]<?" 
+				url="/dev/query/ListSystemTable.jcp?server=?>baseArray[1]<?&amp;catalog=?>baseArray[2]<?&amp;schema=?>baseArray[3]<?"/>?>;
+		}
+	conPlat.close();
+<?
+</forder></root>
+?>;
+}
+
+private void showDB(Jacper jacper,String server,String catalog,String schema){
+
+Connection conPlat = jacper.getConnection(server);
+String[][] data = Database.getTables(conPlat,catalog,schema);
+String base = getBase(catalog,schema);
+<?
+<root _id="?>base<?_?>server<?">
+<forder>
+	<e _id="?>base<?_?>server<?_TABLE" _parent="?>base<?_?>server<?" title="?>jacper.trans("用户表")<?"/>
+	<e _id="?>base<?_?>server<?_VIEW" _parent="?>base<?_?>server<?" title="?>jacper.trans("视图")<?"/>
+	<e _id="?>base<?_?>server<?_SYNONYM" _parent="?>base<?_?>server<?" title="?>jacper.trans("同义词")<?"/>
+</forder>
+<forder icon0="menutree/table" event="sys_tab" _hasChild="1">?>;
+
+for(int i=0;i<data.length;i++){
+	String table = data[i][2];
+	String type = data[i][3];
+	String _table = "$["+server+"]."+table;
+	<?
+	<e _id="?>_table<?_?>server<?" _parent="?>base<?_?>server<?_?>type<?" title="?>_table<?" server="?>server<?"
+	url="/dev/query/ListSystemTable.jcp?server=?>server<?&amp;catalog=?>catalog<?&amp;schema=?>data[i][1]<?&amp;table=?>table<?"/>?>;
+}
+conPlat.close();
+<?</forder></root>?>;
+}
+
+private void showTable(Jacper jacper,String server,String catalog,String schema,String table){
+Connection conPlat = jacper.getConnection(server);
+String[][] data = Database.getColumns(conPlat,catalog,schema,table);
+String _table = "$["+server+"]."+table;
+
+<?
+<root _id="?>_table<?_?>server<?">
+<cell icon0="menutree/column" _parent="?>_table<?_?>server<?">?>;
+
+for(int i=0;i<data.length;i++){
+	String colName = data[i][0];
+	String type = data[i][1];	
+	if(type.toUpperCase().indexOf("CHAR") != -1)
+		type +="("+data[i][2]+")";	
+	String isnull = data[i][3].equals("1")? "NULL" : "NOT NULL";
+<?<e _id="?>_table<?_?>server<?_?>i<?" name="?>colName<?" server="?>server<?"  title="?>colName<? (?>type<? ?>isnull<?)"/>?>;
+}
+conPlat.close();
+<?</cell></root>?>;
+}
+private static String getBase(String catalog,String schema){
+	if(catalog == null || catalog.equals(""))
+		return schema;
+	else
+		return catalog;
+}
+}

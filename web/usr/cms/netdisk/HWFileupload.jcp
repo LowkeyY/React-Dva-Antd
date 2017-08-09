@@ -1,0 +1,171 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.netdisk.NetdiskUnits;
+import com.kinglib.service.cms.netdisk.UpFileUnits;
+import com.kinglib.ui.core.CustomizeFactory;
+import com.kinglib.ui.core.CustomizeObject;
+import com.kinglib.ui.core.input.Input;
+import com.kinglib.ui.core.utils.Param;
+
+import java.io.File;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.UUID;
+
+import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
+
+import com.susing.KingleServletRequest;
+
+//public class HWFileupload{
+@class{
+	public void doPost(Jacper jacper){
+		System.out.println("文件上传开始>>>");
+		KingleServletRequest request = jacper.getRequest();
+		Connection con = jacper.getConnection("education");		  	    		
+		DiskFileItemFactory factory = new DiskFileItemFactory();
+		factory.setSizeThreshold(10240000);
+		String base = NetdiskUnits.netdiskBasepath;
+		File file = new File(base);
+		if (!(file.exists()))
+			file.mkdirs();
+		factory.setRepository(file);
+		ServletFileUpload upload = new ServletFileUpload(factory);
+		//upload.setFileSizeMax(10002400000L);	
+		upload.setSizeMax(10002400000L);
+		upload.setHeaderEncoding("UTF-8");
+		
+		Param p = new Param(jacper);
+		p.put("jacper", jacper);
+		p.put("local", con);
+		try {
+			Enumeration<String> parameterNames = request.getParameterNames();//使用枚举获取这个key-value对
+			while (parameterNames.hasMoreElements()) {
+				String key = parameterNames.nextElement().toString();
+				p.put(key,URLDecoder.decode(jacper.getString(key),"utf-8"));
+			}
+		} catch (UnsupportedEncodingException e1) {
+			e1.printStackTrace();
+		}
+		
+/*		JSONObject fileinfoItems = null;//处理多文件上传
+		try {
+			fileinfoItems = new JSONObject(p.getStr("FILEINFOITEMS"));
+		} catch (JSONException e1) {
+			fileinfoItems = new JSONObject();
+		}*/
+		String objectId = jacper.getStr("objectId");
+		String CustomizeType = jacper.getString("programType" , "");
+		String userCustomInfoName = p.getString("userCustomInfoName", "");
+		
+		try
+		{
+			List items = upload.parseRequest(request.getRequest());
+			String userId = p.getStr("userId");
+			con.setAutoCommit(false);
+			
+			System.out.println("参数整理完成。");
+			//循环上传文件列表。
+			for (int i = 0; i < items.size(); ++i) {
+				FileItem item = (FileItem)items.get(i);
+				System.out.println("竖表加值");
+				//竖表加值
+				if ((!(item.isFormField())) && (item.getName().length() > 0)){ 
+					if(userCustomInfoName.length() > 0)
+						p.set("FILE_NAME", userCustomInfoName);//处理多文件上传 , 用户自定义文件名称
+					if(!p.containsKey("FILE_NAME"))
+						p.set("FILE_NAME", item.getName());
+					
+/*					if (fileinfoItems.length() > 1){//处理多文件上传
+						String key = item.getName().replaceAll("\\s|\\.", "");
+						p.set("FILE_INFO_NAME", fileinfoItems.has(key) ? fileinfoItems.getString(key) : item.getName());
+					}*/
+					
+					String fileId = UUID.randomUUID().toString() , fileName = base + File.separator + item.getName() , phyFileid = "" , filetype = "" , filepath = "" , fileURI = "" , fileSize = Long.toString(item.getSize());
+					
+					boolean hasPhysicalFile = false;
+					
+					String fileMD5 = UpFileUnits.getFileMD5Code(item.getInputStream()) , newfilename = "";
+					System.out.println("fileMD5:"+fileMD5);
+					
+					String[] row = con.getRow("select p.phy_file_id from DIR_FILE_PHYSICAL p where p.file_md5 = ?" , new String[]{fileMD5});
+					if(row != null && row.length >0){
+						phyFileid = row[0];
+						UpFileUnits.addPhysicalFileCount(con, phyFileid);
+						hasPhysicalFile = true;
+					}
+					int pos=-1;
+					filetype = (pos = fileName.lastIndexOf(".")) != -1 ? fileName.substring(pos + 1) : "unknown"; //文件类型
+					
+					if(!hasPhysicalFile){
+						System.out.println("没有md5同样的文件，");
+						phyFileid = UUID.randomUUID().toString();
+						filepath = base + NetdiskUnits.toHexString(phyFileid.substring(phyFileid.length()-2, phyFileid.length()).getBytes())+File.separator;
+						File filep = new File(filepath);
+						if (!(filep.exists()))
+							filep.mkdirs();
+						newfilename = filepath + phyFileid.substring(0,phyFileid.length()-2);			    
+						fileURI = "file:" + newfilename;
+						con.exec("insert into DIR_FILE_PHYSICAL values(?,?,?,?,?,?,?,?,?)", new String[]{phyFileid,"",fileURI,fileMD5,item.getName(),fileSize,filetype,"1",""});
+						item.write(new File(newfilename));
+						System.out.println("新物理文件添加成功");
+					}	
+
+					//模拟模块保存。
+					CustomizeObject custmizeObject = null;
+					try {
+						con.setAutoCommit(false);
+						
+						String nodeId = p.getString("exportData");							//节点id
+						String dirId= UpFileUnits.getDirPathId(nodeId , con);
+						
+						p.set("FILE_ID", fileId);
+						p.set("PHY_FILE_ID",phyFileid);
+						p.set("FILE_TYPE", filetype);
+						p.set("FILE_SIZE", fileSize);
+						p.set("NODE_ID",nodeId);
+						p.set("FILE_DIR",dirId);
+						SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+						p.set("FILE_UPLOAD_DATE",sdf.format(new Date()));
+						
+						CustomizeFactory.remove(String.valueOf(objectId));
+						custmizeObject = CustomizeFactory.getCustomizeObject(p, CustomizeType, String.valueOf(objectId));
+						((Input) custmizeObject).save(p);
+						
+						con.commit();
+						//System.out.println("操作:" + (p.have("newDataId") ? "保存成功":"未保存"));
+					} catch (Exception e) {
+						e.printStackTrace();
+						jacper.print("{'success':false,'message':'上传过程出现错误。'}");
+						return;
+					}
+
+					con.commit();
+				}
+			}
+			//此处不发送邮件 ， 邮件按时发送。
+			//System.out.println("<<<文件上传结束");
+			jacper.print("{'success':true,'message':'上传成功。'}");
+		}catch (Exception e) {
+			try {
+				con.rollback();
+			} catch (Exception ecc) {
+				ecc.printStackTrace();
+			}
+			e.printStackTrace();
+			jacper.print("{'success':false,'message':'上传过程出现错误。'}");
+		}finally { 
+			try {
+				con.setAutoCommit(true);
+			} catch (Exception ecc) {
+				ecc.printStackTrace();
+			}
+			con.close();
+		} 
+	}
+}

@@ -1,0 +1,85 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+import gpra.filesystem.HWUnits;
+//public class up{
+		@class{
+	public void doPost(Jacper jacper) {
+		Connection con=jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			JSONObject jbout=new JSONObject();
+			JSONArray ja = new JSONArray();
+			
+			String spaceid=(String) jacper.getSession().get("HW_BASE_SPACEID");
+			String sql="select count(file_id) from dir_file_base where space_id='"+spaceid+"'";
+			String[][]rs=con.get(sql);
+			JSONObject jb=new JSONObject();
+			jb.put("name","总资料");
+			jb.put("count",rs[0][0]+"个");
+			ja.put(jb);
+			
+			String sql2="select sum(file_size) from dir_file_base where space_id='"+spaceid+"'";
+			String[][]rs2=con.get(sql2);
+			String fileSize="";
+			double count=0.0;
+			if(!rs2[0][0].equals("")){
+				count=Double.parseDouble(rs2[0][0])/1024.00;
+			}
+			if(count>1024){
+				fileSize="MB";
+				count=count/1024.00;
+				if(count>1024){
+					fileSize="GB";
+					count=count/1024.00;
+					if(count>1024){
+						fileSize="TB";
+					}
+				}
+			}else{
+				fileSize="KB";
+			}
+			java.text.DecimalFormat   df   =new   java.text.DecimalFormat("#.00");  
+			
+			JSONObject jb1=new JSONObject();
+			jb1.put("name","总资料大小");
+			jb1.put("count",(df.format(count)+fileSize));
+			ja.put(jb1);
+			
+			String sql3="select count(dir_id) from DIR_NODE_INFO where dir_id in (select default_dir_id from DIR_SPACE_BASE where space_id='" + spaceid + "')";
+			String[][]rs3=con.get(sql3);
+			
+			JSONObject jb2=new JSONObject();
+			jb2.put("name","总目录");
+			jb2.put("count",rs3[0][0]+"个");
+			ja.put(jb2);
+			
+			
+			JSONObject jb4=new JSONObject();
+			jb4.put("name","目录文件统计：");
+			jb4.put("count"," ");
+			ja.put(jb4);
+			String sql4="select db.DATUM_NAME,count(DATUM_NAME) from dir_file_base fb inner join DIR_DATUM_BASE db on fb.FILE_CLASS=db.datum_id where fb.space_id='"+spaceid+"'  group by db.DATUM_NAME";
+			String[][]rs4=con.get(sql4);
+			
+			for(int i=0;i<rs4.length;i++){
+				JSONObject jb3=new JSONObject();
+				jb3.put("name",rs4[i][0]);
+				jb3.put("count",rs4[i][1]+"个");
+				ja.put(jb3);
+			}
+			
+			
+			jbout.put("authArray",ja);
+			jacper.print(jbout);
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void doGet(Jacper jacper) {
+		doPost(jacper);
+	}
+}

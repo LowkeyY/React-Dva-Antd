@@ -1,0 +1,59 @@
+
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import java.util.HashMap;
+
+
+@class{
+
+	public void doGet(Jacper jacper) {
+
+		Connection conPlat = jacper.getConnection("plat");
+		String[][] rs = conPlat
+				.get("select a.group_id,c.system_name||'_'||a.group_name,b.strategy_id,b.strategy_name from platform_edu.sys_strategy b,platform_edu.application_group a,platform_edu.system_base c where  c.system_id=a.system_id and a.group_id=b.group_id ");
+		conPlat.close();
+
+		JSONArray arr = new JSONArray();
+		try {
+			
+			HashMap<String, JSONObject> map = new HashMap<String, JSONObject>();
+			
+			for (String[] r:rs) {
+				
+				JSONObject groupJSON = map.get(r[0]);
+				if (groupJSON == null) {
+					groupJSON = new JSONObject();
+					groupJSON.put("id", r[0]);
+
+					groupJSON.put("text", r[1]);
+					groupJSON.put("children", new JSONArray());
+					map.put(r[0], groupJSON);
+				}
+				JSONArray children = groupJSON.getJSONArray("children");
+
+				JSONObject strategyJSON = new JSONObject();
+				strategyJSON.put("leaf", true);
+				strategyJSON.put("id", r[2]);
+				strategyJSON.put("text", r[3]);
+				strategyJSON.put("checked", false);
+				children.put(strategyJSON);
+			}
+
+			for (JSONObject json : map.values()) {
+				
+				if (json.getJSONArray("children").length() > 0) {
+					arr.put(json);
+				}
+			}
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		jacper.print(arr);
+	}
+
+}

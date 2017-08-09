@@ -1,0 +1,60 @@
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.*;
+import com.kinglib.dictionary.*;
+import com.kinglib.workbench.integrate.*;
+import com.kinglib.workbench.application.*;
+import com.kinglib.util.json.*;
+import com.kinglib.util.*;
+import java.util.*;
+
+@class{
+	public void doPost(Jacper jacper){
+		String type=jacper.getStr("type");
+		String[][] rs=null;
+		String objectId = jacper.getStr("objectId");
+		ObjectNode pnode=ObjectManager.getObject(objectId);
+		if(pnode==null) return ;
+		ArrayList<String[]> al=new ArrayList<String[]>(20);
+		ObjectNode qnode=null;
+		MetaTable mt=null;
+		
+			
+		if(type.equals("query")){
+		
+			for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.QUERY)){
+				qnode=ObjectManager.getObject(node.getId());
+				mt=MetaFactory.getObject(node.getId());
+				if(qnode!=null&&mt==null){
+					al.add(new String[]{qnode.getName(),String.valueOf(qnode.getId())});					
+				}
+			}
+			
+		}else{
+		
+			for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.METATABLE)){
+				al.add(new String[]{node.getName(),String.valueOf(node.getId())});	
+			}
+		
+		}
+		rs = al.toArray(new String[al.size()][2]);
+		
+		JSONObject form=null;
+		try{
+			Arrays.sort(rs, new TwoDimArrayComparator());
+			form= new JSONObject("{success:true}");
+			JSONArray jarr=new JSONArray();
+			for(int i=0;i<rs.length;i++){
+				JSONObject js=new JSONObject("{}");
+				js.put("text",rs[i][0]);
+				js.put("value",rs[i][1]);
+				jarr.put(js);
+			}
+			form.put("items",jarr);
+			form.put("totalCount",jarr.length());
+			jacper.print(form.toString());
+		}catch(Exception e){
+			e.printStackTrace(); 
+		}
+	}
+}

@@ -1,0 +1,30 @@
+
+
+import java.io.IOException;
+import com.kinglib.bi.*;
+import com.kinglib.*;
+import com.kinglibx.report.*;
+import com.kinglib.util.*;
+import com.kinglibx.query.*;
+
+@class{
+	public void doGet(Jacper jacper){
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		Connection conPlat = jacper.getConnection("plat");
+
+		String reportObject_id=jacper.getString("report_id","-1");
+		String data_id=jacper.getStr("data_id");
+
+		TextReportFactory tf=TextReportFactory.getInstance();
+		TextReport rpt=tf.getTextReport(conPlat,reportObject_id);
+		rpt.init(jacper,conPlat);
+		String replacedContent=rpt.getContent();
+		//if(rpt.getHaveReport()){
+		//	replacedContent=rpt.getHeadStyle()+"\n"+replacedContent;
+		//}
+		<??>replacedContent<??>;	
+		conPlat.close();
+}
+}

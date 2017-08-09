@@ -1,0 +1,356 @@
+
+
+
+import com.kinglib.*;
+import com.susing.*;
+import com.susing.util.*;
+
+import java.net.*;
+import java.io.IOException;
+import org.apache.commons.httpclient.*;
+import org.apache.commons.httpclient.methods.*;
+import org.apache.commons.httpclient.params.HttpMethodParams;
+
+@class{
+public void doGet(Jacper jacper){
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid; 
+	
+	String frm = "";
+
+	Connection conPlat = jacper.getConnection("plat");
+	String appName = jacper.getStr("appName");
+	String appVersion = jacper.getStr("appVersion");
+	
+	String type="";
+	String platSystem = (String)com.susing.core.KingleSystem.getProperty("platSystem");
+
+	String starticon="/themes/icon/xp/dhd.gif";
+	String endicon="/themes/icon/xp/dhd.gif";
+	String tree_title=jacper.trans("应用导航");
+
+	String[] rs = conPlat.getRow("select version,register_code,active_code from $[plat].system_register",null);
+	String rand="";
+	String register_code="";
+	String active_code="";
+	String version="";
+	if(rs==null){
+		<?<script>alert("?>jacper.trans("系统未注册,请注册并获得商典公司认证后方可提交Bug!")<?");self.location.replace("register.jcp?rand="+Math.random());</script>?>;
+		return;
+	}else{
+		version=rs[0];
+		register_code=rs[1];
+		active_code=rs[2];
+	}
+<?
+<html>
+<head><title></title>
+<meta http-equiv="Content-Type" content="text/html;">
+<yacus style="behavior:url(#default#userdata);" id="__YACUS_CACHE"/>
+<SCRIPT SRC="/JavaScript"></SCRIPT>
+<script src='/themes/js/show.js'></script>
+<script src="/themes/js/showmenu.js"></script>
+<script src='/themes/js/verify.js'></script>
+<link rel='stylesheet' type='text/css' href='/themes/css/standard.css'>
+<SCRIPT>
+susing("MButton","Menu","MenuTree");
+function main(){
+	var install,leftwin;
+	var titleMap = new Map();
+	leftwin =  new MButton("?>jacper.trans("切换窗格")<?","/themes/icon/xp/leftwin.gif");
+	leftwin.click = function(){
+		if(parent.appload._LEFTWIN_.style.display == 'none'){
+			parent.appload._LEFTWIN_.style.display = '';
+			parent.rightFrame.cols="20%,80%";
+			leftwin.setDown(false);
+		}else{
+			parent.appload._LEFTWIN_.style.display = 'none';
+			parent.rightFrame.cols="0,*";
+			leftwin.setDown(true);
+		}
+	}
+	save = new MButton("?>jacper.trans("注册")<?","/themes/icon/common/save.gif");
+	save.click = function(){
+		subform();
+	}		
+	titleMap.append("",save,"<span style='height:22;width:6;background-image:url(\"/themes/images/separator.gif\")'></span>",leftwin);
+	titleMap.finish(titlemap);
+	leftwin.setDown(false);
+
+	event1.title_click = function(){
+		fm=eval(frm.nam);
+		fm.appName.value=this.prop.title;
+		fm.appVersion.value=this.prop.version;
+	}
+	var menuTree = new MenuTree(Tool.parseXML('<root _id="root"><forder _hasChild="1"  event="event1"><e _id="top" _parent="root"  icon0="?>starticon<?" icon1="?>endicon<?" title="?>tree_title<?" url="bugTree.jcp?_id=1"  _hasChild="1"   /></forder></root>'));
+	menuTree.setEvent("event1",event1);
+	menuTree.finish(TreeDemo);
+}
+var event1 = new Object();
+
+function subform(){
+		fm=eval(frm.nam);
+		if(fm.appName.value==''){
+			alert("?>jacper.trans("没有选择相应Bug的应用!")<?");
+			return false;
+		}
+		if(fm.appVersion.value==''){
+			alert("?>jacper.trans("没有选择相应Bug的应用!")<?");
+			return false;
+		}
+		if(fm.bug_title.value==''){
+			alert("?>jacper.trans("标题不能为空")<?");
+			fm.bug_title.focus();
+			return false;
+		}
+		if(fm.operate_desc.value==''){
+			alert("?>jacper.trans("操作描述不能为空!")<?");
+			fm.operate_desc.focus();
+			return false;
+		}
+		if (fm.bug_title.value.length >200 ) {
+			alert("?>jacper.trans("标题不能超过200个字符(100个汉字)!")<?");
+			fm.bug_title.focus();
+			return false;
+		}
+		if (fm.operate_desc.value.length >4000 ) {
+			alert("?>jacper.trans("操作描述不能超过4000个字符(2000个汉字)!")<?");
+			fm.operate_desc.focus();
+			return false;
+		}
+		if (fm.bug_desc.value.length >4000 ) {
+			alert("?>jacper.trans("错误描述不能超过4000个字符(2000个汉字)!")<?");
+			fm.bug_desc.focus();
+			return false;
+		}
+		fm.submit();
+}
+</SCRIPT>
+
+</head>
+<body topmargin="0" leftmargin="0" rightmargin="0" bottommargin="0" bgcolor="#9EBEF5" style="overflow:auto">
+<table height="100%" width="100%"  cellspacing="0" cellpadding="0">
+<tr height=20  width="100%"><td>
+<table cellspacing cellpadding align=center width=100%>
+			<tr><td nowrap width='100%' height='25' colspan='2'>
+					<table width='100%' cellspacing='0' cellpadding='0' height='28' bgcolor="#9EBEF5">
+							<tr><td nowrap width='2' height='25' ></td><td valign='bottom'>
+									<table width='45%' cellspacing='0' cellpadding='0' background='/themes/default/images/bg2.gif'>
+										<tr>
+											<td width=7><img src="/themes/images/t1.gif"></td>
+											<td width="100%" background="/themes/images/bg2.gif" id=titlemap></td>
+											<td width=13><img src="/themes/images/tbar_tail.gif"></td>
+										</tr>
+									</table>
+							</td></tr>
+					</table>
+			</td></tr>
+	</table>
+</td></tr>
+<script>var frm = new ShowForm('bugReport.jcp','post');</script>
+<tr  width="100%"><td  style="border-left:1px solid #ACA899;">	
+<table cellSpacing="3" cellPadding width="100%" height=100% bgcolor="#ECE9D8" style="border-left:1px solid #ACA899;border-right:1px solid #ACA899;border-top:1px solid #ACA899" >
+	 <tr><td align="left" width=25%>				
+			<table   width="100%" bgcolor="#FEFAEF" style="border-top:1px solid #ACA899;border-left:1px solid #ACA899;border-right:1px solid #FFFFFF;border-bottom:1px solid #FFFFFF" cellspacing cellpadding height="100%" >
+					<tr><td valign="top" height="100%">	
+						<table cellpadding cellspacing width="100%"  height="100%">
+							<tr height=1><td bgcolor="#FEFAEF"></td></tr>
+								<tr>
+									<td bgcolor=white id=TreeDemo style="border:1 solid #7F9DB9" valign="top">
+									<div style="width:100%;height:100%;overflow:auto"><div id=resource_table>	
+									</div></td>
+								</tr>
+						<tr height=1 valign="top"><td bgcolor="#FCF9E8"></td></tr>
+					</table>
+			</td></tr>
+		</table>
+	</td>
+	<td align="left"  width=75%>				
+			<table   width="100%" bgcolor="#FEFAEF" style="border-top:1px solid #ACA899;border-left:1px solid #ACA899;border-right:1px solid #FFFFFF;border-bottom:1px solid #FFFFFF" cellspacing cellpadding height="100%" >
+						<tr id='statusFrame'  ><td  valign="top"  width="100%"  height="100%">
+							<table cellpadding cellspacing width="100%"  height="100%" >
+								<tr><td>
+	<table width="100%" cellspacing=0 cellpadding ID="Table3">
+		<tr>
+				<td width=98%>
+						<table width="100%" cellspacing="1" cellpadding  ID="Table4">
+							<tr>
+								<td style='width:100%'>
+									<table cellspacing=1 cellpadding  width=100% >
+										<tr height="20">
+											<td width="100%" align="right" colspan=4>&nbsp;</td>
+										</tr>
+										<tr height="20">
+											<td width="15%" align="right"><script>Nempty_mark();</script>?>jacper.trans("bug类别")<?:</td>
+											<td width="35%"><script>var arr3=[[1,'?>jacper.trans("逻辑Bug")<?'],[2,'?>jacper.trans("操作Bug")<?'],[3,'?>jacper.trans("页面Bug")<?'],[4,'?>jacper.trans("功能建议")<?']];
+											document.write(frm.Select("bug_type",arr3));</script></td>	
+										</tr>
+										<tr height="20">
+											<td width="15%" align="right" ><script>Nempty_mark();</script>?>jacper.trans("标题")<?:</td>
+											<td width="35%" ><script>document.write(frm.Text('bug_title',"","width:300px"));</script></td>
+										</tr>
+
+										<tr height="20">
+											<td width="15%" align="right"><script>Nempty_mark();</script>?>jacper.trans("操作描述")<?:</td>	<td width="85%" colspan="3" ></td>
+										</tr>
+										<tr height="20">
+											<td width="100%" colspan="4"  align="center"><script>document.write(frm.Textarea("operate_desc",'',"width:550px;height:120px;",""));</script> </td>		
+										</tr>
+										<tr height="20">																					
+											<td width="15%" align="right">?>jacper.trans("错误描述")<?:</td>
+											<td width="85%" colspan="3" ></td>
+										</tr></table>
+										<tr height="20">																			
+											<td width="100%" colspan="4" align="center" ><script>document.write(frm.Textarea("bug_desc",'',"width:550px;height:240px;",""));</script> </td>
+										</tr></table>
+
+										<input type=hidden  name="platSystem" value="?>platSystem<?">
+										<input type=hidden  name="platVersion" value="?>version<?">
+										<input type=hidden  name="appName" value="?>appName<?">
+										<input type=hidden  name="register_code" value="?>register_code<?">
+										<input type=hidden  name="active_code" value="?>active_code<?">									
+										<input type=hidden  name="appVersion" value="?>appVersion<?">
+								</td>
+							</tr>
+						</table>
+					</td>
+		</tr>
+	</table>
+</td></tr>
+							</table>
+						</td></tr>
+			</table>
+	</td>
+ </tr>
+</table>
+</td></tr>
+<tr height=20  width="100%">
+	<td background="/themes/default/images/status_bg.gif" id="statu"></td></tr>
+</td></tr>
+</table>
+<script>
+	frm.Close();
+</script>
+</body>
+</html>
+?>;
+}
+public void doPost(Jacper jacper){
+		
+		boolean isLogin = jacper.setSession();
+        HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+		String type=jacper.getStr("type");
+
+		String platSystem = jacper.getStr("platSystem");	
+		String register_code = jacper.getStr("register_code");
+		String active_code = jacper.getStr("active_code");
+
+
+		String urlString="";
+		String url = (String)com.susing.core.KingleSystem.getProperty("support_url");
+		String rand="";
+
+		try{
+			urlString="type=auth&platSystem="+URLEncoder.encode(platSystem,"UTF-8")+"&register_code="+URLEncoder.encode(register_code,"UTF-8")+"&active_code="+URLEncoder.encode(active_code,"UTF-8");
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		url=url+"/getBug.jcp?"+urlString;
+		HttpClient httpclient = new HttpClient();
+
+		GetMethod method = new GetMethod(url);
+		method.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, 
+		new DefaultHttpMethodRetryHandler(3, false));
+		
+		try {
+		  int statusCode = httpclient.executeMethod(method);
+		  if (statusCode != HttpStatus.SC_OK) {
+			<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+		  }
+		  rand=method.getResponseBodyAsString();
+		} catch (HttpException e) {
+			 <?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+		  e.printStackTrace();
+		} catch (IOException e) {
+			<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+		  e.printStackTrace();
+		} finally {
+		   method.releaseConnection();
+		} 
+		if(rand.equals("true")){
+				String active_key =postBug(jacper);
+				if(!active_key.equals("true")){
+					<?<script>alert("?>jacper.trans("没有成功提交,请与北京商典信息科技有限公司联系!!")<?");</script>?>;
+				}else{
+					<?<script>alert("?>jacper.trans("成功提交,商典公司确认后会尽快修改,请及时更新!")<?");self.location.replace('bugReport.jcp');</script>?>;
+					
+				}	
+		}else{
+			<?<script>alert("?>jacper.trans("您的系统未通过商典公司认证,可能试用期已过!")<?");</script>?>;
+		}
+}
+
+public String  postBug (Jacper jacper){
+		
+		String url = (String)com.susing.core.KingleSystem.getProperty("support_url");
+		url=url+"/getBug.jcp";
+
+		String rand="";
+
+		HttpClient httpclient = new HttpClient();
+
+		String activeCode="";		
+		String platSystem = jacper.getStr("platSystem");
+		String platVersion = jacper.getStr("platVersion");
+		String bugDesc = jacper.getStr("bug_desc");
+		String operateDesc = jacper.getStr("operate_desc");
+		String bugTitle = jacper.getStr("bug_title");
+		String bugType = jacper.getStr("bug_type");
+		String appName = jacper.getStr("appName");	
+		String appVersion = jacper.getStr("appVersion");
+
+        PostMethod post = new PostMethod(url);
+		post.addRequestHeader("Content-Type","application/x-www-form-urlencoded; charset=UTF-8");
+		post.addParameter("platSystem", platSystem);
+		post.addParameter("platVersion", platVersion);
+		post.addParameter("bugTitle",bugTitle);
+		post.addParameter("bugType",bugType);
+		post.addParameter("operateDesc",operateDesc);
+		post.addParameter("bugDesc",bugDesc);
+		post.addParameter("registerCode",jacper.getStr("register_code"));
+		post.addParameter("appName",appName);
+		post.addParameter("appVersion",appVersion);
+		
+		try {
+			 int statusCode = httpclient.executeMethod(post);
+			  if (statusCode != HttpStatus.SC_OK) {
+				<?<script>?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?</script>?>;
+			  }
+			  activeCode=post.getResponseBodyAsString();
+			  if(!activeCode.equals("true")){
+				 <?<script>?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?</script>?>;
+				 activeCode="";
+			  }
+		} catch (HttpException e) {
+			  	<?<script>?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?</script>?>;
+			  e.printStackTrace();
+		} catch (IOException e) {
+			  	<?<script>?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?</script>?>;
+			  e.printStackTrace();
+		} finally {
+			 post.releaseConnection();
+		}  
+		return activeCode;
+ }
+public static class UTF8PostMethod extends PostMethod{
+	public UTF8PostMethod(String url){
+		super(url);
+	}
+	public String getRequestCharSet() {
+		return "UTF-8";
+	}
+}
+}

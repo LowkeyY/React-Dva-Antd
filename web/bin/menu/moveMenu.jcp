@@ -1,0 +1,45 @@
+
+
+import com.kinglib.Jacper;
+import com.kinglib.ui.menu.Menu;
+import com.kinglib.ui.menu.MenuFactory;
+import com.kinglib.ui.menu.TopMenu;
+
+@class{
+
+	public void doPost(Jacper jacper) {
+		String id = jacper.getString("id");
+		String pid = jacper.getString("pid");
+
+		MenuFactory mf = MenuFactory.getInstance();
+
+		Menu menu = mf.getMenu(id), root = mf.getRoot();
+		Menu parent = mf.getMenu(pid);
+		if (parent!=root && !(parent instanceof TopMenu) && (menu instanceof TopMenu)) {
+			jacper.print("{success:false,message:'顶层导航不能移动到普通菜单下'}");
+			return;
+		}
+		Menu p = parent;
+		while (p != root) { 
+			if (menu == p) {
+				jacper.print("{success:false,message:'菜单不能移动到自己的子菜单下'}");
+				return;
+			}
+			p = p.getParent();
+		}
+
+		menu.getParent().removeChild(menu);
+		menu.hang(parent);
+
+		String sql;
+		if (menu instanceof TopMenu) {
+			sql = "update $[plat].SYS_TOP set PARENT_TOP=? where TOP_ID=?";
+		} else {
+			sql = "update $[plat].SYS_APPLICATION set PARENT_APP=? where APP_ID=?";
+		}
+		jacper.getConnection("plat").exec(sql, new String[] { pid, id });
+		jacper.print("{success:true}");
+	}
+	
+
+}

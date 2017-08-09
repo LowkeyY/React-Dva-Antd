@@ -1,0 +1,159 @@
+import java.io.IOException;
+import java.awt.Color;
+import java.awt.GradientPaint;
+import java.io.OutputStream;
+
+import com.social.api.core.model.*;
+import com.kinglib.*;
+import com.kinglib.util.*;
+import SoftwareFX.ChartFX.*;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import java.io.*;
+import java.awt.*;
+
+@class{ 
+public void doGet(Jacper jacper){
+
+			Connection conCert= jacper.getConnection("cert");
+			Connection conPlat = jacper.getConnection("plat");
+			
+			String title=jacper.trans("日访问统计");  
+			String bottom=jacper.trans("姓名");
+			String left=jacper.trans("访问次数");
+			String objectId =jacper.getString("id");
+			
+			
+		
+			BufferedImage[] bufImage = new BufferedImage[1];
+				
+			String sql="select RECORDER,count(RECORDER) from $[plat].LOG where ";
+				
+			
+			String firtim = jacper.getStr("firtim");
+			String sectim = jacper.getStr("sectim");
+
+			if(firtim.equals("null")||sectim.equals("null")||firtim.equals("")||sectim.equals("")||(firtim==null)||(sectim==null)){
+			
+				sql+="$getdate()-entry_date<30 and content=? and RECORDER>1 group by RECORDER ";
+				
+			}else{			
+				
+				sql+=" entry_date between $str_date('"+firtim+"',111) and $str_date('"+sectim+"',111) and RECORDER>1 and content=? group by RECORDER ";
+			}
+		
+			String[][] result = conPlat.get(sql,new String[]{objectId},100);
+			for(int i=0;i<result.length;i++){
+			
+				result[i][0] =User.getUser(result[i][0]).getRealName();	
+			}
+			int currpage = jacper.getInt("currpage",0);
+			currpage *= 20;
+			int resu =0;
+			
+			if(result!=null)
+				resu = result.length;
+
+			if(resu>20){if(resu-currpage>20){resu=20;}else{resu=resu-currpage;}}
+			int start=currpage;
+			int end=currpage+resu;
+			int j=0;
+			
+			
+			Chart chart = new  Chart();
+			chart.setGallery(2); 
+			DefaultBorder myBorder = new DefaultBorder(0); 
+			chart.setBorderObject (myBorder);
+			chart.setAxesStyle(2);
+			chart.setRightGap(10);
+			chart.setBottomGap(10);
+			chart.setTopGap(10);
+			chart.setBackColor( java.awt.Color.decode("#FFFFFF") );
+			
+			Axis axisX = chart.getAxisX();
+			java.util.List list1 = new java.util.ArrayList(resu);
+			java.util.List list2 = new java.util.ArrayList(resu);
+			java.util.List list4 = new java.util.ArrayList();
+			if(resu>0){
+				for(int i=0;i<resu;i++){
+						list1.add(result[i][0]);
+						list2.add(new Float(Float.parseFloat(result[i][1])));
+				}
+			}else{
+						list1.add("0");
+						list2.add(new Float(Float.parseFloat("0")));
+			}
+		
+			list4.add(list1);
+			list4.add(list2);
+			SoftwareFX.ChartFX.ListProvider lstDataProvider = new SoftwareFX.ChartFX.ListProvider(list4);
+			chart.setDataSource(lstDataProvider);	
+
+		
+
+			axisX.getTitle().setText(bottom);
+
+			SeriesAttributes series = null;
+			series = chart.getSeries(0);
+			series.setColor(java.awt.Color.decode("#00FF00"));
+			chart.setBorderEffect(BorderEffect.RAISED);
+			chart.setAxesStyle(AxesStyle.MATH);
+			
+			Axis axis=null;
+			axis = chart.getAxis(0);
+			axis.getTitle().setText(left);
+
+			
+				chart.getTitle(0).setText(jacper.trans("模块访问统计"));
+			
+			chart.getTitle(0).setFont( new java.awt.Font("SimSun",java.awt.Font.BOLD, 15));
+			chart.getTitle(0).setTextColor(new java.awt.Color(0,0,0));
+
+			String width = jacper.getStr("width");
+			String height = jacper.getInt("height",400)+"";
+			jacper.getResponse().setContentType("image/png");	
+			try{
+				ByteArrayOutputStream out = new ByteArrayOutputStream();
+				chart.getHtmlDataEx(width,height,"PNG",out,System.out,System.out);
+				bufImage[0]=ImageIO.read(new ByteArrayInputStream(out.toByteArray()) );
+			}catch(Exception e){
+				e.printStackTrace();
+		   }
+	
+		try{
+			BufferedImage i3 = concat(bufImage,true);
+			ImageIO.write(i3, "PNG", jacper.getOutputStream());
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+}
+public static BufferedImage concat(Image[] images,boolean down){
+
+	int width=0;
+	int height=0;
+	for(int i=0;i<images.length;i++){
+		if(i==0){
+			width= images[i].getWidth(null);
+			height=images[i].getHeight(null);
+		}else if(down){
+			width = Math.max(width,images[i].getWidth(null));
+			height+=images[i].getHeight(null);
+		}else{
+			width+=images[i].getWidth(null);
+			height=Math.max(height,images[i].getHeight(null));
+		}
+	}
+	BufferedImage plat = new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
+	Graphics2D graphic = plat.createGraphics(); 
+
+	width=0;height=0;
+	for(int i=0;i<images.length;i++){
+		graphic.drawImage(images[i], java.awt.geom.AffineTransform.getTranslateInstance(width,height),null); 
+		if(down){
+			height+=images[i].getHeight(null);
+		}else
+			width+=images[i].getWidth(null);
+	}
+	return plat;
+}
+}

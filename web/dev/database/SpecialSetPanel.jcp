@@ -1,0 +1,41 @@
+import com.kinglib.Jacper;
+import com.kinglib.ui.core.utils.CoreUtils;
+import com.kinglib.util.json.JSONPart;
+import com.kinglib.Connection;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+import com.kinglib.workbench.integrate.*;
+
+@class{
+
+	public void doPost(Jacper jacper) {
+		jacper.setSession();
+		String objectId = jacper.getString("objectId", "0");
+		ObjectNode pnode = ObjectManager.getObject(objectId);
+		JSONPart jp = new JSONPart();
+		StringBuilder sb = new StringBuilder(1024);
+		IntegrateFactory IFactory=IntegrateFactory.getInstance();
+		Integrate integrate=null;
+		
+		Connection conPlat=jacper.getConnection("plat");
+		try{
+			sb.append("[");
+			for (ObjectNode node : pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.INTEGRATE)) {
+				integrate=IFactory.getIntegrate(conPlat,String.valueOf(node.getId()));
+				if(integrate!=null ){
+					if (sb.length() > 1)
+						sb.append(",");
+					sb.append(CoreUtils.createTextValueJSON(node.getName(), String.valueOf(node.getId())));
+				}
+			}
+		}catch(Exception e){
+		}finally{
+			conPlat.close();
+		}
+		jp.append("datas", sb.append("]").toString());
+		
+		jp.join("sucess", "true");
+		jacper.print(jp);
+	}
+}

@@ -1,0 +1,41 @@
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+
+@class{
+		public void doPost(Jacper jacper){
+      			Connection conPlat = jacper.getConnection("plat");
+      			String parent_id=jacper.getString("parent_id");
+      			String[] object_id = jacper.getString("object_id").split(",");
+      			HttpSession hs = jacper.getSession();
+      			long user_id = hs.uid;
+      			try{
+      				String[][] rsPId=conPlat.get("select url,son from $[plat].help_category where category_id=?",new String[]{parent_id});
+      				String urlPId=rsPId[0][0];
+      				int son=Integer.parseInt(rsPId[0][1]);
+      				if(rsPId.length>0){
+      					for(int i=0;i<object_id.length;i++){
+	      					String[][] rsCId=conPlat.get("select category_name from $[plat].help_category where object_id=?",new String[]{object_id[i]});
+	      					String urlCId=rsCId[0][0];
+	      					son+=1;
+	      					conPlat.exec("update $[plat].help_category set parent_id=?,url=?,update_time=$getdate(),update_user=? where object_id=?",new String[]{parent_id,urlPId+">>"+urlCId,user_id+"",object_id[i]});
+	      					conPlat.exec("update $[plat].help_category set son=? where category_id=?",new String[]{son+"",parent_id});	
+	      				};
+	      				jacper.print("{success:true}"); 
+      				} else {
+      					jacper.print("{success:false}"); 
+      				}
+				}catch(Exception e){
+					e.printStackTrace();
+					jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+				}finally{
+					try {
+						conPlat.close();
+					}catch(Exception e2) {
+					
+					}
+				}
+      			
+		}
+}

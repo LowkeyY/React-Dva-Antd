@@ -1,0 +1,99 @@
+
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+import com.kinglib.*;
+import java.util.*;  
+import com.kinglib.workbench.*;
+import com.kinglib.gis.*;
+
+@class{
+public void doPost(Jacper jacper) {
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = hs.uid+"";
+
+	String type = jacper.getStr("type");
+	String group_name = jacper.getStr("group_name");
+
+	ObjectManager OM=ObjectManager.getInstance();
+
+	if (type.equals("save")){
+		try{	
+			String parent_id = jacper.getStr("object_id");
+			String object_id  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+			ObjectNode tempNode=OM.getObject(parent_id);
+			ObjectNode mapNode=tempNode.upTo(ObjectType.MAP);
+			String mapId=mapNode.getId();
+			WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+			if(tempNode.getType()==ObjectType.MAP){
+				tempNode.addChild(conPlat,object_id,group_name,ObjectType.MAPLAYERGROUP,hs.uid);
+				conPlat.exec("insert into $[plat].map_layergroup (group_name,type,object_id,parent_id) values(?,?,?,?)",new String[]{group_name,"0",object_id+"",parent_id});
+			}else if(tempNode.getType()==ObjectType.MAPPOI){
+				tempNode.addChild(conPlat,object_id,group_name,ObjectType.MAPMENU,hs.uid);
+				conPlat.exec("insert into $[plat].map_layergroup (group_name,type,object_id,parent_id) values(?,?,?,?)",new String[]{group_name,"1",object_id+"",parent_id});
+			}else if(tempNode.getType()==ObjectType.MAPLAYER){
+				tempNode.addChild(conPlat,object_id,group_name,ObjectType.MAPMENU,hs.uid);
+				conPlat.exec("insert into $[plat].map_layergroup (group_name,type,object_id,parent_id) values(?,?,?,?)",new String[]{group_name,"1",object_id+"",parent_id});
+			};
+			webMap.reloadLayer(conPlat);
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			conPlat.close();
+		}
+	}else if ( type.equals("updatesave")) {
+		String object_id = jacper.getStr("objectId");		
+		ObjectNode mapGroupNode=OM.getObject(object_id);
+		mapGroupNode.updateName(conPlat,group_name);
+		ObjectNode mapNode=mapGroupNode.upTo(ObjectType.MAP);
+		String mapId=mapNode.getId();
+		WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+		try{	
+			conPlat.exec("update $[plat].map_layergroup set group_name=? where object_id=?",new String[]{group_name,object_id});
+			webMap.reloadLayer(conPlat);
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			conPlat.close();
+		}
+	}else if (type.equals("delete")){
+		String object_id = jacper.getStr("objectId");
+		try{	
+			conPlat.setAutoCommit(false);	
+			ObjectNode mapGroupNode=OM.getObject(object_id);
+			ObjectNode mapNode=mapGroupNode.upTo(ObjectType.MAP);
+			String mapId=mapNode.getId();
+			WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+			mapGroupNode.destroy(conPlat);
+			conPlat.commit();
+			webMap.reloadLayer(conPlat);
+			<?{success:true}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

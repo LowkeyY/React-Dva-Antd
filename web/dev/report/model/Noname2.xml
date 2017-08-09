@@ -1,0 +1,22 @@
+<xReport name="qqqq" language="java" columnCount="1" printOrder="Vertical" columnDirection="LTR" orientation="Portrait" whenNoDataType="NoPages" pageSize="A1" pageWidth="1684" pageHeight="2380" columnWidth="555" columnSpacing="0" leftMargin="20" rightMargin="20" topMargin="30.75" bottomMargin="30.5">
+  <resource>
+    <query id="d431827e-27bd-4b9a-9612-f804fd8f99ea" name="成绩查询_年级单科统计查询" rename="tabNaN" isSys="" server="education" level="">
+      <col src="年级名称"/>
+      <col src="课程名称"/>
+      <col src="成绩类型"/>
+      <col src="班级人数"/>
+      <col src="缺考人数"/>
+      <col src="作弊人数"/>
+      <col src="免考人数"/>
+      <col src="免修人数"/>
+      <col src="缓考人数"/>
+      <col src="不及格人数"/>
+      <col src="总分"/>
+      <col src="平均分"/>
+      <col src="最高分"/>
+      <col src="最低分"/>
+      <col src="及格率"/>
+      <col src="优秀率"/>
+    </query>
+  </resource>
+</xReport>

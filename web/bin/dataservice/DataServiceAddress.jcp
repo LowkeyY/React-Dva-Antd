@@ -1,0 +1,74 @@
+
+
+import java.util.Iterator;
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workbench.dataservice.DataServiceFactory;
+
+@class{
+
+	public void doGet(Jacper jacper) {
+		jacper.setSession();
+		Connection conPlat = jacper.getConnection("plat");
+		JSONObject ret = new JSONObject();
+		try {
+			String[][] result = conPlat.get("select LOGIC_NAME,OBJECT_ID,SERVER_ADDRESS from $[plat].DATA_SERVICE WHERE IS_CLIENT='true'");
+			if(result!=null && result.length>0){
+				ret.put("success", true);
+				JSONObject source = new JSONObject();
+				for(int i=0;i<result.length;i++){
+					source.put(result[i][0]+":"+result[i][1],result[i][2]);
+				}
+				ret.put("source", source);
+			}else{
+				ret.put("success", false);
+				ret.put("message", jacper.trans("本系统不存在需要设定的客户端数据服务"));
+			}
+		} catch (Exception e) {
+			try {
+				ret.put("success", false);
+				ret.put("message", e.getMessage());
+			} catch (JSONException e1) {
+			}
+		} finally {
+			conPlat.close();
+		}
+		jacper.print(ret);
+	}
+	public void doPost(Jacper jacper) {
+		
+		jacper.setSession();
+		Connection conPlat = jacper.getConnection("plat");
+		JSONObject ret = new JSONObject();
+		try {
+			conPlat.setAutoCommit(false);
+			JSONObject source = new JSONObject(jacper.getStr("source"));
+			Iterator it = source.keys();
+			String key=null;
+			String[] add=null;
+			while (it.hasNext()) {
+				key = it.next().toString();
+				add=key.split(":");
+				DataServiceFactory.getInstance().remove(add[1]);
+				conPlat.exec("update $[plat].DATA_SERVICE set SERVER_ADDRESS=? WHERE LOGIC_NAME=? and OBJECT_ID=?",new String[]{source.get(key).toString(),add[0],add[1]});
+			}
+			conPlat.commit();
+			ret.put("success", true);
+		} catch (Exception e) {
+			try {
+				conPlat.rollback();
+				ret.put("success", false);
+				ret.put("message", e.getMessage());
+			} catch (Exception e1) {}
+		} finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			} catch (Exception e1) {}
+		}
+		jacper.print(ret);
+	}
+
+}

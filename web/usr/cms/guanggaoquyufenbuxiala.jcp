@@ -1,0 +1,47 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.UUID;
+import com.susing.core.KingleSystem;
+
+@class{
+public void doGet(Jacper jacper) {
+doPost(jacper);
+}
+	public void doPost(Jacper jacper) {
+	try {
+			HttpSession hs = jacper.getSession();
+			Connection conEdu = jacper.getConnection("education");
+			String startdate = jacper.getString("startdate");
+			String enddate=jacper.getString("enddate");
+			String guanggaoid=jacper.getString("guanggaoid");
+			enddate+="  23:59:59";
+			JSONObject jbout=new JSONObject();
+			JSONArray ja = new JSONArray();
+			
+			String sql="select guanggao.mingcheng,ds from(select distinct(guanggaoid) ds from guanggaotongji),guanggao where ds=guanggao.id";
+			
+			
+			String[][]rs=conEdu.get(sql);
+			for(int i=0;i<rs.length;i++){
+				JSONObject jb=new JSONObject();
+				jb.put("name",rs[i][0]);
+				jb.put("value",rs[i][1]);
+				
+				
+				ja.put(jb);
+			}
+			jbout.put("authArray",ja);
+			jacper.print(jbout);
+	} catch (Exception e) {
+			e.printStackTrace();
+	}
+	}}

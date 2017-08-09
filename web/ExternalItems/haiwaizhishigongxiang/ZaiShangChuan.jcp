@@ -1,0 +1,19 @@
+import gpra.filesystem.HWUnits;
+
+import com.kinglib.*;
+
+//public class ZaiShangChuan{
+@class{
+	public void doPost(Jacper jacper) {
+		Connection con=jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			String fileid=jacper.getString("file_id");
+			String sql="update DIR_DATUM_FILE_REVIEWED set file_audit='0' where file_id='"+fileid+"'and file_audit='3'";
+			con.exec(sql);
+			System.out.println(sql);
+			jacper.print("{success:true}");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

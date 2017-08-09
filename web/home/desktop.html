@@ -1,0 +1,82 @@
+<html  xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml">
+<head>
+<title>#</title>
+<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE8"/>  
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<link rel="stylesheet" type="text/css" href="/Ext/resources/css/ext-all.css"/>
+<link rel="stylesheet" type="text/css" href="/home/FixExt.css?123"/>
+<link rel="stylesheet" type="text/css" href="/home/resources/css/desktop.css"/>
+<link rel="stylesheet" type="text/css" href="/lib/jsvm/jsvm.css"/>
+<link rel="stylesheet" type="text/css" href="/etc/configure/personalSet.css"/>
+<link rel="stylesheet" type="text/css" href="/ExternalItems/haiwaizhishigongxiang/haiwaizhishimenu.css"/>
+
+<script type="text/javascript" src="/Ext/ext-base.js"></script>
+<script type="text/javascript" src="/Ext/ext-all-debug.js"></script>
+<script type="text/javascript" src='FixExt.jss'></script>
+
+ <tree_store style="behavior:url(#default#userdata);" id="tree_store"></tree_store>
+<script type="text/javascript" src='/login/timeout.js'></script>
+<script type="text/javascript" src="/system.js"></script>
+<script type="text/javascript" src="system/Module.js"></script>
+<script type="text/javascript" src="system/Desktop.js"></script>
+<script type="text/javascript" src="system/Shortcut.js"></script>
+<script type="text/javascript" src="system/StartMenu.js"></script>
+<script type="text/javascript" src="system/TaskBar.js"></script>
+<script type="text/javascript" src="system/App.js"></script>
+
+<script type="text/javascript" src="/bin/exe/CPM.jss"></script>
+<script type="text/javascript" src="/ExternalItems/swfupload/swfupload.js"></script>
+
+<script type="text/javascript">
+	var lang = get_cookie("locale");
+	using("lang."+(lang || "dumb"));
+</script>
+<script type="text/javascript" src="system/WorkBench.jss"></script>
+<script type="text/javascript" src="system/baseNode.js"></script>
+<script type="text/javascript" src="system/BorderLayout.js"></script>
+<script type="text/javascript" src="system/TreeNodeUI.js"></script>
+<script type="text/javascript" src="/etc/configure/personalSet.js"></script>
+<script type="text/javascript" src="/lib/chart/js/AnyChart.js"></script>
+<script type="text/javascript" src="/dev/potal/PotalUnits.js"></script>
+
+
+
+<script type="text/javascript">
+Ext.onReady(function(){
+   var title=get_cookie('systemTitle');
+	 window.document.title=title;
+	if(swfobject.getFlashPlayerVersion().major==0){
+		Ext.msg(
+			"confirm",
+			"&nbsp;&nbsp;&nbsp;&nbsp;您的浏览器尚未安装Adobe Flash Player，这可能会影响您无法正常使用系统。<br>您需要现在安装Adobe Flash Player吗?",
+			{
+				fn:function(id){
+					if(id=='yes'){
+						var div=Ext.getBody().createChild({
+							tag: "div",
+							style:"display:none;"
+						});
+						div.dom.innerHTML='<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" codebase="http://fpdownload.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=7,0,0,0" width="0" height="0" align="middle"> <param name="allowScriptAccess" value="sameDomain" /> <param name="movie" value="/lib/swfobject/expressInstall.swf" /> <param name="quality" value="high" /> <param name="bgcolor" value="#ffffff" /> <embed src="/lib/swfobject/expressInstall.swf" quality="high" bgcolor="#ffffff" width="0" height="0" name="mymovie" align="middle" allowScriptAccess="sameDomain" type="application/x-shockwave-flash" pluginspage="http://www.adobe.com/go/getflashplayer" /> </object>';
+					}
+				}
+			}
+		);
+	}else if(swfobject.getFlashPlayerVersion().major<10){
+		var div=Ext.getBody().createChild({
+					tag: "div",
+					style:"display:none;"
+				});
+		swfobject.showExpressInstall({data:"/lib/swfobject/expressInstall.swf"},{},div.id);
+	}
+
+	 checkBrowser();
+	 });
+</script> 
+
+</head>
+<body scroll="no"> 
+<div id="replaceMainFrame"></div>
+<iframe name='InnerFileDownloadFrame' style='height:0px;widht:0px;border:none;'></iframe>
+</body>
+</html>

@@ -1,0 +1,303 @@
+import com.kinglib.*;
+import com.kinglib.workbench.*;
+import java.util.ArrayList;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.util.json.*;
+import java.util.*;
+import com.kinglib.i18n.*;
+@class{
+/*	public ObjectNode[] getChildNodes(ObjectNode node) {
+		ArrayList<ObjectNode> arr = new ArrayList<ObjectNode>();
+		int t = 0;
+		for (ObjectNode n : node.getChilds()) {
+			t = n.getType();
+			if (t < 2 || (t > 6 && t < 9) || t == 10 || t == 5
+					|| (t > 22 && t < 28)) {
+				arr.add(n);
+			}
+		}
+		return arr.toArray(new ObjectNode[arr.size()]);
+	}
+
+	public ArrayList<String> getAllNode(ArrayList<String> arr, ObjectNode node) {
+		for (ObjectNode n : getChildNodes(node)) {
+			arr.add(n.getId() + ":" + n.getType()+":"+n.getName());
+			if (n.haveChild()) {
+				getAllNode(arr, n);
+			}
+		}
+		return arr;
+	}
+    
+    public void transFile(String language,String type){
+            TranslationFactory redjs=TranslationFactory.getInstance();
+			ArrayList<String> filelistp=new ArrayList<String>();
+			filelistp=redjs.findFile(filelistp,"zh_cn."+type,com.kinglib.i18n.dict.JcpDictionary.path);
+			for (String filepath : filelistp) {
+			   String fpath=filepath.substring(0, filepath.lastIndexOf("\\"))+"\\"+language+"."+type;
+			   HashMap<String, String> map=redjs.transSource(fpath,type);
+			   StringBuffer yuan = new StringBuffer();
+			   Iterator  iit=map.entrySet().iterator();	
+			   int i=0;
+			   while(iit.hasNext()){
+				  Map.Entry  me=(Map.Entry)iit.next();  
+				  yuan.append(me.getKey());
+				  i++;
+				  if (i != map.size()-1) yuan.append("！");				 
+			   }
+	
+			   StringBuffer fanyi = new StringBuffer();
+			   if(yuan.length()>0){
+			       AutoTransMachine transGoogle=TranslationFactory.getAutoTransMachine("com.kinglib.i18n.TranslationGoogle");
+				   HashMap<String, String> originalMap=transGoogle.getTrans(yuan.toString(),language);
+				   Iterator  it=originalMap.entrySet().iterator();
+				   if("jss".equals(type)){
+						String title=fpath.substring(7,fpath.lastIndexOf("\\"));
+						title=title.replaceAll("\\\\", ".");
+						fanyi.append(title).append("={\r\n");			       
+				   }
+				   int j=0;
+				   while(it.hasNext()){
+				       Map.Entry  me=(Map.Entry)it.next();
+				       j++;
+				       if(!me.getKey().equals("")){
+	                            if("jss".equals(type)){
+									  	String former="'"+(String)me.getKey()+"'";
+									  	String hinder=(String)me.getValue();
+									  	hinder="'"+hinder.replaceAll("'"," ")+"'";
+									  	fanyi.append(former).append(":").append(hinder);
+										if (j != originalMap.size())fanyi.append(",");
+										fanyi.append("\r\n");	  	  	                                
+	                            }else{
+	                                    fanyi.append((String)me.getKey()).append("=").append((String)me.getValue()).append("\r\n");	
+	                            }
+	                            
+							}
+				   }
+				   if("jss".equals(type)){
+			           fanyi.append("}"); 
+				   }   		   
+				   redjs.newFile(fpath,fanyi.toString());
+			  }
+			}        
+    }
+    
+    
+	public void doPost(Jacper jacper) {
+		String language = jacper.getString("language", "");
+		Connection conPlat = jacper.getConnection("plat");
+		ArrayList<String> arr = new ArrayList<String>();
+		arr = getAllNode(arr, ObjectManager.getRoot());
+		StringBuffer yuanAll=new StringBuffer();
+		HashMap<String, HashSet> yuanobjid=new HashMap<String, HashSet>();
+		try {
+			for(int count=0;count<arr.size();count++){
+			    HashSet<String> hs=new HashSet<String>();
+				String id = arr.get(count).split(":")[0];
+				String type = arr.get(count).split(":")[1];
+                StringBuffer yuan = new StringBuffer();
+				if ("2".equals(type)) {
+					MetaTable mt = MetaFactory.getObject(id);
+					MetaColumn[] cs = mt.getColumnArray();
+					for (int i = 0; i < cs.length; i++) {
+						yuan.append(cs[i].getLname());
+						hs.add(cs[i].getLname());
+						if(i!=cs.length-1) yuan.append("！");  	
+					}
+				}
+				if ("4".equals(type)) {
+					String[][] rs = conPlat
+							.get(
+									"select query_name from $[plat].app_query where query_id=?",
+									new String[] { id });
+					if (rs != null) {
+						for (int i = 0; i < rs.length; i++) {
+							yuan.append(rs[i][0]);
+							hs.add(rs[i][0]);
+						    if(i!=rs.length-1) yuan.append("！");  
+						}
+					}
+
+				}
+				if ("5".equals(type)) {
+					String[][] rs = conPlat 
+							.get(
+									"select modlogic_name from $[plat].mod_base where object_id=?",
+									new String[] { id });
+					if (rs != null) {
+						for (int i = 0; i < rs.length; i++) {
+							yuan.append(rs[i][0]);
+							hs.add(rs[i][0]);
+						    if(i!=rs.length-1) yuan.append("！");  
+						}
+					}
+				}
+				if ("6".equals(type)) {
+					String[][] rs = conPlat
+							.get(
+									"select top_title from $[plat].sys_top where object_id=?",
+									new String[] { id });
+					if (rs != null) {
+						for (int i = 0; i < rs.length; i++) {
+							yuan.append(rs[i][0]);
+							hs.add(rs[i][0]);
+						    if(i!=rs.length-1) yuan.append("！");  
+						}
+					}
+				}
+				if ("7".equals(type)) {
+					String[] rs = conPlat
+							.getRow(
+									"select prgtype,prglogic_name from $[plat].prg_base where object_id=?",
+									new String[] { id });
+				    if(rs!=null){
+						yuan.append(rs[1]);
+						hs.add(rs[1]);
+					}
+					if ("1".equals(rs[0]) || "6".equals(rs[0])) {
+						String[][] rs2 = conPlat
+								.get(
+										"select title from $[plat].ctrl_input where object_id=? union all select button_name from $[plat].ctrl_button where module_id=?",
+										new String[] { id, id });
+						if (rs2 != null && rs2.length > 0) {
+						    yuan.append("！"); 
+							for (int i = 0; i < rs2.length; i++) {
+							   yuan.append(rs2[i][0]);
+							   hs.add(rs2[i][0]);
+						       if(i!=rs2.length-1) yuan.append("！");  
+							}
+						}
+					}
+					if ("2".equals(rs[0])) {
+						String[][] rs2 = conPlat
+								.get(
+										"select list_title from $[plat].ctrl_lst where module_id=? union all select button_name from $[plat].ctrl_button where module_id=? union all select search_title from $[plat].ctrl_search where module_id=?",
+										new String[] { id, id, id });
+						if (rs2 != null && rs2.length > 0) {
+						    yuan.append("！");
+							for (int i = 0; i < rs2.length; i++) {
+							   yuan.append(rs2[i][0]);
+							   hs.add(rs2[i][0]);
+						       if(i!=rs2.length-1) yuan.append("！"); 
+							}
+						}
+					}
+					if ("5".equals(rs[0])) {
+						String[][] rs2 = conPlat
+								.get(
+										"select title from $[plat].crtl_chart where chart_id=? union all select button_name from $[plat].ctrl_button where module_id=? union all select y_axis_title from $[plat].crtl_chartseries where chart_id=?",
+										new String[] { id, id, id });
+						if (rs2 != null && rs2.length > 0) {
+						    yuan.append("！");
+							for (int i = 0; i < rs2.length; i++) {
+							   yuan.append(rs2[i][0]);
+							   hs.add(rs2[i][0]);
+						       if(i!=rs2.length-1) yuan.append("！"); 
+							}
+						}
+					}
+					if ("10".equals(rs[0])) {
+						String[][] rs2 = conPlat
+								.get(
+										"select item from $[plat].ctrl_query where object_id=? union all select button_name from $[plat].ctrl_button where module_id=?",
+										new String[] { id, id });
+						if (rs2 != null && rs2.length > 0) {
+						    yuan.append("！");
+							for (int i = 0; i < rs2.length; i++) {
+							   yuan.append(rs2[i][0]);
+							   hs.add(rs2[i][0]);
+						       if(i!=rs2.length-1) yuan.append("！"); 
+							}
+						}
+					}
+					if ("12".equals(rs[0])) {
+						String[][] rs2 = conPlat
+								.get(
+										"select EXPORTITEM from $[plat].ctrl_select where module_id=? union all select button_name from $[plat].ctrl_button where module_id=? union all select search_title from $[plat].ctrl_search where module_id=?",
+										new String[] { id, id, id });
+						if (rs2 != null && rs2.length > 0) {
+						    yuan.append("！");
+							for (int i = 0; i < rs2.length; i++) {
+							   yuan.append(rs2[i][0]);
+							   hs.add(rs2[i][0]);
+						       if(i!=rs2.length-1) yuan.append("！"); 
+							}
+						}
+					}
+				}
+				if ("8".equals(type)) {
+					String[][] rs = conPlat
+							.get(
+									"select widgetlogic_name from $[plat].widget_base where object_id=?",
+									new String[] { id });
+					if (rs != null) {
+						for (int i = 0; i < rs.length; i++) {
+							yuan.append(rs[i][0]);
+							hs.add(rs[i][0]);
+						    if(i!=rs.length-1) yuan.append("！"); 
+						}
+					}
+				}
+				if(yuan.length()>0)yuanobjid.put(id,hs);				
+				if(yuan.length()>0&&count!=arr.size()) yuan.append("！");
+				yuanAll.append(yuan);			
+			}
+			
+			String[][] r=conPlat.get("select TOP_TITLE from $[plat].SYS_TOP where IS_VALID='true' union all select APP_TITLE from $[plat].SYS_APPLICATION where IS_VALID='true'", new String[]{});
+			if (r != null) {			    
+			    HashSet<String> hs1=new HashSet<String>();
+				for (int i = 0; i < r.length; i++) {
+				 yuanAll.append("！");
+				 yuanAll.append(r[i][0]);
+				 hs1.add(r[i][0]);  
+				}
+			    yuanobjid.put("1",hs1);
+			}				
+			if(yuanAll.length()>0){
+				AutoTransMachine transGoogle=TranslationFactory.getAutoTransMachine("com.kinglib.i18n.TranslationGoogle");	
+				HashMap<String, String> originalMap=transGoogle.getBatchTrans(yuanAll.toString(),language);
+				conPlat.setAutoCommit(false);
+				conPlat.exec("delete from $[plat].lang_comparison where lang=?",
+				//conPlat.exec("delete from $[plat].lang_cp where lang=?",
+									new String[] {language});			
+			    Iterator  it=yuanobjid.entrySet().iterator();
+			    while(it.hasNext()){
+			       Map.Entry<String, HashSet>  me=(Map.Entry<String, HashSet>)it.next();
+			       //System.out.println("objectId=="+(String)me.getKey());
+			       if(!me.getKey().equals("")){
+			          HashSet<String> h=me.getValue();		
+			          for(String former:h){
+			             former=former.trim();
+			             conPlat.exec("insert into $[plat].lang_comparison (former,hinder,object_id,lang) values (?,?,?,?)",
+			             //conPlat.exec("insert into $[plat].lang_cp (former,hinder,object_id,lang) values (?,?,?,?)",
+										new String[] {former,originalMap.get(former),(String)me.getKey(),language});
+			          }
+			          			           
+			       }
+			    }
+				conPlat.commit();
+			}
+            transFile(language,"jss");
+            transFile(language,"properties");
+            TranslationFactory redjs=TranslationFactory.getInstance();
+            redjs.makeLangFile(com.kinglib.i18n.dict.JcpDictionary.path+"\\Ext\\locale", language);
+            System.out.println(jacper.trans("翻译结束"));
+            jacper.print("{success:true}");
+		} catch (Exception e) {
+			try {
+				conPlat.rollback();
+			} catch (Exception ecc) {
+			}
+			e.printStackTrace();
+		} finally {
+			try {
+				conPlat.setAutoCommit(true);
+			} catch (Exception ecc) {
+			}
+			conPlat.close();
+		}
+
+	}*/
+}

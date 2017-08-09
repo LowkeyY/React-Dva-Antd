@@ -1,0 +1,73 @@
+import gpra.filesystem.HWUnits;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+//public class FolderMoveBeforeInit{
+@class{
+	public void doPost(Jacper jacper) {
+		String[][] rs = null;
+		String[][] bRs = null;
+		Connection con = jacper.getConnection(HWUnits.HW_DBLINK);
+		String nodeId = jacper.getString("nodeId", "") , dirId = jacper.getString("dirId", "");
+		if(nodeId.length() == 0 || dirId.length() == 0){
+			jacper.print("[{'text':'未知空间','id':'-9999','leaf':true , 'allowSelect' : false}]");
+			return;
+		}
+		try {
+			JSONArray datas = new JSONArray();
+			bRs = con.get("select b.dir_id , b.dir_name , b.space_id from DIR_NODE_BASE b where b.dir_id = ? order by b.sort_seq" , new String[]{dirId});
+			rs = con.get("select i.node_id , i.node_value , i.p_node_id , i.dir_id , i.node_icon from DIR_NODE_INFO i where i.dir_id = ? order by i.sort_seq" , new String[]{dirId});
+			if(rs != null && rs.length > 0){
+				ArrayList<JSONObject> base = new ArrayList<JSONObject>();
+				HashMap<String , JSONArray> map = new HashMap<String , JSONArray>();
+				if(bRs != null && bRs.length >0){
+					for(String[] crs : bRs)
+						base.add(new JSONObject().put("text", crs[1].replaceAll("分类$", "")).put("id", crs[0]).put("allowSelect", !nodeId.equals(crs[0])));
+					for(String[] crs : rs){
+						if(!nodeId.equals(crs[0]))
+							add2Map(map , "".equals(crs[2]) ? crs[3] : crs[2] , new JSONObject().put("text", crs[1]).put("id", crs[0]).put("allowSelect", !(nodeId.equals(crs[0]))).put("icon", crs[4]));
+					}
+					for(JSONObject obj : base){
+						setJSONObject(obj , map);
+						datas.put(obj);
+					}
+				}
+			}
+			jacper.print(datas);
+			return;
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			con.close();
+		}
+		jacper.print("[{'text':'未知空间','id':'-9999','leaf':true , 'allowSelect' : false}]");
+	}
+	public void relationChildren(HashMap<String , JSONArray> map , JSONArray datas) throws JSONException{
+		for(int i = 0 ; i < datas.length() ; i ++)
+			setJSONObject(datas.getJSONObject(i) , map);
+	}
+	public void setJSONObject(JSONObject data , HashMap<String , JSONArray> map) throws JSONException{
+		String key = data.getString("id");
+		boolean hasChild = map.containsKey(key);
+		data.put("leaf", !hasChild);
+		if(map.containsKey(key)){
+			relationChildren(map , map.get(key));
+			data.put("children" ,  map.get(key));
+		}
+	}
+	public void add2Map(HashMap<String , JSONArray> map , String key , JSONObject obj){
+		if(!map.containsKey(key))
+			map.put(key, new JSONArray());
+		map.get(key).put(obj);
+	}
+	public void doGet(Jacper jacper) {
+		doPost(jacper);
+	}
+}

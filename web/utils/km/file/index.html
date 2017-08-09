@@ -1,0 +1,46 @@
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+<title>文件管理</title>
+
+
+
+<link rel="stylesheet" type="text/css" href="/Ext/resources/css/ext-all.css" />
+<link id="theme" rel="stylesheet" type="text/css" href="resources/themes/xtheme-vistablue/css/xtheme-vistablue.css" />
+
+<script type="text/javascript" src="/Ext/ext-base.js"></script>
+<script type="text/javascript" src="/Ext/ext-all.js"></script>
+
+<script type="text/javascript" src="controls/Controls.js"></script>       
+<script type="text/javascript" src="controls/FileManager.js"></script> 
+<script type="text/javascript" src="controls/Menues.js"></script>
+<script type="text/javascript" src="controls/Uploader.js"></script>
+<script type="text/javascript" src="controls/RemoteMethods.js"></script>
+<script type="text/javascript" src="controls/PhotoGallery.js"></script>
+
+<link rel="stylesheet" type="text/css" href="style/filemanager.css" />
+<link rel="stylesheet" type="text/css" href="style/upload.css" />
+<link rel="stylesheet" type="text/css" href="style/gallery.css" />
+<link rel="stylesheet" type="text/css" href="style/icons.css" />
+<link rel="stylesheet" type="text/css" href="style/filetypes.css" />
+
+<script type="text/javascript">
+Ext.QuickTips.init();
+var KmFileManager={};
+Ext.onReady(function(){
+		RemoteMethods = new KmFile.RemoteMethods(); 
+		RemoteMethods.GetFileManagerSettings(function(result) {
+				KmFileManager.mainPanel=new KmFile.FileManager({settings:result});
+				KmFileManager.Frame=new Ext.Viewport({
+								layout:'border',
+								items:[
+											KmFileManager.mainPanel
+								 ]
+				});
+	}, this);       
+
+});
+</script>
+</head>
+<body></body>
+</html>

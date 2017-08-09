@@ -1,0 +1,91 @@
+
+import java.util.UUID;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.unit.*;
+@class{
+	public void doGet(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+ 		HttpSession hs = jacper.getSession();
+
+		String sort = jacper.getStr("sort");
+		String dir = jacper.getStr("dir");
+
+		String sql = "select id,factor,name,is_native,description,metric_default,imperial_default from $[plat].unit where group_id=?";
+
+		int startRow = jacper.getInt("start",0);
+		int rowCount = jacper.getInt("limit",0);
+		String group_id=jacper.getString("group_id","-1");
+		Grid gd=new Grid(sql,"id",new String[]{"id","factor","name","is_native","description","metric_default","imperial_default"});
+		JSONObject gridJSON=gd.getJSON(conPlat,new String[]{group_id+""},startRow,rowCount,dir,sort);
+		jacper.getResponse().setContentType("application/x-json");
+		<?(?>gridJSON.toString()<?)?>;
+		conPlat.close();
+}
+
+public void doPost(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		Connection conPlat = jacper.getConnection("plat");
+
+		String types=jacper.getStr("type");
+
+		String factor=jacper.getStr("factor");
+		String name=jacper.getStr("name");
+		String is_native=jacper.getStr("is_native");
+		String metric_default=jacper.getStr("metric_default");
+		String imperial_default=jacper.getStr("imperial_default");
+		String description=jacper.getStr("description");
+		String group_id=jacper.getString("group_id","0");
+	
+		if(types.equals("save")){
+			try{	
+				String id  = "";
+				String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+				if(idType==null||idType.equals("0")){
+					id = SQLUtils.getNextVal(conPlat,1)+"";
+				}else{
+					id =UUID.randomUUID().toString();
+				}
+				if(is_native.equals("true")) conPlat.exec("update $[plat].unit set is_native='false' where group_id=?",new String[]{group_id+""});
+				if(metric_default.equals("true")) conPlat.exec("update $[plat].unit set metric_default='false' where group_id=?",new String[]{group_id+""});
+				if(imperial_default.equals("true")) conPlat.exec("update $[plat].unit set imperial_default='false' where group_id=?",new String[]{group_id+""});
+				String insertStr="insert into $[plat].unit (id,group_id,factor,name,description,is_native,metric_default,imperial_default)  values (?,?,?,?,?,?,?,?)";
+				conPlat.exec(insertStr,new String[]{id,group_id+"",factor,name+"",description,is_native,metric_default,imperial_default});
+				<?{success:true,group_id:'?>group_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(types.equals("updatesave")){	
+			String id=jacper.getString("id","0");
+			if(is_native.equals("true")) conPlat.exec("update $[plat].unit set is_native='false' where group_id=?",new String[]{group_id+""});
+			if(metric_default.equals("true")) conPlat.exec("update $[plat].unit set metric_default='false' where group_id=?",new String[]{group_id+""});
+			if(imperial_default.equals("true")) conPlat.exec("update $[plat].unit set imperial_default='false' where group_id=?",new String[]{group_id+""});
+			try{	
+				String updStr="update $[plat].unit set factor=?,name=?,description=?,is_native=?,metric_default=?,imperial_default=? where id=?";
+				conPlat.exec(updStr,new String[]{factor,name+"",description,is_native,metric_default,imperial_default,id+""});
+				<?{success:true,group_id:'?>group_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(types.equals("delete")){
+			try{	
+				int id=jacper.getInt("id",0);
+				String delStr="delete from $[plat].unit where id=?";
+				conPlat.exec(delStr,new String[]{id+""});
+				<?{success:true,group_id:'?>group_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}
+		UnitFactory.getInstance().removeUnitGroup(group_id+"");
+	}
+}

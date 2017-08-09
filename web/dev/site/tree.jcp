@@ -1,0 +1,185 @@
+            
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+import com.social.api.core.model.User;
+import com.social.api.core.model.User;
+import com.social.api.core.model.UserType;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.database.*;
+
+                
+@class{
+
+	public void doGet(Jacper jacper){    
+
+		Connection conPlat = jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String userId = hs.uid+"";
+		String deptId=hs.getString("dept_id");
+		User u = User.getUser(userId+"");
+		UserType userType=u.getUserType();
+
+		String rootNode=jacper.getString("rootNode");
+		String type=jacper.getString("type");
+
+		String forder_id = jacper.getString("_id");
+		String nodeType="";
+
+		String hasChild ="1";    			
+		String endicon="";
+		String starticon="";
+		String params="";
+		String url="";
+		String eventName="event0";
+
+	<?<root _id="?>forder_id<?">?>; 
+	if("0".equals(rootNode)){
+
+		String sql="";
+		String[] paramsArray=new String[]{};
+		if (userType.getValue()==1||userType.getValue()==0){
+			sql="select max(a.system_id),max(a.system_name),count(c.object_id) from $[plat].system_base a left outer join $[plat].object_base  b on a.system_id=b.parent_id  left outer join $[plat].object_base  c on b.object_id=c.parent_id  group by a.system_id";
+		}else{
+			paramsArray=new String[]{deptId,userId};
+			sql="select max(a.system_id),max(a.system_name),count(c.object_id) from $[plat].system_base a left outer join $[plat].object_base  b on a.system_id=b.parent_id  left outer join $[plat].object_base  c on b.object_id=c.parent_id  inner join $[plat].system_auth f on a.system_id=f.id where f.deptid=? and f.roleid=? group by a.system_id";
+		}
+
+		String[][] rs=conPlat.get(sql,paramsArray,0);
+
+		<?<forder _parent="?>forder_id<?">?>;
+		for(int i=0;i<rs.length;i++){
+			starticon="/themes/icon/xp/dhd.gif";
+			endicon="/themes/icon/xp/dhd.gif";
+			params="params=\"parent_id="+rs[i][0]+"\"";
+			if (Integer.parseInt(rs[i][2])>1) rs[i][2]="1";
+			<?<e _id="?>rs[i][0]<?"  _parent="?>forder_id<?" _hasChild ="?>rs[i][2]<?" icon0="?>starticon<?" objectType="0" icon1="?>endicon<?" title="?>rs[i][1]<?"  ?>params<?  url="/dev/site/tree.jcp?_id=?>rs[i][0]<?&amp;rootNode=1&amp;type=?>type<?"/>?>;
+		}
+		<?</forder>?>;
+	}else if("1".equals(rootNode)){
+			
+			<?<forder _parent="?>forder_id<?"  event="event0">?>;
+			String sql="";
+			String[] paramsArray=new String[]{type,forder_id+""};
+			if (userType.getValue()==1||userType.getValue()==0){
+				sql="select max(b.object_id),max(a.applogic_name),count(e.object_id),max(a.appphy_name),max(b.object_type) from $[plat].application_base a,$[plat].object_base b left outer join $[plat].object_base e on b.object_id=e.parent_id and e.object_type=? ,$[plat].application_group c where a.object_id=b.object_id and b.parent_id=c.group_id  and c.system_id=? group  by b.object_id";
+			}else{
+				paramsArray=new String[]{type,forder_id+"",deptId,userId};
+				sql="select max(b.object_id),max(a.applogic_name),count(e.object_id),max(a.appphy_name),max(b.object_type) from $[plat].application_base a,$[plat].object_base b left outer join $[plat].object_base e on b.object_id=e.parent_id and e.object_type=? ,$[plat].application_group c,$[plat].system_auth d where a.object_id=b.object_id and b.parent_id=c.group_id  and c.system_id=? and a.object_id=d.id and d.deptid=? and d.roleid=?  group  by b.object_id";
+			}
+			String[][] rs = conPlat.get(sql,paramsArray,0);
+			starticon="/themes/icon/xp/spzl.gif";
+			endicon="/themes/icon/xp/spzl.gif";
+			for(int i=0;i<rs.length;i++){
+				params="params=\"parent_id="+rs[i][0]+"\"";
+				if (Integer.parseInt(rs[i][2])>1) rs[i][2]="1";
+				<?<e _id="?>rs[i][0]<?" _parent="?>forder_id<?" _hasChild ="?>rs[i][2]<?" icon0="?>starticon<?" icon1="?>endicon<?"  objectType="1"  title="?>rs[i][1]<?"  ?>params<?  url="/dev/site/tree.jcp?_id=?>rs[i][0]<?&amp;rootNode=3&amp;type=?>type<?"/>?>;
+			}
+			<?</forder>?>;
+	}else{
+			String[][] rs;
+			String[] rs2=new String[]{"","",""};
+
+			if("2".equals(rootNode)){
+				rs=conPlat.get("select a.object_id,a.object_type,a.son,a.parent_id,'' from $[plat].object_base a, $[plat].object_base b where a.parent_id=b.object_id and b.parent_id=? order by a.object_name",new String[]{forder_id+""},0);
+			}else if("3".equals(rootNode)){
+				rs=conPlat.get("select object_id,object_type,son,parent_id from $[plat].object_base where parent_id=? and object_type=?  order by object_name",new String[]{forder_id+"",type},0);
+			}else{
+				rs=conPlat.get("select object_id,object_type,son,parent_id from $[plat].object_base where parent_id=?  order by object_name",new String[]{forder_id+""},0);
+			}
+
+			if(rs.length==0){
+				conPlat.exec("update $[plat].object_base  set son=0 where object_id=?",new String[]{forder_id+""});
+			}	
+
+			for(int i=0;i<rs.length;i++){
+				switch(Integer.parseInt(rs[i][1])){
+					case ObjectType.APPLICATION:
+								rs2=conPlat.getRow(
+								"select b.applogic_name, b.appphy_name,b.application_id from $[plat].application_base b where  b.object_id=?",
+								new String[]{rs[i][0]});
+							break;
+					case ObjectType.SITE:
+								rs2=conPlat.getRow(
+								"select logicname,name,name from $[plat].site_base where object_id=?",
+								new String[]{rs[i][0]+""});
+							break;
+					case ObjectType.PROGRAM:
+								rs2=conPlat.getRow(
+								"select prglogic_name,prgphy_name,prgtype,prgtype from $[plat].prg_base where object_id=?",
+								new String[]{rs[i][0]});
+							break;
+				   case ObjectType.SITERESOURCEDIR:
+								ObjectNode node=ObjectManager.getObject(rs[i][0]);
+								rs2=new String[]{node.getName(),node.up(1).getType()+"",node.getType()+""};
+							break;
+				   case ObjectType.SITEWIDGETDIR:
+							    node=ObjectManager.getObject(rs[i][0]);
+								rs2=new String[]{node.getName(),node.up(1).getType()+"",node.getType()+""};
+							break;
+				   case ObjectType.SITETEMPLATEDIR:
+								node=ObjectManager.getObject(rs[i][0]);
+								rs2=new String[]{node.getName(),node.up(1).getType()+"",node.getType()+""};
+							break;
+				   case ObjectType.SITESTRUCTUREDIR:
+							   node=ObjectManager.getObject(rs[i][0]);
+								rs2=new String[]{node.getName(),node.up(1).getType()+"",node.getType()+""};
+							break;
+					case ObjectType.SEARCHCATEGORY:
+								rs2=conPlat.getRow(
+								"select LOGIC_NAME,PHY_NAME,SEARCH_TYPE from $[plat].search_category where object_id=?",
+								new String[]{rs[i][0]+""});
+							break;
+				}
+
+				if(rs2==null) {
+					conPlat.exec("update $[plat].object_base  set son=son-1 where object_id=?",new String[]{forder_id+""});
+					conPlat.exec("delete from $[plat].object_base where object_id=?",new String[]{rs[i][0]+""});
+					return;
+				}else{
+					url="/dev/site/tree.jcp?_id="+rs[i][0];
+					int objType=Integer.parseInt(rs[i][1]);
+					if(objType==ObjectType.PROGRAM){
+						ProgramType p=ProgramType.parseProgramType(rs2[2]);
+						starticon=ObjectIcon.getIcon(objType,p);
+					}else{
+						starticon=ObjectIcon.getIcon(objType,null);
+					}
+					endicon=starticon;
+					switch(objType){
+							case ObjectType.APPLICATION:
+								params="params=\"parent_id="+rs[i][0]+"\"";
+								break;
+							case ObjectType.PROGRAM:
+								params="params=\"parent_id="+rs[i][0]+"&amp;objectId="+rs[i][0]+"&amp;view="+rs2[3]+"&amp;acttype=5&amp;prgtype="+rs2[2]+"\"";
+								break;			
+							case ObjectType.SITE:
+								params="params=\"parent_id="+rs[i][0]+"&amp;view="+rs2[2]+"\"";
+							break;
+							case ObjectType.QUALITY:
+								params="params=\"parent_id="+rs[i][0]+"&amp;object_id="+rs[i][0]+"&amp;view="+rs2[2]+"\"";
+							break;
+							case ObjectType.SEARCHCATEGORY:
+								params="params=\"parent_id="+rs[i][0]+"&amp;view="+rs2[2]+"\"";
+							break;
+							default:
+								params="";
+								break;
+					}
+			if (Integer.parseInt(rs[i][2])>1){
+				rs[i][2]="1";
+			}
+			
+			<?<forder _parent="?>forder_id<?"  event="?>eventName<?">?>;
+			<?<e _id="?>rs[i][0]<?"  _parent="?>forder_id<?" _hasChild ="?>rs[i][2]<?"  objectType="?>rs[i][1]<?" icon0="?>starticon<?" icon1="?>endicon<?" title="?>rs2[0]<?"  ?>params<?  url="?>url<?"  />?>;				
+			<?</forder>?>;
+			}
+			}
+		}
+		conPlat.close();
+		<?</root>?>;
+	}
+}

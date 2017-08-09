@@ -1,0 +1,127 @@
+ 
+import java.io.IOException;
+
+import com.kinglib.*;
+import java.util.Vector;
+import java.util.Calendar;
+import java.util.ArrayList;
+import com.kinglib.util.json.*;
+import com.social.api.core.model.*;
+import com.kinglib.ui.menu.MenuFactory;
+import com.kinglib.ui.core.ButtonFactory;
+
+@class{
+
+	public void doGet(Jacper jacper){
+		
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String userId = hs.uid+"";
+		String deptId=hs.getString("dept_id");
+		User u = User.getUser(userId+""); 
+		UserType userType=u.getUserType();
+
+		Connection conPlat = jacper.getConnection("plat");
+		Connection conCert = jacper.getConnection("cert");		
+
+		String role_id = jacper.getStr("role_id");
+		
+		String sql="";
+		String[] paramsArray=new String[]{};
+		if (userType.getValue()==1||userType.getValue()==0){
+			sql="select a.group_id,c.system_name||'('||a.group_name||')' from $[plat].application_group a,$[plat].system_base c where  c.system_id=a.system_id ";
+		}else{
+			paramsArray=new String[]{deptId,userId};
+			sql="select a.group_id,c.system_name||'('||a.group_name||')' from $[plat].application_group a,$[plat].system_base c,$[plat].system_auth f  where  c.system_id=a.system_id and a.system_id=f.id and f.deptid=? and f.roleid=?";
+		}
+
+		String[][] rs = conPlat.get(sql,paramsArray,0);
+
+		jacper.getResponse().setContentType("application/x-json");
+
+		try{
+			JSONObject authJSON = new JSONObject("{}");
+
+			JSONArray systemJSONArray=new JSONArray();
+
+			for ( int i=0; i<rs.length; i++ ){
+				
+				JSONObject tempSystemJSON = new JSONObject("{}");
+				tempSystemJSON.put("system_id",rs[i][0]);
+				tempSystemJSON.put("system_name",rs[i][1]);
+
+				String[][] temp = conCert.get("select strategy_id from $[plat].SYS_STRATEGY_ROLE where group_id=? and role_id=?",new String[]{rs[i][0],role_id},0);
+				JSONArray authJSONArray=new JSONArray();
+				
+				for ( int j=0; j<temp.length; j++ ){
+					JSONObject tempJSON = new JSONObject("{}");
+					tempJSON.put("role_id",temp[j][0]);
+					authJSONArray.put(tempJSON);
+				}
+				tempSystemJSON.put("application_auth",authJSONArray);
+				
+				String[][] rs_s = conPlat.get("select strategy_id,strategy_name from $[plat].sys_strategy  where group_id=?",new String[]{rs[i][0]},0);
+
+				JSONArray roleJSONArray=new JSONArray();
+				for ( int j=0; j<rs_s.length; j++ ){
+					JSONObject tempJSON = new JSONObject();
+					tempJSON.put("role_id",rs_s[j][0]);
+					tempJSON.put("auth_id",rs_s[j][1]);
+					roleJSONArray.put(tempJSON);
+				}
+				tempSystemJSON.put("sys_role",roleJSONArray);
+				systemJSONArray.put(tempSystemJSON);
+			}
+			authJSON.put("application_array",systemJSONArray);	
+			<?[?>authJSON.toString()<?]?>;
+
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+			conCert.close();	
+		}
+	}                                     
+
+	public void doPost(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		String position_id  = jacper.getStr("role_id");
+		String[] sys = jacper.getArray("syschk");
+
+		try{	
+			conPlat.exec("delete from $[plat].SYS_STRATEGY_ROLE where role_id=?",new String[]{position_id+""});
+			
+			CertManager cache=CertManager.getInstance();
+			Role role=cache.getRole(position_id);
+			role.setStrategys(null);
+
+			if (sys != null ) {
+				ArrayList<Strategy> strategyList=new ArrayList<Strategy>();
+				for (int i=0; i<sys.length; i++ ) {
+					String role_id = sys[i].substring(0,sys[i].indexOf("S"));	
+					String system_id =sys[i].substring(sys[i].indexOf("S")+1,sys[i].length());
+					Strategy st=cache.getStrategy(system_id);
+					strategyList.add(st);
+					conPlat.exec("insert into $[plat].SYS_STRATEGY_ROLE (role_id,strategy_id,group_id) values (?,?,?)",new String[]{position_id,system_id,role_id});
+				}
+				if(role!=null){
+					Strategy[] stArray=new Strategy[strategyList.size()];
+					strategyList.toArray(stArray);
+					role.setStrategys(stArray);
+					
+					//清除权限缓存。
+					ButtonFactory.clearCache();
+					MenuFactory.getInstance().clearMenuPrivilege();
+				}
+			}
+			<?{"success":"true","position_id":"?>position_id<?"}?>;
+		}catch(Exception e){
+			<?{success:"false","message":"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}
+}
+

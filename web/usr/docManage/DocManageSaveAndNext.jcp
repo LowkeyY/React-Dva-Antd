@@ -1,0 +1,292 @@
+
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.propertyset.PropertySet;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workflow.Condition;
+import com.kinglib.workflow.TypeResolver;
+import com.kinglib.workflow.Workflow;
+import com.kinglib.workflow.WorkflowException;
+import com.kinglib.workflow.basic.BasicWorkflow;
+import com.kinglib.workflow.config.DefaultConfiguration;
+import com.kinglib.workflow.loader.AbstractDescriptor;
+import com.kinglib.workflow.loader.ActionDescriptor;
+import com.kinglib.workflow.loader.ConditionDescriptor;
+import com.kinglib.workflow.loader.ConditionsDescriptor;
+import com.kinglib.workflow.loader.StepDescriptor;
+import com.kinglib.workflow.loader.WorkflowDescriptor;
+import com.kinglib.workflow.spi.Step;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.Dept;
+import com.social.api.core.model.Role;
+import com.social.api.core.model.Strategy;
+import com.social.api.core.model.User;
+
+@class{
+	public void doGet(Jacper jacper){
+		
+		HttpSession hs = jacper.getSession();
+		String user_id = String.valueOf(hs.uid);
+		String role_id= hs.getString("role_id");
+		String instanceId = jacper.getString("instanceId","");
+		String workflowId = jacper.getString("workflowId","");
+		String theOperatorComment = jacper.getString("theOperatorComment","");
+		String actName = jacper.getString("ACT", "");
+		boolean mustComment = jacper.getString("mustComment", "").equals("true")?true:false;
+		
+		long entryId = jacper.getLong("entryId",-1);
+		long stepId = jacper.getLong("stepId",-1);
+		
+		if("0".equals(user_id) || "1".equals(user_id)){
+			jacper.print("{success:false,message:'无法进行下一步,\"系统管理员\"没有所属部门。'}");
+			return;
+		}
+		
+		Workflow wf = new BasicWorkflow(user_id);
+		DefaultConfiguration config = new DefaultConfiguration();
+		wf.setConfiguration(config);
+		WorkflowDescriptor wd = wf.getWorkflowDescriptor(instanceId);
+		PropertySet ps = null;
+		String roleString = "",roleString1 = "";
+		boolean isCreate = false;
+		
+		if (entryId == -1) {
+			List initialActList = wd.getInitialActions();
+			int initId = 0;
+			for (Iterator iterator = initialActList.iterator(); iterator.hasNext();) {
+				ActionDescriptor initalActionObject = (ActionDescriptor) iterator.next();
+				initId = initalActionObject.getId();
+			}
+			try {
+				
+
+				Role role = Role.getRole(role_id);
+				if (role != null) {
+					Strategy[] sts = role.getStrategys();
+					if (sts != null) {
+						for (int i = 0; i < sts.length; i++) {
+							roleString += ",r:" + sts[i].getId();
+							roleString1 += ",d:" + sts[i].getId();
+						}
+						roleString = roleString.substring(1, roleString.length());
+						roleString1 = roleString1.substring(1, roleString1.length());
+					}
+				}
+				entryId = wf.initialize(instanceId, initId, null);
+				ps = wf.getPropertySet(entryId);
+				ps.setString("initer", user_id);
+				wf.start(instanceId, initId, entryId, null);
+				isCreate = true;
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}else{
+			ps = wf.getPropertySet(entryId);
+		}
+		Collection currentSteps = wf.getCurrentSteps(entryId);
+
+		for (Iterator interator = currentSteps.iterator(); interator.hasNext();) {
+			Step step = (Step) interator.next();
+			if(isCreate){
+				if (step.getOwner().equals("a:" + role_id) || step.getOwner().equals(user_id + "") || 
+						(roleString1.indexOf(step.getOwner()) != -1) || 
+							(roleString.indexOf(step.getOwner()) != -1)) {
+					stepId = step.getStepId();
+				}
+			}else{
+				stepId = step.getStepId();
+			}
+		}
+
+		String nextStepOwner ="" , nextStepName = "操作人"; int nextStepId=-1,currentActionId = -1;;
+		if (stepId != -1) {
+			StepDescriptor stp = wd.getStep(stepId);
+			StringBuilder rsErr = new StringBuilder();
+
+			for (Iterator iterator = stp.getActions().iterator();iterator.hasNext();) {
+				ActionDescriptor action = (ActionDescriptor) iterator.next();
+				if(action.getRestriction()!=null){
+					//动作设定条件时，以条件返回结果为准。暂时只支持 获取一个脚本的返回结果。
+					ConditionsDescriptor conditions = action.getRestriction().getConditionsDescriptor();
+					for (Iterator iteor = conditions.getConditions().iterator(); iteor.hasNext();) {
+						AbstractDescriptor descriptor = (AbstractDescriptor) iteor.next();
+						if (descriptor instanceof ConditionDescriptor) {
+							try {
+								Condition condition = TypeResolver.getResolver().getCondition(
+										((ConditionDescriptor) descriptor).getType(),
+										((ConditionDescriptor) descriptor).getArgs());
+								if(condition.passesCondition(new HashMap(), ((ConditionDescriptor) descriptor).getArgs(), ps)){
+									nextStepOwner = embodyOwner(action.getUnconditionalResult().getOwner(),ps,rsErr,user_id);
+									if(rsErr.length()>0){
+										jacper.print("{success:false,message:'"+rsErr.toString()+"'}");
+										return;
+									}
+									nextStepId = action.getUnconditionalResult().getStep();
+									nextStepName = nextStepId == 0 ? "审批结束" : nextStepName;
+									currentActionId = action.getId();
+									break;
+								};
+							} catch (WorkflowException e) {
+								e.printStackTrace();
+							}
+						}
+					}
+				}else{
+					if(proofTheNames(action.getName(),actName)){
+						nextStepOwner = embodyOwner(action.getUnconditionalResult().getOwner(),ps,rsErr,user_id);
+						if(rsErr.length()>0){
+							jacper.print("{success:false,message:'"+rsErr.toString()+"'}");
+							return;
+						}
+						nextStepId = action.getUnconditionalResult().getStep();
+						nextStepName = nextStepId == 0 ? "审批结束" : nextStepName;
+						currentActionId = action.getId();
+						break;
+					}
+				}
+			}
+
+			if(nextStepId != -1 && nextStepId != 0){
+				StepDescriptor nstp = wd.getStep(nextStepId);
+				if(nstp != null)
+					nextStepName = nstp.getName();
+			}
+			
+			
+		}
+		
+		if(nextStepOwner!=null &&nextStepOwner.length()>0){
+			JSONObject datas = new JSONObject();
+			JSONObject rsOwner = new JSONObject();
+			JSONObject rsComment = new JSONObject();
+			JSONArray rsItems = new JSONArray();
+			JSONObject wfc = new JSONObject();
+			try {
+				wfc.put("entryId",entryId);
+				wfc.put("instanceId",instanceId);
+				wfc.put("workflowId",workflowId);
+				wfc.put("actionId",currentActionId);
+				wfc.put("isCreate",isCreate);
+				
+				rsOwner.put("fieldLabel", (new StringBuilder(nextStepName).append("<font color=\"red\">*</font>")).toString());
+				rsOwner.put("allowBlank", false);
+				rsOwner.put("name" , "theNextOperator");
+				rsOwner.put("xtype", "radiogroup");
+				rsOwner.put("items",
+						new JSONArray("[{'name':'theNextOperator','inputValue':'"+nextStepOwner+
+								"','boxLabel':'"+CertManager.getUser(nextStepOwner).getRealName()+"','checked':true}]"));
+				rsItems.put(rsOwner);
+				rsComment.put("fieldLabel", 
+						mustComment ? (new StringBuilder("办理理由").append("<font color=\"red\">*</font>")).toString():
+							"办理理由");
+				rsComment.put("allowBlank", !mustComment);
+				rsComment.put("name","theOperatorComment");
+				rsComment.put("xtype", "textarea");
+				rsComment.put("width", "500");
+				if(theOperatorComment.length()>0){
+					rsComment.put("value",theOperatorComment);
+				}
+				rsItems.put(rsComment);
+				datas.put("items", rsItems);
+				
+				jacper.print("{success:true,datas:"+datas+",wfconfig:"+wfc+"}");
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+		}else{
+			jacper.print("{success:false,message:'未找到下一步操作人。'}");
+		}
+	}
+	//校验名称，name是否以proofName结束
+	private boolean proofTheNames(String name,String proofName){
+		boolean rs = false;
+		if(proofName.equals("转下一步")){
+			rs =  true;
+		}else if(proofName.equals("同意")){
+			if(name.equals(proofName)){
+				rs = true;
+			}else{
+				if(name.length()>=3 && name.endsWith(proofName) && name.charAt(name.length()-3)!='不')
+					rs = true;
+				else
+					rs = false;
+			}
+		}else{
+			rs = name.endsWith(proofName);
+		}
+		return rs;
+	}
+	private String embodyOwner(String owner, PropertySet ps, StringBuilder sb, String currentUserID) {
+
+		if (owner == null) {
+			return null;
+
+		} else if (owner.startsWith("$")) {
+
+			String sign = owner.substring(2, owner.length() - 1);
+			if (sign.equals("initer") || sign.startsWith("caller")) {
+				owner = ps.getString("initer");
+			}else{
+				owner = currentUserID;
+			}
+
+			if (sign.indexOf("Supervisor") != -1) {
+				User user = CertManager.getUser(owner);
+
+				if (user == null) {
+					sb.append("申请者已经被删除");
+					return null;
+				}
+				owner = null;
+
+				if(user.getDept()==null){
+					sb.append("无法进行下一步,没有找到您所在的部门");
+					return null;
+				}
+				Dept callerDept = user.getDept();
+				
+				if (sign.indexOf("UpSupervisor") != -1) {
+					callerDept = callerDept.getParent();
+					if (callerDept == null) {
+						sb.append("定制错误,当前步骤找不到上级部门");
+						return null;
+					}
+				}
+				for (User u : callerDept.getUsers()) {
+					if (u.isMaster()) {
+						owner = u.getUserId();
+						break;
+					}
+				}
+				if (owner == null) {
+					sb.append("定制错误,当前步骤涉及部门没有主管");
+					return null;
+				}
+			}
+		} else if (owner.startsWith("a")) {
+
+			owner = owner.substring(2);
+			Role role = CertManager.getRole(owner);
+			owner = null;
+			for (User u : role.getDept().getUsers()) {
+				if (u.getRole() == role) {
+					owner = u.getUserId();
+					break;
+				}
+			}
+			if (owner == null) {
+				sb.append("定制错误,没有用户当前步骤转到的职位");
+				return null;
+			}
+		}
+		return owner;
+	}
+}

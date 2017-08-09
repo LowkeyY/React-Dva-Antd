@@ -1,0 +1,43 @@
+/*
+ * Ext JS Library 2.3.0
+ * Copyright(c) 2006-2009, Ext JS, LLC.
+ * licensing@extjs.com
+ * 
+ * http://extjs.com/license
+ */
+
+.x-tool-close-vm {
+	width:45px!important; 
+    height:45px!important;
+	background:transparent url(/themes/icon/tool-sprites-vm.gif) no-repeat!important;
+    background-position:0 -0!important;
+}
+.x-tool-close-vm-over {
+	background-position:-45px 0!important;
+}
+
+.x-tool-gear-vm {
+	width:48px!important;
+    height:48px!important;
+	background:transparent url(/themes/icon/48all/System.png) no-repeat!important;
+    /*background-position:0 -45px!important;*/
+}
+.x-tool-gear-vm-over {
+	background:transparent url(/themes/icon/48all/system-run.png) no-repeat!important;
+	/*background-position:-45px -45px!important;*/
+}
+
+.x-panel-header-vm {
+    color:#99bbe8;
+	font-weight:bold; 
+    font-size: 11px;
+    font-family: tahoma,arial,verdana,sans-serif;
+    /*border-color:#99bbe8;*/
+    overflow: hidden;
+	zoom: 1;
+	padding: 5px 3px 4px 5px;
+	border: 1px solid;
+	border-top-width: 0;
+	border-bottom-width: 0;
+	line-height: 15px;
+}

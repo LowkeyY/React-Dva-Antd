@@ -1,0 +1,90 @@
+
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workflow.Workflow;
+import com.kinglib.workflow.basic.BasicWorkflow;
+import com.kinglib.workflow.config.DefaultConfiguration;
+import com.kinglib.workflow.loader.StepDescriptor;
+import com.kinglib.workflow.loader.WorkflowDescriptor;
+import com.kinglib.workflow.spi.Step;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+
+
+@class{
+		public void doPost(Jacper jacper) {
+
+		Workflow wf = new BasicWorkflow("");
+		DefaultConfiguration config = new DefaultConfiguration();
+		wf.setConfiguration(config);
+		WorkflowDescriptor wd = wf.getWorkflowDescriptor(jacper.getString("instanceId"));
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy年MM月dd日 HH:mm");
+		long entryId = jacper.getLong("entryId", "登陆点id错误");
+
+		try {
+			JSONArray arr = new JSONArray();
+			for (Object r : wf.getHistorySteps(entryId)) {
+				arr.put(stepToJson((Step) r, wd, sdf));
+			}
+
+			int len = arr.length();
+			JSONArray desc = new JSONArray();
+			for (int i = 0; i < len; i++) {
+				desc.put(i, arr.get(len - i - 1));
+			}
+
+			for (Object r : wf.getCurrentSteps(entryId)) {
+				desc.put(stepToJson((Step) r, wd, sdf));
+			}
+
+			JSONObject json = new JSONObject();
+			json.put("steps", desc);
+			jacper.print(json);
+
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private JSONObject stepToJson(Step step, WorkflowDescriptor wd, SimpleDateFormat sdf) throws JSONException {
+
+		JSONObject json = new JSONObject();
+
+		Date dt;
+		User u;
+		StepDescriptor sd;
+		String value = "";
+
+		if (step.getOwner().length() > 0) {
+			u = CertManager.getUser(step.getOwner());
+			if (u != null)
+				value = u.getRealName();
+		}
+		json.put("userName", value);
+
+		value = "";
+		sd = wd.getStep(step.getStepId());
+		if (sd != null) {
+			value = sd.getName();
+		}
+		json.put("stepName", value);
+
+		value = "";
+		dt = step.getFinishDate();
+		if (dt != null) {
+			value = sdf.format(dt);
+		}
+		json.put("startTime", value);
+
+		json.put("status", step.getStatus());
+		json.put("detail", step.getComment());
+
+		return json;
+	}
+}

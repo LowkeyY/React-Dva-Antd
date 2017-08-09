@@ -1,0 +1,93 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.database.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.utils.*;
+import com.susing.sql.DataSourceFactory;
+import com.kinglib.bi.*;
+import java.util.ArrayList;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectType;
+import com.kinglib.workbench.ObjectNode;
+
+@class{
+	public void doPost(Jacper jacper){
+		
+		
+		Connection conLocal=jacper.getConnection("plat");
+		String combo = jacper.getStr("combo").trim();
+		String text = jacper.getStr("text").trim();
+	
+		try{
+			JSONObject relJSON = new JSONObject();
+			
+			StringBuilder sql = new StringBuilder(200);
+			if(combo.equals("1")){
+				sql.append("select prglogic_name,prgphy_name,object_id,tab_id from $[plat].prg_base  where prglogic_name like '%").append(text).append("%'");
+			}else if(combo.equals("2")){
+				sql.append("select prglogic_name,prgphy_name,object_id,tab_id from $[plat].prg_base where prgphy_name like '%").append(text).append("%'");
+			}else if(combo.equals("3")){
+				sql.append("select prglogic_name,prgphy_name,object_id,tab_id from $[plat].prg_base  where object_id like '%").append(text).append("%'");
+			}else if(combo.equals("4")){
+				sql.append("select prglogic_name,prgphy_name,object_id,tab_id from $[plat].prg_base where tab_id like '%").append(text).append("%'");
+			}
+
+			String[][] rs =conLocal.get(sql.toString());
+			String path="";
+			if(rs!=null){
+				JSONArray data = new JSONArray();
+				for(int i=0;i<rs.length;i++){
+				
+					path=getPath(rs[i][2]);
+					if(path.length()==0)
+						continue;
+					JSONObject rowJSON = new JSONObject();
+					rowJSON.put("prglogic_name",rs[i][0]);
+					rowJSON.put("prgphy_name",rs[i][1]);
+					rowJSON.put("object_id",rs[i][2]);
+					MetaTable mt=MetaFactory.getMetaTable(rs[i][3]);
+					rowJSON.put("tab_name",(mt==null)?"":mt.getLname()+"("+rs[i][3]+")");
+					
+					rowJSON.put("path",path);
+					data.put(rowJSON);
+				}
+				relJSON.put("data",data);
+				jacper.print(relJSON);
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+			jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+		}finally{
+				conLocal.close();
+		}	
+	}
+	public String getPath(String id) throws Exception{
+	
+		
+		ObjectNode node= ObjectManager.getObject(id);
+		ObjectNode pnode=node.getParent();
+		
+		if(pnode.getType()<23||pnode.getType()>27){
+			return "";
+		
+		}
+		ArrayList<ObjectNode> alist=new ArrayList<ObjectNode>();
+		while(node!=null){
+				if(node.getType()!=ObjectType.APPLICATIONGROUP)
+				alist.add(node);
+				node=node.getParent();
+		}
+		StringBuilder sb=new StringBuilder("0");
+		
+		int len=alist.size()-1;
+		for(int i=len;i>-1;i--){
+			if(i!=len){
+				sb.append("/");
+				sb.append(alist.get(i).getId());
+			}
+		}
+		return sb.toString().trim();
+	}
+
+}

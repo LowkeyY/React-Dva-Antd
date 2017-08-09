@@ -1,0 +1,235 @@
+<div class="modal fade" tabindex="-1" id="persons_add" data-focus-on="input:first">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" id="close_x" aria-hidden="true"></button>
+        <h3 class='modal-title'>New Person</h3>
+    </div>
+    <form action="#" class="horizontal-form" id="person-add" name="person-add" style="margin-bottom: 0px;">
+        <div class="modal-body">
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <div class="controls">
+                            <input type="text" class="form-control" id="firstname" name="firstname" placeholder="Firstname">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <div class="controls">
+                            <input type="text" class="form-control" id="lastname" name="lastname" placeholder="Lastname">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <div class="controls">
+                            <input type="text" class="form-control" id="email" name="email" placeholder="Email">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <div class="controls">
+                            <input type="text" class="form-control" id="phone" name="phone" placeholder="Phone">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <div class="controls">
+                            <input class="form-control" id="contact_types_select" name="contact_types_select" type="hidden">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="control-label">Owner</p>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <div class="controls">
+                            <input class="form-control" id="customer_owners_select" name="customer_owners_select" type="hidden">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="control-label">Account</p>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <div class="controls">
+                            <input class="form-control" id="accounts_select" name="accounts_select" type="hidden">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="control-label">Address</p>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <div class="controls">
+                            <input type="text" class="form-control" id="street" name="street" placeholder="Street">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <div class="controls">
+                            <input type="text" class="form-control" id="city" name="city" placeholder="City">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <div class="controls">
+                            <input type="text" class="form-control" id="zip" name="zip" placeholder="ZIP">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <div class="controls">
+                            <input class="form-control" id="countries_select" name="countries_select" type="hidden">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <div class="controls">
+                            <textarea class="form-control" id="textarea" rows="3" placeholder="Description"  name="description"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="modal-footer">
+            <div class="row">
+                <div class="col-md-6"><button class="btn btn-circle btn-default btn-fit-height btn-block" type="submit" id="save">Save</button></div>
+                <div class="col-md-6"><button class="btn btn-circle btn-default btn-fit-height btn-block" type="button" id="cancel">Cancel</button></div>
+            </div>
+        </div>
+    </form>
+</div>
+
+
+<script type='text/javascript'>
+
+    $(function () {
+        $.fn.modalmanager.defaults.resize = true;
+
+        $.fn.modal.defaults.maxHeight = function () {
+            return $(window).height() - 250;
+        }
+    });
+
+    $(document).ready(function () {
+
+        $.ajax({
+            type: "POST",
+            url: "/list/values/countries",
+            success: function (data_list, status) {
+                $("#persons_add #countries_select").select2({width: 'resolve', placeholder: "Countries", allowClear: true, data: data_list});
+            }
+        });
+
+        $.ajax({
+            type: "POST",
+            url: "/list/values/customer_contact_accounts",
+            success: function (data_list, status) {
+                $("#persons_add #accounts_select").select2({width: 'resolve', placeholder: "Account", allowClear: true, multiple: true, data: data_list});
+            }
+        });
+
+        $.ajax({
+            type: "POST",
+            url: "/list/values/contact_types",
+            success: function (data_list, status) {
+                $("#persons_add #contact_types_select").select2({width: 'resolve', placeholder: "Types", allowClear: true, data: data_list});
+            }
+        });
+
+        $.ajax({
+            type: "POST",
+            url: "/list/values/customer_owners",
+            data: "permission=2",
+            success: function (data_list, status) {
+                $("#persons_add #customer_owners_select").select2({width: 'resolve', placeholder: "Owners", allowClear: false, multiple: true, data: data_list});
+                $("#persons_add #customer_owners_select").select2("val", ["user_1040"]);
+            }
+        });
+
+        $('#cancel').click(function (e) {
+            e.preventDefault();
+            $('#persons_add').modal('hide');
+        });
+
+        $('#close_x').click(function (e) {
+            e.preventDefault();
+            $('#persons_add').modal('hide');
+        });
+
+
+
+        $('#person-add').validate({
+            errorElement: 'span'
+            , errorClass: 'validator-error-color'
+            , focusInvalid: false
+            , ignore: ""
+            , rules: {
+                lastname: {
+                    minlength: 2
+                    , required: true
+                }
+
+            }
+            , messages: {
+                lastname: {
+                    required: "Undefined [Enter lastname].."
+                }
+            }
+            , errorPlacement: function (error, element) {
+                error.insertAfter(element);
+            }
+            , highlight: function (element) {
+                $(element).closest('.form-group').addClass('error');
+            }
+            , success: function (label) {
+                label.closest('.form-group').removeClass('error');
+            }
+            , submitHandler: function (form) {
+                $.ajax({
+                    type: "POST",
+                    url: "/persons/modal/add/",
+                    data: $("#person-add").serialize(),
+                    success: function (data, status) {
+                        $('#persons_add').modal('hide');
+                        toastr.success("New person was created!", "Created !");
+                    }
+                });
+            }
+        });
+
+
+
+    });
+</script>

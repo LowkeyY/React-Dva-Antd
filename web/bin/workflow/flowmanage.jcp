@@ -1,0 +1,137 @@
+
+import java.io.IOException;
+
+
+import com.kinglib.*;
+
+import com.kinglib.workflow.Workflow;
+import com.kinglib.workflow.basic.BasicWorkflow;
+import com.kinglib.workflow.query.WorkflowQuery;
+import com.kinglib.workflow.InvalidActionException;
+import com.kinglib.workflow.InvalidEntryStateException;
+import com.kinglib.workflow.InvalidInputException;
+import com.kinglib.workflow.InvalidRoleException;
+import com.kinglib.workflow.WorkflowException;
+import com.kinglib.workflow.config.DefaultConfiguration;
+
+import com.kinglib.propertyset.PropertySet;
+import com.kinglib.propertyset.PropertySetManager;
+import com.kinglib.database.*;
+import com.kinglib.workbench.program.*;
+
+@class{
+ 
+ public void doGet(Jacper jacper){
+
+    boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	int user_id = (int)hs.uid;
+	
+	String type = jacper.getStr("type");
+	String workflowId=jacper.getStr("workflowId");
+	String flowType=jacper.getStr("flowType");
+	String entryId=jacper.getStr("entryId");
+	String objectId=jacper.getStr("objectId");
+
+	PropertySet ps = null;
+	Workflow wf = new BasicWorkflow(user_id+"");	
+	try {
+		  ps=wf.getPropertySet(Long.parseLong(entryId));
+	} catch (Exception e) {
+		e.printStackTrace();
+	} 
+	String[] pkData=null;
+	String PkString="";
+	String[] data_arr=null;
+	if(flowType.equals("1")){
+		Connection conPlat = jacper.getConnection("plat");
+		Connection conTemp = null;
+		Program prg =ProgramFactory.getInstance().getProgram(conPlat,objectId);
+		String tab_id=prg.getTabId();
+		String dataId= ps.getString("dataId");	
+		MetaTable mt = MetaFactory.getObject(tab_id);
+		MetaColumn[] pkMc= mt.getPrimaryKeys();
+		String DbLink=mt.getDblink();
+		String tabPname=mt.getName();
+		conTemp=jacper.getConnection(DbLink);
+		data_arr=dataId.split(",");
+		Connection conWork = jacper.getConnection("work");
+		try{	
+				conTemp.setAutoCommit(false);	
+				conWork.setAutoCommit(false);			
+				for(int i=0,n=data_arr.length;i<n;i++){
+					pkData=data_arr[i].split(":");
+					for(int k=0;k<pkMc.length;k++){
+						if (pkMc[k].getDataType()==DataType.DATE){
+							if(pkMc[k].getSpecialSet()==SpecialSet.YYYYMM){
+								PkString+=" and $date_str("+pkMc[k].getPname()+",117)='"+pkData[k]+"'";
+							}else if(pkMc[k].getSpecialSet()==SpecialSet.YYYY){
+								PkString+=" and $date_str("+pkMc[k].getPname()+",118)='"+pkData[k]+"'";
+							}else if(pkMc[k].getSpecialSet()==SpecialSet.YYYYMMDDHHMMSS){
+								PkString+=" and $date_str("+pkMc[k].getPname()+",113)='"+pkData[k]+"'";
+							}else{
+								PkString+=" and $date_str("+pkMc[k].getPname()+",111)='"+pkData[k]+"'";
+							}
+						}else if (pkMc[k].getDataType()==DataType.INT){
+							PkString+=" and "+pkMc[k].getPname()+"="+pkData[k]+"";
+						}else{
+							PkString+=" and "+pkMc[k].getPname()+"='"+pkData[k]+"'";
+						}
+					}
+					String delStr="delete from "+tabPname+" where "+PkString.substring(4,PkString.length());
+					PkString="";
+					conTemp.exec(delStr,new String[]{});
+			   }
+			   conWork.exec("delete from $[work].historystep_prev where id=?",new String[]{entryId+""});
+			   conWork.exec("delete from $[work].historystep where id=?",new String[]{entryId+""});
+			   conWork.exec("delete from $[work].currentstep_prev where id=?",new String[]{entryId+""});
+			   conWork.exec("delete from $[work].currentstep where id=?",new String[]{entryId+""});
+			   conWork.exec("delete from $[work].wfentry where id=?",new String[]{entryId+""});
+			   conWork.exec("delete from $[work].propertyentry where  global_key=?",new String[]{"bwf_"+entryId+""});
+			   conTemp.commit();
+			   conWork.commit();
+			<?{success:true,flowType:"?>flowType<?"}?>;
+		}catch(Exception e){
+		e.printStackTrace();
+			try {
+				conWork.rollback();
+			}catch(Exception e1) {}
+			try {
+				conTemp.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conWork.setAutoCommit(true);
+				conTemp.setAutoCommit(true);
+				conWork.close();
+				conPlat.close();
+				conTemp.close();
+			}catch(Exception e2) {}
+		}
+	}else if (flowType.equals("2")||flowType.equals("4")){
+		Connection conWork = jacper.getConnection("work");
+		try{	
+			conWork.setAutoCommit(false);			
+			conWork.exec("delete from $[work].historystep_prev where id=?",new String[]{entryId+""});
+			conWork.exec("delete from $[work].historystep where id=?",new String[]{entryId+""});
+			conWork.exec("delete from $[work].currentstep_prev where id=?",new String[]{entryId+""});
+			conWork.exec("delete from $[work].currentstep where id=?",new String[]{entryId+""});
+			conWork.exec("delete from $[work].wfentry where id=?",new String[]{entryId+""});
+			conWork.exec("delete from $[work].propertyentry where global_key=?",new String[]{"bwf_"+entryId+""});
+			conWork.commit();
+			<?{success:true,flowType:"?>flowType<?"}?>;
+		}catch(Exception e){
+			try {
+				conWork.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conWork.setAutoCommit(true);
+				conWork.close();
+			}catch(Exception e2) {}
+		}	
+	}
+ }
+}

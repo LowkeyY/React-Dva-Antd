@@ -1,0 +1,66 @@
+import com.kinglib.*;
+import com.kinglib.service.cms.netdisk.UpFileUnits;
+
+import java.sql.SQLException;
+
+
+	//public class up{
+@class{
+	public void doPost(Jacper jacper) {
+		String dir_id = jacper.getString("dir_id");
+		Connection con = jacper.getConnection("education");
+		try {
+			con.setAutoCommit(false);
+			String userId = jacper.getStr("userId");
+			
+			String getGuanliyuan = "select guanliyuan from cms_zhandian where fuzhandianid is null";
+				String[][]  guanliyuans= con.get(getGuanliyuan);
+				
+				boolean isGaunLiYuan = false;
+				for (String[] strings2 : guanliyuans) {
+					if (strings2[0].equals(userId)) {
+						isGaunLiYuan=true;
+						break;
+					}else{
+						isGaunLiYuan=false;
+					}
+				}
+			
+			String sql="select node_add_user from dir_node_info where node_id='"+dir_id+"'";
+			String[] rs = con.getRow(sql);
+			if(isGaunLiYuan || (rs!=null && rs.length>0 && !rs[0].equals(userId))){
+				String getFile="select '1',phy_file_id from dir_file_base where node_id='"+dir_id+"'";
+
+				String[][] fileRs=con.get(getFile);
+
+				if(fileRs.length>0){
+					UpFileUnits.decreasePhysicalFileCount(con, fileRs);
+				}
+				
+				con.exec("delete from dir_file_base where node_id='"+dir_id+"'");
+				con.exec("delete from dir_node_info where node_id='"+dir_id+"'");
+				
+				con.commit();
+				jacper.print("{success : true}");
+
+			}else{
+				jacper.print("{'err':true,'success':true}");
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			try {
+				con.rollback();
+			} catch (SQLException e1) {
+				e1.printStackTrace();
+			}
+			
+			e.printStackTrace();
+		}
+
+	}
+
+	public void doGet(Jacper jacper) {
+		doPost(jacper);
+	}
+
+}

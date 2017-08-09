@@ -1,0 +1,104 @@
+import java.util.ArrayList;
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.bi.chart.Chart;
+import com.kinglib.bi.chart.ChartFactory;
+import com.kinglib.bi.*;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.util.json.JSONValue;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+import com.kinglib.workbench.ProgramNode;
+import com.kinglib.workbench.program.Program;
+import com.kinglib.workbench.program.ProgramFactory;
+import com.kinglib.workbench.program.ProgramType;
+import com.kinglib.ui.core.CustomizeFactory;
+
+@class{
+
+
+	public void doGet(Jacper jacper) {
+
+		jacper.getSession();
+		String objectId = jacper.getStr("objectId");
+		Connection conPlat = null;
+
+		JSONObject result = new JSONObject();
+		try {
+
+			conPlat = jacper.getConnection("plat");
+			Object[] style=conPlat.getLarge("select layout from $[plat].portlet_base where PORTALET_ID=?",new String[]{objectId});
+
+			if(style==null || style.length==0 || style[0]==null){
+				JSONArray jarr=new JSONArray();
+				ObjectNode portletNode = ObjectManager.getObject(objectId);
+				for (ObjectNode node : portletNode.getChilds(ObjectType.PROGRAM)) {
+					JSONObject jo = new JSONObject();
+					int prgType = ((ProgramNode) node).getProgramType().getValue();
+					jo.put("type", prgType);
+					jo.put("title", node.getName());
+					jo.put("objectId", node.getId());
+					jo.put("showTitle", false);
+					jo.put("showBorder", false);
+					switch (prgType) {
+					case 5:
+						Program prg = ProgramFactory.getInstance().getProgram(conPlat, node.getId());
+						Chart c = ChartFactory.getInstance().getChart(conPlat, String.valueOf(prg.getChartId()));
+						jo.put("subType", c.getChartType().getValue());
+						break;
+					case 11:
+						break;
+					case 10:
+						break;
+					case 9:
+						break;
+					}
+					jarr.put(jo);
+				}
+				result.put("config", jarr);
+			}else{
+				result.put("config", new JSONValue(style[0]));
+			}
+			result.put("success", true);
+		} catch (JSONException e) {
+			try {
+				result.put("success", false);
+				result.put("message", e.getMessage());
+			} catch (JSONException e1) {
+			}
+			e.printStackTrace();
+		} finally {
+			if (conPlat != null)
+				conPlat.close();
+		}
+		jacper.print(result);
+	}
+
+	public void doPost(Jacper jacper) {
+		jacper.getSession();
+		String result = null;
+		String objectId=jacper.getString("objectId");
+		
+		try {
+			Connection conPlat = jacper.getConnection("plat");
+			conPlat.execLarge("update $[plat].portlet_base set layout=? where PORTALET_ID=?", new Object[] { jacper.getStr("layout"),objectId });
+			PortaletFactory.getInstance().remove(objectId);
+			conPlat.close();
+			result = "{success:true}";
+			ArrayList<String> al=new ArrayList<String>();
+			for(Program prg:ProgramFactory.getInstance().getCachedPrograms()){
+				if(prg.getPortletId().length()>0 && prg.getPortletId().equals(objectId))
+					CustomizeFactory.remove(prg.getId());
+			}
+		} catch (Exception e) {
+			result = "{success:false,message:'" + e.getMessage() + "'}";
+			e.printStackTrace();
+		}
+		jacper.print(result);
+	}
+
+}

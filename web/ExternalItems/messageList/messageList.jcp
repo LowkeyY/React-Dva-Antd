@@ -1,0 +1,13 @@
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.portal.PortalMessage;
+
+@class{
+	
+	public void doPost(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		
+		PortalMessage msg = new PortalMessage(String.valueOf(hs.uid));
+		jacper.print("{success:true,datas:" + msg.getMessage(jacper.getConnection("plat"))+"}");
+	}
+}

@@ -1,0 +1,21 @@
+
+import java.io.IOException;
+import com.kinglib.*;
+import com.kinglib.gis.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.program.*;
+
+@class{                                              
+	public void doGet(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String parent_id=jacper.getString("parent_id","0");
+		Connection conPlat = jacper.getConnection("plat");
+		Program prg =ProgramFactory.getInstance().getProgram(conPlat,parent_id);
+		String mapId=prg.getMapId()+"";
+		jacper.getResponse().setContentType("application/x-json");
+		WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId);
+		conPlat.close();
+		<??>webMap.getJSON(jacper)<??>;
+}
+}  

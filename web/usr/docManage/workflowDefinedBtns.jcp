@@ -1,0 +1,203 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workflow.Workflow;
+import com.kinglib.workflow.basic.BasicWorkflow;
+import com.kinglib.workflow.config.DefaultConfiguration;
+import com.kinglib.workflow.loader.ActionDescriptor;
+import com.kinglib.workflow.loader.StepDescriptor;
+import com.kinglib.workflow.loader.WorkflowDescriptor;
+import com.kinglib.workflow.spi.Step;
+import com.kinglib.workflow.spi.WorkflowStore;
+
+import java.sql.SQLException;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.UUID;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+
+@class{
+
+	public void doPost(Jacper jacper) {
+
+		HttpSession hs = jacper.getSession();
+		String user_id = String.valueOf(hs.uid);
+		
+		String instanceId = jacper.getString("instanceId", "");
+		String exportData = jacper.getString("exportData", "");
+		String owners = jacper.getString("owners", "");
+		String ownersArr[] = owners.split(","); 
+
+		long entryId = jacper.getLong("entryId", -1);
+		long stepId = jacper.getLong("stepId", -1);
+
+		int types = jacper.getInt("types", -1);
+		//0、插入主数据表，1、不插入主数据表，2、插入数据从表,3、强制结束
+		if (types != -1 && exportData.length()>0) {
+			try {
+				Workflow wf = new BasicWorkflow(user_id);
+				DefaultConfiguration config = new DefaultConfiguration();
+				wf.setConfiguration(config);
+				WorkflowDescriptor wd = wf.getWorkflowDescriptor(instanceId);
+				StepDescriptor stp = wd.getStep(stepId);
+				
+				if (!config.isInitialized())
+					config.load();
+				WorkflowStore store = config.getWorkflowStore();
+				
+				Collection currentSteps = wf.getCurrentSteps(entryId);
+				long pIds[] = null;
+				String info = "转发";
+				switch(types){
+					case 0: 
+						for (Iterator iterator = stp.getActions().iterator();iterator.hasNext();) {
+							ActionDescriptor action = (ActionDescriptor) iterator.next();
+							if(action.getRestriction()!=null){
+								for(int i = 0;i<ownersArr.length;i++){
+									store.createCurrentStep(
+											entryId, action.getUnconditionalResult().getStep(), 
+											ownersArr[i], (new Date()), null, "收集中", pIds
+										);
+								}
+							}
+						}
+						break;
+					case 1: 
+						for (Iterator interator = currentSteps.iterator(); interator.hasNext();) {
+							Step step = (Step) interator.next();
+							if(step.getOwner().equals(user_id)){
+								pIds = new long[]{step.getId()};
+								step = store.markFinished(step, step.getActionId(), (new Date()), "已转发", user_id);
+								store.moveToHistory(step);
+								break;
+							}
+						}
+						for (Iterator iterator = stp.getActions().iterator();iterator.hasNext();) {
+							ActionDescriptor action = (ActionDescriptor) iterator.next();
+							if(action.getUnconditionalResult() != null && 
+									action.getUnconditionalResult().getDisplayName().indexOf("转发")!=-1){
+								for(int i = 0;i<ownersArr.length;i++){
+									store.createCurrentStep(
+											entryId, action.getUnconditionalResult().getStep(), 
+											ownersArr[i], (new Date()), null, "收集中", pIds
+										);
+								}
+							}
+						}
+						break;
+					case 2: 
+						for (Iterator interator = currentSteps.iterator(); interator.hasNext();) {
+							Step step = (Step) interator.next();
+							if(step.getOwner().equals(user_id)){
+								pIds = new long[]{step.getId()};
+								step = store.markFinished(step, step.getActionId(), (new Date()), "完成", user_id);
+								store.moveToHistory(step);
+								break;
+							}
+						}
+						String content = jacper.getString("submitContent", "");
+						if(content.length()>0){
+							String sql = "insert into OA_MEETING_COLL_RESULTS(ISSUE_ID,RESULT_ID,SUBMITTER,SUBMIT_DATE,SUBMIT_CONTENT)"
+									+ " values(?,?,?,sysdate,?)";
+							insertIntoTables(jacper.getConnection("education"),sql,
+									new String[]{exportData,UUID.randomUUID().toString(),user_id,content});							
+						}
+						info = "提交";
+						break;
+					case 3:
+						for (Iterator interator = currentSteps.iterator(); interator.hasNext();) {
+							Step step = (Step) interator.next();
+							if(!step.getOwner().equals(user_id)){
+								pIds = new long[]{step.getId()};
+								step = store.markFinished(step, step.getActionId(), (new Date()), "征集结束，未提交", user_id);
+								store.moveToHistory(step);
+								break;
+							}
+						}
+						info = "更新";
+						break;
+				}
+				jacper.print("{success:true,message:'"+info+"成功。'}");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else {
+			jacper.print("{success:false,message:'未提供操作方式。'}");
+		}
+	}
+	public void doGet(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		String user_id = String.valueOf(hs.uid);
+		
+		String exportData = jacper.getString("exportData", "");
+		if(exportData.length()>0){
+			Connection con = jacper.getConnection("education");
+			String[][] rs = con.get("select RESULT_ID,SUBMITTER,SUBMIT_DATE,SUBMIT_CONTENT from " +
+					"OA_MEETING_COLL_RESULTS where ISSUE_ID = ?", new String[]{exportData});
+			if(rs!=null && rs.length>0){
+				JSONArray items = new JSONArray();
+				JSONObject datas = new JSONObject();
+				String fl[] = {"征集编号","提交人","提交时间","提交内容"};
+				for (int i = 0; i < rs.length; i++) {
+					try {
+						JSONArray its = new JSONArray();
+						for (int j = 0; j < rs[i].length; j++) {
+							JSONObject obj = new JSONObject();
+							if(j==0)
+								obj.put("xtype", "hidden");
+							else
+								obj.put("xtype", "viewfield");
+							if(j==rs[i].length-1){
+								obj.put("height", 150);
+								obj.put("width", 600);
+							}else
+								obj.put("width", 450);
+							obj.put("name","field_"+i+"_"+j);
+							obj.put("fieldLabel" , fl[j]);
+							if(j==2)
+								datas.put("field_"+i+"_"+j,rs[i][j].length()>19?rs[i][j].substring(0, 19):rs[i][j]);
+							else if(j==1){
+								User u = CertManager.getUser(rs[i][j]);
+								if(u!=null)
+									datas.put("field_"+i+"_"+j,u.getRealName()+"("+u.getDept().getName()+")");
+							} else
+								datas.put("field_"+i+"_"+j,rs[i][j]);
+							its.put(obj);
+						}
+						items.put(new JSONObject("{'layout' : 'form','columnWidth' : 1,'border' : false, items :"+its+"}"));
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+
+				}
+				jacper.print("{success:true,items:"+items+",datas:"+datas+"}");
+			}else{
+				jacper.print("{success:true,items:[]}");
+			}
+		}else{
+			jacper.print("{success:false,message:'参数丢失。'}");
+		}
+		
+	}
+	private void insertIntoTables(Connection con,String sql,String[] values){
+		try {
+			con.setAutoCommit(false);
+			con.exec(sql, values);
+			con.commit();
+		} catch (SQLException e) {
+			try {
+				con.rollback();
+			} catch (SQLException e1) {
+				e1.printStackTrace();
+			}
+			e.printStackTrace();
+		}
+		
+	}
+}

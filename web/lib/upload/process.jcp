@@ -1,0 +1,77 @@
+
+import java.io.IOException;
+import java.io.PrintWriter;
+
+import com.kinglib.Jacper;
+import com.susing.upload.UploadProcessor;
+
+@class{
+
+	public void doGet(Jacper jacper) {
+
+		int uid = jacper.getSession().uid;
+		
+		//if(uid!=-1)
+		//	return;///firefox ie下不能兼容,有空在考虑怎么写--tz
+		UploadProcessor p = null;
+		int counter = 0;
+		String sid = jacper.getString("sid");
+		if (sid == null)
+			return;
+		
+		while (counter++ < 50) {
+			p = UploadProcessor.getProcessor(uid);
+			if (p == null) {
+				sleep(100);
+			} else {
+				break;
+			}
+		}
+
+		if (p == null){
+			return;
+		}else{
+			UploadProcessor.removeProcessor(uid);
+		}
+
+		PrintWriter out;
+		try {
+			out = jacper.getWriter();
+		} catch (IOException e) {
+			e.printStackTrace();
+			return;
+		}
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("<script>parent.").append(sid).append(".startProcess(");
+		String pf = "<script>parent."+sid+".u(";
+		String uf = ")</script>";
+		
+		send(out, sb.toString(),uf, p.getTotal());
+		while (p.uploading()) {
+			sleep(200);
+			send(out, pf, uf, p.getSize());
+		}
+		String msg=p.getErrorMessage();
+		if (msg!=null) {
+			msg=",'"+jacper.trans("错误")+":"+msg.replace('\'','"')+"!'"+uf;
+			send(out, pf,msg, -1l);
+		}
+
+	}
+
+	private void send(PrintWriter out, String prefix, String postfix, long value) {
+		out.print(prefix);
+		out.print(value);
+		out.print(postfix);
+		out.flush();
+	}
+
+	private void sleep(int time) {
+		try {
+			Thread.sleep(time);
+		} catch (Exception e) {
+		}
+	}
+
+}

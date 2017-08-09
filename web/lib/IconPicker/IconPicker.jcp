@@ -1,0 +1,70 @@
+
+import com.kinglib.*;
+import com.kinglib.util.Files;
+import java.io.*;
+import java.util.*;
+
+import com.kinglib.util.json.*;
+                              
+@class{
+	static HashMap<String,String>  imagePool=new  HashMap<String,String>(6);
+
+
+	public void doPost(Jacper jacper){
+			String dir=jacper.getStr("dir");
+			boolean isReLoad = !"".equals(jacper.getStr("reload"));
+			if(dir.equals("")) dir="common";
+			if(!imagePool.containsKey(dir) || isReLoad){
+				try{
+					String icon_path=(String)com.susing.core.KingleSystem.getProperty("icon_path");
+					File directory = new File(icon_path+dir);
+					File[] entries = directory.listFiles();
+					if(isReLoad)
+						Files.sortByLastModified(entries);
+					JSONObject form= new JSONObject("{success:true}");
+					JSONArray jarr=new JSONArray();
+					String name="";
+					for(int i=0;i<entries.length;i++){
+						name=entries[i].getName().toLowerCase();
+						if(name.endsWith("gif") || name.endsWith("jpg") ||name.endsWith("png")){
+							JSONObject js=new JSONObject("{}");
+							js.put("url","/themes/icon/"+dir+"/"+entries[i].getName());
+							jarr.put(js);
+						}
+					}
+					form.put("images",jarr);
+					imagePool.put(dir,form.toString());
+				}catch(Exception e){
+					e.printStackTrace(); 
+				}
+			}
+			jacper.print(imagePool.get(dir));
+	}
+
+
+
+	public void doGet(Jacper jacper){
+			String dir="image_root_tz";
+			if(!imagePool.containsKey(dir)){
+				try{
+					String icon_path=(String)com.susing.core.KingleSystem.getProperty("icon_path");
+					File directory = new File(icon_path);
+					File[] entries = directory.listFiles();
+					JSONObject form= new JSONObject("{success:true}");
+					JSONArray jarr=new JSONArray();
+					String name="";
+					for(int i=0;i<entries.length;i++){
+						if(!entries[i].isDirectory()) continue;
+						JSONObject js=new JSONObject("{}");
+						js.put("text",entries[i].getName());
+						jarr.put(js);
+					}
+					form.put("images",jarr);
+					imagePool.put(dir,form.toString());
+				}catch(Exception e){
+					e.printStackTrace(); 
+				}
+			}
+			jacper.print(imagePool.get(dir));
+	}
+}

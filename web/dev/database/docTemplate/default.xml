@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+	<var-def name="content">
+		<html-to-xml>
+			<shell return="ret.toString()"><![CDATA[
+				String ret=html.toString();
+			]]></shell>
+		</html-to-xml>
+	</var-def>
+
+	<var-def name="result">
+		<loop item="tr" index="i">
+			<list>
+				<xpath expression="//tbody/tr">
+					<var name="content"/>
+				</xpath>
+			</list>
+			<body>
+				<empty>
+					<var-def name="count">
+						<xpath expression="/tr/count(*)">
+							<var name="tr"/>
+						</xpath>
+					</var-def>
+				</empty>
+				<case>
+					<if condition = "${count.toInt()==1}">
+						<empty>
+							<var-def name="name">
+								<xpath expression="//td/text()">
+									<var name="tr"/>
+								</xpath>
+							</var-def>
+						</empty>
+						<shell return="col.toString()"><![CDATA[				
+							String[] arrName = name.toString().trim().split(" ");
+							String tableTitle = arrName[0];
+							String tableName = arrName[1];
+							String col="<table name=\""+tableName+"\" title=\""+tableTitle+"\">";
+						]]></shell>
+					</if>
+					<else>
+						<empty>
+							<var-def name="col1">
+								<xpath expression="//td[1]/text()">
+									<var name="tr"/>
+								</xpath>
+							</var-def>
+							<var-def name="col2">
+								<xpath expression="//td[2]/text()">
+									<var name="tr"/>
+								</xpath>
+							</var-def>
+							<var-def name="col3">
+								<xpath expression="//td[3]/text()">
+									<var name="tr"/>
+								</xpath>
+							</var-def>
+							<var-def name="col4">
+								<xpath expression="//td[4]/text()">
+									<var name="tr"/>
+								</xpath>
+							</var-def>
+							<var-def name="col5">
+								<xpath expression="//td[5]/text()">
+									<var name="tr"/>
+								</xpath>
+							</var-def>
+							<var-def name="col6">
+								<xpath expression="//td[6]/text()">
+									<var name="tr"/>
+								</xpath>
+							</var-def>
+							<var-def name="col7">
+								<xpath expression="//td[7]/text()">
+									<var name="tr"/>
+								</xpath>
+							</var-def>
+						
+							<var-def name="col8Old">
+								<xpath expression="//td[8]/text()">
+									<var name="tr"/>
+								</xpath>
+							</var-def>
+							<var-def name="col8">
+								<shell return="ret.toString()"><![CDATA[
+									String ret=col8Old.toString();
+									ret = ret.trim();
+									ret = String.valueOf(ret.equals("是"));
+								]]></shell>	
+							</var-def>
+						
+						
+							<var-def name="col9">
+								<xpath expression="//td[9]/text()">
+									<var name="tr"/>
+								</xpath>
+							</var-def>
+						
+							<var-def name="col10Old">
+								<xpath expression="//td[10]/text()">
+									<var name="tr"/>
+								</xpath>
+							</var-def>
+							<var-def name="col10">
+								<shell return="ret.toString()"><![CDATA[
+									String ret=col10Old.toString();
+									ret = ret.trim();
+									ret = String.valueOf(ret.equals("★"));
+								]]></shell>	
+							</var-def>
+						
+							<var-def name="col11">
+								<xpath expression="//td[11]/text()">
+									<var name="tr"/>
+								</xpath>
+							</var-def>
+							<var-def name="col12">
+								<xpath expression="//td[12]/text()">
+									<var name="tr"/>
+								</xpath>
+							</var-def>
+						</empty>
+							<template><![CDATA[ 
+								<row>
+									<title>${col2.toString()}</title>
+									<name>${col3.toString()}</name>
+									<type>${col4.toString()}</type>
+									<length>${col5.toString()}</length>
+									<digitalDecimals>${col6.toString()}</digitalDecimals>
+									<unit>${col7.toString()}</unit>
+									<primaryKey>${col8.toString()}</primaryKey>
+									<notNull>${col10.toString()}</notNull>
+									<memo>${col12.toString()}</memo>	
+								</row>
+							]]></template>
+					</else>
+				</case>
+			</body>
+		</loop>
+		<text>&lt;/table&gt;</text>
+	</var-def>
+	
+	<var-def name="returnValue">
+		<text>&lt;tables&gt;</text>
+		<var name="result"/>
+		<text>&lt;/tables&gt;</text>
+	</var-def>  
+</config>

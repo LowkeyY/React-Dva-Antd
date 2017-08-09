@@ -1,0 +1,142 @@
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+import com.kinglib.workbench.dblink.*;
+import com.kinglib.*;
+import com.kinglib.database.*;
+import java.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.quality.*;
+import com.susing.core.KingleSystem;
+
+@class{
+
+public void doGet(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String id = jacper.getString("parent_id","0");
+	String link_id = jacper.getString("link_id");
+	jacper.getResponse().setContentType("application/x-json");
+	try{	
+			JSONObject dblinkJSON = new JSONObject("{}");
+
+			String[] rs= conPlat.getRow("select link_id,dblink_name,URL,USERNAME,PASSWD,MAPED_STRING,NAME from $[plat].quality_dblink  where link_id=?",new String[]{link_id});
+			JSONObject nodeJSON = new JSONObject("{}");
+			nodeJSON.put("link_id",rs[0]);
+			nodeJSON.put("dblink_name",rs[1]);
+			nodeJSON.put("url",rs[2]);
+			nodeJSON.put("username",rs[3]);
+			nodeJSON.put("password",rs[4]);
+			nodeJSON.put("mapedstring",rs[5]);
+			nodeJSON.put("name",rs[6]);
+			dblinkJSON.put("success",true);
+			dblinkJSON.put("data",nodeJSON);
+
+		   <??>dblinkJSON.toString()<??>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = String.valueOf(hs.uid);
+
+	String type=jacper.getString("type");
+	String link_id = jacper.getStr("link_id");
+	String id=jacper.getString("parent_id");	
+	QualityFactory  QF=QualityFactory.getInstance();
+	Quality quality=QF.getQuality(conPlat,id);
+	MetaTable mt = MetaFactory.getObject(quality.getTabId());
+	String dblink_name = mt.getDblink();
+	String url = jacper.getString("url");
+	String username = jacper.getString("username");
+	String passwd = jacper.getString("password");
+	String mapedstring = jacper.getString("mapedstring");
+	String name = jacper.getString("name");
+
+	ObjectManager OM=ObjectManager.getInstance();
+
+	if (type.equals("save")) {
+		try{	
+			conPlat.setAutoCommit(false);	
+			String dblink_id = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				dblink_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				dblink_id =UUID.randomUUID().toString();
+			}
+			String[] insed = conPlat.getRow("select count(name) from $[plat].quality_dblink where name=?",new String[]{name});
+			if(insed[0].equals("0")){
+				conPlat.exec("insert into $[plat].quality_dblink ( link_id,dblink_name,URL,USERNAME,PASSWD,name,MAPED_STRING) values (?,?,?,?,?,?,?)",new String[]{dblink_id,dblink_name,url,username,passwd,name,mapedstring});
+				conPlat.commit();
+				<?{success:true,id:'?>dblink_id<?'}?>;
+			}else{
+				<?{success:false,message:"实例名与已有的实例重名，请选择其他名称"}?>;
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if ( type.equals("updatesave")){	
+		String url_new = jacper.getString("url_new");
+		String username_new = jacper.getString("username_new");
+		String passwd_new = jacper.getString("password_new");
+		String name_new = jacper.getString("name_new");
+		String mapedstring_new = jacper.getString("mapedstring_new");
+		try{
+			String[] insed = conPlat.getRow("select count(name) from $[plat].quality_dblink where name=?",new String[]{name_new});
+			if(insed[0].equals("0")){
+				conPlat.exec("update $[plat].quality_dblink set url=?,username=?,passwd=?,MAPED_STRING=?,name=? where link_id=? ",new String[]{url_new,username_new,passwd_new,mapedstring_new,name_new,link_id});
+				<?{success:true,id:'?>link_id<?'}?>;
+			}else{
+				<?{success:false,message:"实例名与已有的实例重名，请选择其他名称"}?>;
+			}
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}else if (type.equals("delete")) {
+		try{	
+			String[] isUsed = conPlat.getRow("select count(db_link) from $[plat].quality_instance where db_link=?",new String[]{link_id});
+			if(isUsed[0].equals("0")){
+				QualityDbLinkFactory.getInstance().remove(link_id);
+				conPlat.setAutoCommit(false);	
+				conPlat.exec("delete from $[plat].quality_dblink  where link_id=?",new String[]{link_id});
+				conPlat.commit();
+				<?{success:true,id:'?>link_id<?'}?>;
+			}else{
+				<?{success:false,message:"该数据库链接已被使用，请先删除相关应用"}?>;
+			}
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

@@ -1,0 +1,78 @@
+import java.util.Iterator;
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.database.DataType;
+import com.kinglib.database.MetaColumn;
+@class{
+	public void doPost(Jacper jacper){
+		String from_id=jacper.getString("from_id");
+		String to_name=jacper.getString("to_name");
+		String server=jacper.getString("server");
+
+		Connection conTarget = jacper.getConnection(server);
+		
+		try{
+			conTarget.setAutoCommit(false);
+
+		    MetaTable table=MetaFactory.getObject(from_id);
+		    String from_name=table.getName();
+			Iterable<MetaColumn> cols=table.getColumns();
+			
+			String fromDb= table.getDblink();
+			Connection conFrom = jacper.getConnection(fromDb);
+
+
+			String colsql="";
+			String colcount="";
+			Iterator iter = cols.iterator();
+			while(iter.hasNext()){
+				MetaColumn col = (MetaColumn)iter.next();
+ 				colsql=colsql+","+col.getPname();
+ 				colcount=colcount+",?";
+			}
+			colsql=colsql.substring(1);
+			colcount=colcount.substring(1);
+
+			String sqlDel="delete from $["+server+"]."+to_name;
+			String fromDate=" select "+colsql+" from "+from_name;
+			String sqlIns="Insert into $["+server+"]."+to_name+" ("+colsql+") "+"values ("+colcount+")";
+			conTarget.exec(sqlDel);
+
+			MetaColumn[] columns=table.getColumnArray();
+			boolean havaBlob=false;
+			for(int i=0;i<columns.length;i++){
+				if(columns[i].getDataType()==DataType.CLOB||columns[i].getDataType()==DataType.BLOB||columns[i].getDataType()==DataType.GEOMETRY){
+					havaBlob=true;
+					break;
+				}
+			}
+			if(havaBlob){
+				String[][] rs=conFrom.get(fromDate);
+				if(rs!=null && rs.length>0){
+					conTarget.exec(sqlIns,rs);
+				}
+			}else{
+				Object[][] rs=conFrom.getLarges(fromDate,new String[]{});
+				for(int i=0;i<rs.length;i++){
+					conTarget.execLarge(sqlIns,rs[i]);
+				}
+			}
+			conTarget.commit();
+			<?{success:ture}?>;
+			}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conTarget.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.getMessage()<?"}?>;
+		}finally {
+			try {
+				conTarget.setAutoCommit(true);
+				conTarget.close();
+			}catch(Exception e2) {}
+		}
+	}
+}

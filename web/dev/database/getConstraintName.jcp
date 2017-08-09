@@ -1,0 +1,53 @@
+
+/*
+ * @(#).jcp	1.0.0 03/04/04
+ *
+ * Copyright 2003 Bizdict Co.,Ltd. All rights reserved.
+ *
+ * 主程序作者：田宙
+ * @author tianzhou
+ *
+ * 修改者：
+ *
+ * 修改日期:
+ *
+ * 修改理由:
+ *
+ * 数据字典:见文件尾
+ */
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+import com.kinglib.util.json.*;
+import com.kinglib.database.*;
+import com.kinglib.database.ConstraintType;
+import com.kinglib.i18n.*;
+
+@class{
+	public void doGet(Jacper jacper){
+		jacper.print("{0:' '");
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid; 
+		Translator t=I18n.getLocal(user_id+"").getTranslator(SpecialSet.class);
+		for(SpecialSet sp:SpecialSet.values()){
+			jacper.print(",'");
+			jacper.print(sp.getValue());
+			jacper.print("':'");
+			jacper.print(sp.toString(t));
+			jacper.print("'");
+		}
+		jacper.print("}");
+	}
+	public void doPost(Jacper jacper){
+		String object_id=jacper.getString("object_id","-1");
+		String constraint_name=jacper.getStr("constraint_name");
+		if(object_id.equals("-1")) return;
+		for(Constraint c:MetaFactory.getObject(object_id).getConstraints()){
+			if(c.getConstraintName().equals(constraint_name)){
+				jacper.print("{link_table:'"+MetaFactory.getObject(c.getLinkTable()).getLname()+"',delete_flag:"+c.isDeleteFlag()+"}");
+				break;
+			}
+		}
+	}
+}

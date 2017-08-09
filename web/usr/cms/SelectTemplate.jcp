@@ -1,0 +1,63 @@
+
+
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONFile;
+import com.kinglib.util.json.JSONObject;
+
+import java.io.File;
+
+import com.susing.core.KingleSystem;
+
+@class{
+
+	public void doPost(Jacper jacper) {
+
+		String zhandian = jacper.getString("id");
+		String type = jacper.getStr("type");
+		JSONArray arr = new JSONArray();
+
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		File file = new File(service.getTemplateRoot());
+		JSONObject json = new JSONObject();
+
+		try {
+			if (zhandian == null) {
+				for (File f : file.listFiles()) {
+					if (f.isDirectory()) {
+						File config = new File(f, "config.json");
+						if (config.exists()) {
+							JSONObject cjs = (new JSONFile(config)).read();
+							JSONObject js = new JSONObject();
+							js.put("text", cjs.getString("mingcheng"));
+							js.put("value", f.getName());
+							arr.put(js);
+						}
+					}
+				}
+			} else {
+				ZhanDian zd = service.getZhanDian(zhandian);
+				file = new File(file, zd.getMuban());
+				for (File f : file.listFiles()) {
+					File config = new File(f, "config.json");
+					if (config.exists()) {
+						JSONObject cjs = (new JSONFile(config)).read();
+						if (cjs.get("yongyu").equals(type)) {
+							JSONObject js = new JSONObject();
+							js.put("text", cjs.getString("mingcheng"));
+							js.put("value", f.getName());
+							arr.put(js);
+						}
+					}
+				}
+			}
+			json.put("items", arr);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		jacper.print(json);
+
+	}
+}

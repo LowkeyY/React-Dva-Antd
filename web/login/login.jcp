@@ -1,0 +1,60 @@
+/**    
+ * 
+ *登录页面
+ *
+ * @version 1.0   
+ *
+ * @author  tianzhou
+ *
+ * @date: Oct 22, 2013日4:42:18 PM 
+ *
+ */
+
+import com.kinglib.Jacper;
+import com.kinglib.service.login.LoginService;
+import com.kinglib.service.login.ValidateResult;
+
+import java.sql.SQLException;
+
+import com.susing.KingleServletRequest;
+import com.susing.KingleServletResponse;
+import com.susing.core.KingleSystem;
+
+@class{
+
+	public void doPost(Jacper jacper) throws SQLException {
+
+		KingleServletRequest request = jacper.getRequest();
+		KingleServletResponse response = jacper.getResponse();
+
+                response.setHeader("Access-Control-Allow-Origin", "*");
+		response.setContentType("application/x-json");
+
+		String email = request.getParameter("usrMail").trim();
+		String pwd = request.getParameter("usrPwd").trim();
+		if (email == null || email.equals("")) {
+			this.sendErr(jacper, "用户名/Email必须提供");
+			return;
+		} else if (pwd == null || pwd.equals("")) {
+			this.sendErr(jacper, "密码必须提供");
+			return;
+		}
+
+		LoginService loginService = (LoginService) KingleSystem.getService("登录服务");
+		ValidateResult v = loginService.validate(email, pwd);
+		if (v.isSuccess()) {
+			loginService.login(v.getAttribute().toString(), request, response);
+			jacper.print("{\"success\":true}");
+		} else {
+			this.sendErr(jacper, v.getAttribute().toString());
+		}
+	}
+	
+	
+
+	private void sendErr(Jacper jacper, String message) {
+		jacper.print("{\"success\":false,\"errorMessage\":\"");
+		jacper.print(jacper.trans(message));
+		jacper.print("\"}");
+	}
+} 

@@ -1,0 +1,85 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.util.RandomStr;
+import com.social.api.core.model.*;
+import com.kinglib.workbench.quality.*;
+import java.util.*;
+
+@class{
+public void doPost(Jacper jacper){
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String userId = hs.uid+"";
+	Connection conPlat = jacper.getConnection("plat");
+    String objectId=jacper.getStr("objectId");
+	int startRow = jacper.getInt("start",0);
+	int rowCount = jacper.getInt("limit",0);
+
+	Program program=ProgramFactory.getInstance().getProgram(conPlat,objectId);
+	String qualityType=program.getQualityType();
+
+	String resultDb=(String)com.susing.core.KingleSystem.getProperty("quality_db");
+	Connection conResult = jacper.getConnection(resultDb);
+
+	try{	
+			QualityFactory QF =QualityFactory.getInstance();
+			QF.init(conPlat);
+			String authString=QF.getQualityArray(userId);
+
+		    JSONObject qualityJSON = new JSONObject();	
+			qualityJSON.put("success",true);
+
+			if(!authString.equals("")||userId.equals("0")||userId.equals("1")){
+				String sqlRow="";
+				String sql="";
+				if(!authString.equals("")){
+					sqlRow="select count(*) from $["+resultDb+"].quality_result where quality_type=? and instance_id in ("+authString+")";
+					sql="select quality_id, instance_id, $date_str(check_date,111), quality_name, instance_name, quality_type, title, export_data, error_desc, notify_time from  $["+resultDb+"].quality_result where quality_type=? and instance_id in("+authString+")";
+				}else{
+					sqlRow="select count(*) from $["+resultDb+"].quality_result where quality_type=?";
+					sql="select quality_id, instance_id, $date_str(check_date,111), quality_name, instance_name, quality_type, title, export_data, error_desc, notify_time from  $["+resultDb+"].quality_result where quality_type=?";
+				}
+				String [] resultRow=conResult.getRow(sqlRow,new String[]{qualityType});
+				qualityJSON.put("total",resultRow[0]);
+				String [][] qualityResults=conResult.get(sql,new String[]{qualityType},startRow,rowCount);
+
+				JSONArray jarr=new JSONArray();
+		
+				if(qualityResults.length>0){
+					for(int i=0;i<qualityResults.length;i++){	
+						String qualityId=qualityResults[i][0];
+						Quality quality=QF.getQuality(conPlat,qualityId);
+						
+						String expTab=quality.getTabId();
+						String expItem=quality.getExportItem();
+
+						JSONObject titleJSON = new JSONObject();
+						titleJSON.put("qualityId",qualityResults[i][0]);
+						titleJSON.put("instanceId",qualityResults[i][1]);
+						titleJSON.put("checkDate",qualityResults[i][2]);
+						titleJSON.put("qualityName",qualityResults[i][3]);
+						titleJSON.put("instanceName",qualityResults[i][4]);
+						titleJSON.put("title",qualityResults[i][6]);
+						titleJSON.put("exportData",qualityResults[i][7]);
+						titleJSON.put("errorDesc",qualityResults[i][8]);
+						titleJSON.put("notifyTime",qualityResults[i][9]);
+						titleJSON.put("exportTab",expTab);
+						titleJSON.put("exportItem",expItem);
+						jarr.put(titleJSON);
+					}			
+				}
+				qualityJSON.put("data",jarr);
+			}else{
+				qualityJSON.put("total","0");
+			}
+			jacper.print(qualityJSON);
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+		conResult.close();
+	}
+}}

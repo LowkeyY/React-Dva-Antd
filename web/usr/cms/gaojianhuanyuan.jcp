@@ -1,0 +1,66 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.LanMu;
+
+import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.UUID;
+import com.susing.core.KingleSystem;
+
+@class{
+	public void doPost(Jacper jacper) {
+
+		HttpSession hs = jacper.getSession();
+		Connection conEdu = jacper.getConnection("education");
+		HashSet<String> set = new HashSet<String>();
+
+		String[] ids = jacper.getArray("pmks");
+		String lanmu = jacper.getString("lanmu");
+		String copyFrom = jacper.getString("copyFormLanmu");
+		
+		CMSService cms = (CMSService) KingleSystem.getService("CMS");
+		
+		LanMu lm = cms.getLanMu(lanmu);
+		LanMu cp = cms.getLanMu(copyFrom);
+		
+		/*栏目的默认稿件模式不一致时，不能复制。*/
+		if(lm!=null && cp !=null && !(lm.getGaojianmoshi().equals(cp.getGaojianmoshi()))){
+			jacper.print("{success:false,message:'此稿件与目标栏目的默认稿件模式不一致，无法还原，请重新选择。'}");
+			return;
+		}
+		
+		StringBuilder sb = new StringBuilder();
+		//String inid="";
+		for (int i = 0; i < ids.length; i++) {
+		//	if(i+1==ids.length){
+			//	inid=inid+"'"+ids[i]+"'";	
+			//}else{
+			//	inid=inid+"'"+ids[i]+"',";	
+			//}
+			
+			if (i > 0)
+				sb.append(',');
+			sb.append('?');
+		}
+
+		try {
+			conEdu.setAutoCommit(false);
+			String intoGj = "update cms_gaojian set lanmuid='"+lanmu+"',huishouzhuangtai=null where ";
+			intoGj=intoGj+"id in ("+sb+")";
+			conEdu.exec(intoGj,ids);				
+			conEdu.commit();
+		} catch (SQLException e) {
+			try {
+				conEdu.rollback();
+			} catch (SQLException e1) {
+			}
+			jacper.print("{success:false,message:'还原出错，请联系管理员。'}");
+			e.printStackTrace();
+			return;
+		}
+		
+		jacper.print("{success:true,message:'还原成功。'}");	
+	}
+}

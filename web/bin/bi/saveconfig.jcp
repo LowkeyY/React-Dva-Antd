@@ -1,0 +1,21 @@
+
+import com.kinglib.Jacper;
+import com.kinglib.util.UserData;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+import com.social.api.core.model.UserType;
+
+@class{
+
+	public void doPost(Jacper jacper) {
+
+		jacper.setSession();
+		String userId = jacper.getSession().uid + "";
+		User u = CertManager.getUser(userId);
+		if (u.getUserType() == UserType.USER) {
+			UserData.set(userId, "ProgramListQuery", jacper.getStr("objectId"), jacper.getStr("fields"));
+		}
+	}
+
+}

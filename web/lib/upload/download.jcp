@@ -1,0 +1,24 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.susing.upload.FileExtend;
+@class{
+
+	public void doGet(Jacper jacper) {
+
+		/**
+		 * 先注销用来测试代码--tz 
+		 * boolean isLogin = jacper.setSession();
+		 * HttpSession hs = jacper.getSession();
+		 */
+
+		String id = jacper.getStr("fileid");
+		Connection con = jacper.getConnection("cert"); 
+		try {
+			FileExtend.downLoadFile(jacper, con, id);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			con.close();
+		}
+	}
+}

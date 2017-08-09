@@ -1,0 +1,61 @@
+.x-grid-group-hd{zoom:1;}
+.x-grid-group-hd{border-bottom:2px solid #99bbe8;cursor:pointer;padding-top:4px;}
+.x-grid-group-hd-remove{cursor:pointer;background:transparent url(../../media/images/silk/icons/cross.png) no-repeat 0px 0px;}
+.x-grid-group-hd div{background:transparent url(../js/extjs/resources/images/default/grid/group-expand-sprite.gif) no-repeat 3px -47px;padding:4px 4px 4px 17px;color:#3764a0;font:bold 11px tahoma,arial,helvetica,sans-serif;}
+
+/* Data layer menu, expanded row body style */
+.x-grid3-row-body {
+    padding: 4px;
+} 
+
+.x-grid3-row-body p {
+    padding-left: 37px;
+    padding-bottom: 2px;
+    padding-top: 2px;
+    color: #666666;
+}
+
+.x-grid3-row-checker-on
+{
+    background-position: -23px 2px; 
+    background-color:transparent;
+    background-image:url(/themes/images/row-check-sprite.gif);
+    background-repeat:no-repeat;
+    height:18px;
+    width:100%;
+}
+
+.x-grid3-row-checker-off
+{
+    background-position: 2px 2px; 
+    background-color:transparent;
+    background-image:url(/themes/images/row-check-sprite.gif);
+    background-repeat:no-repeat;
+    height:18px;
+    width:100%;
+}
+
+.x-grid-group-hd {
+    padding-left:5px;
+    font-size:1.2em;
+    background-color:#EBF1FA;
+    padding:5px;
+}
+
+.x-grid-group-hd span.number {
+    color:#5D5D5D;
+}
+
+.x-grid-group{
+    margin-bottom:1em;
+}
+
+.x-grid3-dirty-cell {
+    background:none !important;
+}
+.grid-row-insert-below {
+    border-bottom:1px solid #3366cc;
+}
+.grid-row-insert-above {
+    border-top:1px solid #3366cc;
+}  

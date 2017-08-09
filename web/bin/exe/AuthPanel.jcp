@@ -1,0 +1,94 @@
+
+
+import com.kinglib.*;
+import com.social.api.core.model.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.database.*;
+import com.kinglib.ui.core.utils.*;
+
+@class{
+public void doPost(Jacper jacper){	
+	Connection conPlat = jacper.getConnection("plat");
+	String objectId=jacper.getString("objectId","-1");
+	if(objectId.equals("-1"))
+		return;
+	String tableId= ProgramFactory.getInstance().getProgram(conPlat,objectId).getTabId();
+	MetaTable mt=MetaFactory.getObject(tableId);
+	
+	String auth=jacper.getStr("auth");
+
+	String dataId=jacper.getStr("dataId");
+	String[] pvalues=dataId.split("::");
+	String name=mt.getName()+"_AUTH";
+
+	String dbLink=mt.getDblink();
+	Connection conApp = jacper.getConnection(dbLink);
+
+	StringBuilder metas=new StringBuilder();
+	StringBuilder qutas=new StringBuilder();
+	StringBuilder sb=new StringBuilder();
+	for(MetaColumn mc:mt.getPrimaryKeys()){
+		if(sb.length()>0){
+			sb.append(" and ");
+			metas.append(",");
+			qutas.append(",");
+		}
+		CoreUtils.appendWhere(sb,mc,"?");
+		metas.append(mc.getPname());
+		qutas.append("?");
+	}
+
+	String[] ids = jacper.getArray("ids");
+	String[][] values=new String[ids.length][pvalues.length+3];
+
+	String condition=sb.toString()+" and auth_type=?";
+
+	String[] params=new String[pvalues.length+1];
+	for(int i=0;i<params.length;i++){
+		if(i<params.length-1){
+			params[i]=pvalues[i];
+		}else{
+			params[i]=auth;
+		}
+	}
+
+	if(ids.length==1 && ids[0].equals("")){ 
+		conApp.exec("delete from "+name+" where "+condition,params);
+		<?{success:true}?>;
+		return;
+	}
+
+	String[] temp=null;
+	for(int i=0;i<ids.length;i++){
+		int j=0;
+		for(;j<pvalues.length;j++){
+			values[i][j]=pvalues[j];
+		}
+		temp=ids[i].split("_");
+		values[i][j]=temp[0];
+		values[i][j+1]=temp[1];
+		values[i][j+2]=auth;
+	}
+	try{	
+		conApp.setAutoCommit(false);
+		conApp.exec("delete from "+name+" where "+condition,params);
+		conApp.exec("insert into "+name+"("+metas.toString()+",DEPT_ID,USER_ID,AUTH_TYPE) values("+qutas.toString()+",?,?,?)",values);
+		conApp.commit();
+		<?{success:true}?>;
+	}catch(Exception e){
+    	e.printStackTrace();
+		try {
+			conPlat.rollback();
+		}catch(Exception e1) {}
+		String msg=e.toString().replaceAll("\\'","\\\\'");
+		<?{success:false,message:"?>jacper.trans("错误:")+msg<?"}?>;
+	}finally {
+		try {
+			conApp.setAutoCommit(true);
+		}catch(Exception e2) {}
+		conApp.close();
+		conPlat.close();
+	}
+}
+}

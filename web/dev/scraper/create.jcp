@@ -1,0 +1,138 @@
+
+import java.util.*; 
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.bi.*;
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String objectId = jacper.getStr("objectId");
+	String type = jacper.getStr("type");
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	if(type.equals("getTable")){
+		try{
+			JSONObject optionsJSON = new JSONObject("{}");
+			ObjectNode widgetNode=ObjectManager.getObject(objectId);
+			ObjectNode appNode=widgetNode.upTo(1);
+			ObjectNode app=ObjectManager.getObject(appNode.getId());
+			ObjectNode[] nodes=app.getChilds(2);
+			JSONArray jarr=new JSONArray();
+			for(int i=0;i<nodes.length;i++){
+				JSONObject items = new JSONObject("{}");
+				items.put("id",String.valueOf(nodes[i].getId()));
+				items.put("label",String.valueOf(nodes[i].getName()));
+				jarr.put(items);
+			}
+			optionsJSON.put("TabArray",jarr);
+			<??>optionsJSON.toString()<??>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}else{
+		try{	
+				JSONObject scraperJSON = new JSONObject("{}");
+				Object[] scraperInfo = conPlat.getLarge("select scraper_name,content,object_id,tab_id from $[plat].scraper_base where object_id=?",new String[]{objectId});
+				String contentValue=scraperInfo[1].toString();
+				scraperJSON.put("scraper_name",scraperInfo[0]);
+				scraperJSON.put("xmlCodeValue",contentValue);
+				scraperJSON.put("object_id",scraperInfo[2]);
+				scraperJSON.put("tabId",scraperInfo[3]);
+				ObjectNode node=ObjectManager.getObject(objectId);
+				if(node!=null){
+					scraperJSON.put("lastModifyTime",node.getLastModifyTime());
+					scraperJSON.put("lastModifyName",node.getLastModifyName());
+				}
+			   <?[?>scraperJSON.toString()<?]?>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally {
+			conPlat.close();
+		}
+	}
+}
+public void doPost(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;   
+
+	String type = jacper.getStr("type");
+	String parentId = jacper.getStr("objectId");
+	String scraper_name = jacper.getStr("scraper_name");
+	String content = jacper.getStr("xmlCodeValue");
+	String tabId = jacper.getStr("tabId");
+
+	ObjectManager OM=ObjectManager.getInstance();
+
+	if(type.equals("save")){
+		try {
+			conPlat.setAutoCommit(false);	
+			String object_id  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+			ObjectNode applicationNode=OM.getObject(parentId);
+			applicationNode.addChild(conPlat,object_id,scraper_name,ObjectType.SCRAPER,user_id);
+			conPlat.execLarge("INSERT INTO $[plat].scraper_base (object_id,tab_id,scraper_name,content) VALUES (?,?,?,?)",new Object[]{object_id+"",tabId,scraper_name,content});
+			conPlat.commit();
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e) {
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if(type.equals("updatesave")){
+		try{	
+			conPlat.execLarge("UPDATE $[plat].scraper_base SET  content = ? WHERE object_id=?",new Object[]{content,parentId+""});
+			<?{success:true,id:?>parentId<?}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			conPlat.close();
+		}		
+	}else if(type.equals("delete")){
+		try{
+			conPlat.setAutoCommit(false);
+			ObjectNode scraperNode=OM.getObject(parentId);
+			scraperNode.destroy(conPlat);
+			conPlat.commit();
+			<?{success:true}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

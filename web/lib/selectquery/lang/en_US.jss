@@ -1,0 +1,1 @@
+lib.selectquery.lang={"插入查询数据项":"Insert query data items","确定":"OK","数据不能提交!请修改表单中标识的错误!":"The data can not submit  Please modify the errors identified in the form","数据项选择":"Data Item","请选择数据项!":"Please select the data items","请选择查询!":"Please select query","查询选择":"Query","取消":"Cancel"}

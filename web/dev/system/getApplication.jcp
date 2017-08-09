@@ -1,0 +1,80 @@
+
+
+
+
+
+import com.susing.sql.*;
+import com.susing.core.KingleSystem;
+import com.kinglib.*;
+import java.util.*;  
+import com.kinglib.util.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.ui.menu.*;
+@class{
+
+public void doPost(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;  
+
+	String type = jacper.getStr("type");
+	String id = jacper.getStr("id");
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+			
+			JSONObject applicationJSON = new JSONObject("{}");
+
+			if(type.equals("new")){
+				String option = jacper.getStr("optionType");
+				JSONObject optionJSON = new JSONObject("{}");
+				if(option.equals("datalink")){
+					String[] cs= KingleSystem.getConnectionNames();		
+					JSONArray jarr=new JSONArray();
+					for(int i=0;i<cs.length;i++){
+						if(cs[i].equals("plat") || cs[i].equals("utils")|| cs[i].equals("work")|| cs[i].equals("cert")) continue;
+							JSONObject items = new JSONObject("{}");
+							items.put("id",cs[i]);
+							items.put("title",cs[i]);
+							jarr.put(items);
+					}
+					optionJSON.put("datalink",jarr);
+					<??>optionJSON.toString()<??>;
+				}
+			}else{
+				
+				 String[] rs= conPlat.getRow("select a.applogic_name,a.appphy_name,a.database_link,a.MENU_ID,a.note,a.terminal_type from $[plat].application_base a where  a.object_id=?",new String[]{id+""});
+				
+				applicationJSON.put("object_id",id+"");
+				applicationJSON.put("applogic_name",rs[0]);
+				applicationJSON.put("appphy_name",rs[1]);
+				applicationJSON.put("database_link",rs[2]);
+				Menu menu=MenuFactory.getInstance().getMenu(rs[3]);
+				if(menu!=null){
+					applicationJSON.put("target_link",new JSONValue(CoreUtils.createTextValueJSON(menu.getTitle(),rs[3])));
+				}else{
+					applicationJSON.put("target_link",rs[3]);
+				}
+				applicationJSON.put("note",rs[4]);
+				applicationJSON.put("terminaltype",rs[5]);
+				ObjectNode node=ObjectManager.getObject(id);
+				if(node!=null){
+					applicationJSON.put("lastModifyTime",node.getLastModifyTime());
+					applicationJSON.put("lastModifyName",node.getLastModifyName());
+				}
+
+			   <?[?>applicationJSON.toString()<?]?>;
+		}
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+}

@@ -1,0 +1,60 @@
+import java.sql.SQLException;
+
+import gpra.filesystem.space.HWSpaceFactory;
+import gpra.filesystem.space.HWSpaceFactory.HWSessions;
+
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import gpra.filesystem.HWUnits;
+
+
+//public class pageIdex {
+@class{
+	public void doGet(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		
+		String currentSpaceId = String.valueOf(hs.get(HWSessions.HW_BASE_SPACEID.name()));
+		String apps = "" , userId = String.valueOf(hs.uid);
+		boolean isManager = false;
+		if(currentSpaceId.length() > 10 ){
+			Connection con = jacper.getConnection(HWUnits.HW_DBLINK);
+			isManager = HWSpaceFactory.getSpaceById(currentSpaceId) != null && HWSpaceFactory.getSpaceById(currentSpaceId).getSpaceAdmin().equals(userId);
+			String[] row = con.getRow("select s.layout_conf from DIR_SPACE_INDEX_SET s where s.space_id = ?" , new String[]{currentSpaceId});
+			if(row != null && row.length > 0 && row[0].length()>0)
+				apps = row[0];
+		}
+		jacper.print("{success:true, isManager:"+isManager+", apps:"+(apps.length() > 0 ? apps : "\"\"")+"}");
+	}
+	public void doPost(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		String currentSpaceId = String.valueOf(hs.get(HWSessions.HW_BASE_SPACEID.name()));
+		String apps = jacper.getString("apps" , "");
+		if(apps.length() > 0 && currentSpaceId.length() > 10){
+			Connection con = jacper.getConnection(HWUnits.HW_DBLINK);
+			try {
+				con.setAutoCommit(false);
+				String[] row = con.getRow("select s.layout_conf from DIR_SPACE_INDEX_SET s where s.space_id = ?" , new String[]{currentSpaceId});
+				if(row != null){
+					if(row.length > 0){
+						con.exec("update DIR_SPACE_INDEX_SET s set s.layout_conf = ? where s.space_id = ?" , new String[]{apps , currentSpaceId});
+					}else{
+						con.exec("insert into DIR_SPACE_INDEX_SET(space_id , layout_conf) values(?,?)" , new String[]{currentSpaceId , apps});
+					}
+				}else{
+					con.exec("insert into DIR_SPACE_INDEX_SET(space_id , layout_conf) values(?,?)" , new String[]{currentSpaceId , apps});
+				}
+				con.commit();
+			} catch (SQLException e) {
+				try {
+					con.rollback();
+				} catch (SQLException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				e.printStackTrace();
+			}
+		}
+		jacper.print("{success:true}");
+	}
+}

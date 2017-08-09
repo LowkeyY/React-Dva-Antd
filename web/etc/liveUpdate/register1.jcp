@@ -1,0 +1,304 @@
+
+import java.util.*;
+import org.w3c.dom.*;
+import java.net.InetAddress;
+import java.io.IOException;
+import org.apache.commons.httpclient.*;
+import org.apache.commons.httpclient.methods.*;
+import org.apache.commons.httpclient.params.HttpMethodParams;
+
+import com.kinglib.*;
+
+
+import com.kinglib.util.*;
+
+import java.io.File;
+
+@class{
+
+public void doGet(Jacper jacper){ 
+/*
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid; 
+	
+	String type="";
+	if(option.equals("searchType")){
+			String[][] groups = conPlat.get("SELECT b.option_code, b.option_value from $[plat].second_dict b WHERE b.option_id=5",new String[]{});
+			JSONArray jarr=new JSONArray();
+			try{
+				for(int i=0;i<groups.length;i++){
+					JSONObject items = new JSONObject("{}");
+					items.put("id",groups[i][0]);
+					items.put("title",groups[i][1]);
+					jarr.put(items);
+				}
+				optionJSON.put("searchTypes",jarr);
+			}catch(Exception e){}
+			<??>optionJSON.toString()<??>;
+	}
+
+
+
+	String[] rs = conPlat.getRow("select org_name,short_name,corp_type,country,province,city,contact_name,celler,phone,email,passwd,address,postcode,register_code,active_code,introduce_id from $[plat].system_register ",new String[]{});
+    if(rs==null||rs.length==0){ 
+		String registerCode="";
+		for (int i=0;i<8;i++){
+				RandomStr.setCharset("A-Z");
+				RandomStr.setLength(4+"");
+				try {
+					RandomStr.generateRandomObject();
+				}catch(Exception e) {
+					e.printStackTrace();
+				}
+				if(i!=7){
+					registerCode += RandomStr.getRandom()+"-";
+				}else{
+					registerCode += RandomStr.getRandom();
+				}
+		}
+		 rs = new String[] {"","","","","","","","","","","","","",registerCode.toUpperCase(),"","0"};
+		type="save";
+	}else{
+		type="update";
+	}
+	*/
+}
+public void doPost(Jacper jacper){
+		
+		boolean isLogin = jacper.setSession();
+        HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+		String type=jacper.getStr("type");
+
+		Connection conPlat=jacper.getConnection("plat");
+
+		String orgName = jacper.getStr("org_name");
+		String shortName = jacper.getStr("short_name");
+		String userType = jacper.getStr("user_type");
+		String contactName = jacper.getStr("contact_name");
+		String celler = jacper.getStr("celler");
+		String phone = jacper.getStr("phone");
+		String email = jacper.getStr("email");
+		String country = jacper.getStr("country");
+		String province = jacper.getStr("province");
+		String city = jacper.getStr("city");
+		String passwd = jacper.getStr("passwd");
+		String postcode = jacper.getStr("postcode");
+		String register_code = jacper.getStr("register_code");
+		String address = jacper.getStr("address");
+		String introduce_id = jacper.getStr("introduce_id");
+
+		int dbType=conPlat.getType();
+
+		if(type.equals("save")){
+				String active_key =getKey(jacper,dbType);
+				String version = (String)com.susing.core.KingleSystem.getProperty("version");
+				if(active_key.length()!=16){
+				<?<script>alert("?>jacper.trans("不能获得认证码,请与北京商典信息科技有限公司联系!!")<?");</script>?>;
+				}else{
+					conPlat.exec("insert into  $[plat].system_register (org_name,short_name,corp_type,country,province,city,contact_name,celler,phone,email,passwd,address,postcode,register_code,active_code,introduce_id,version) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",new String[]{orgName,shortName,userType,country,province,city,contactName,celler,phone,email,passwd,address,postcode,register_code,active_key,introduce_id,version});	
+					<?<script>self.location.replace('register.jcp');</script>?>;
+					
+				}				
+		}else{
+				String updateFlag =updateRegister(jacper);
+
+				if(updateFlag.equals("true")){				
+					conPlat.exec("update $[plat].system_register set org_name=?,short_name=?,corp_type=?,country=?,province=?,city=?,contact_name=?,celler=?,phone=?,email=?,passwd=?,address=?,postcode=? where register_code=?",new String[]{orgName,shortName,userType,country,province,city,contactName,celler,phone,email,passwd,address,postcode,register_code});
+					<?<script>self.location.replace('register.jcp');</script>?>;
+				}else{
+					<?<script>alert("?>jacper.trans("更新注册失败,请确认注册码和激活码正确!!")<?");</script>?>;
+				}
+		}		
+}
+
+public String  updateRegister (Jacper jacper){
+		
+		String platSystem = (String)com.susing.core.KingleSystem.getProperty("platSystem");
+		String url = (String)com.susing.core.KingleSystem.getProperty("support_url");
+		url=url+"/getRegister.jcp";
+
+		String ip=getLocalHostIP();
+
+		HttpClient httpclient = new HttpClient();
+		
+		GetMethod method = new GetMethod(url);
+		method.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, 
+    		new DefaultHttpMethodRetryHandler(3, false));
+		
+		String rand="";
+
+		try {
+		  int statusCode = httpclient.executeMethod(method);
+		  if (statusCode != HttpStatus.SC_OK) {
+			<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系,010-82327935!!!")<?");</script>?>;
+		  }
+		  byte[] responseBody = method.getResponseBody();
+		  rand=new String(responseBody);
+		} catch (HttpException e) {
+			 <?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系,010-82327935!!!")<?");</script>?>;
+		  e.printStackTrace();
+		} catch (IOException e) {
+			<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系,010-82327935!!!")<?");</script>?>;
+		  e.printStackTrace();
+		} finally {
+		   method.releaseConnection();
+		}  
+
+		String activeCode="";		
+        PostMethod post = new PostMethod(url);
+		post.addRequestHeader("Content-Type","application/x-www-form-urlencoded; charset=UTF-8");
+		post.addParameter("org_name", jacper.getStr("org_name"));
+		post.addParameter("ip", ip);
+		post.addParameter("short_name",jacper.getStr("short_name"));
+		post.addParameter("user_type",jacper.getStr("user_type"));
+		post.addParameter("country",jacper.getStr("country"));
+		post.addParameter("province",jacper.getStr("province"));
+		post.addParameter("city",jacper.getStr("city"));
+		post.addParameter("passwd",jacper.getStr("passwd"));
+		post.addParameter("contact_name",jacper.getStr("contact_name"));
+		post.addParameter("celler", jacper.getStr("celler"));
+		post.addParameter("phone",jacper.getStr("phone"));
+		post.addParameter("email",jacper.getStr("email"));
+		post.addParameter("postcode",jacper.getStr("postcode"));
+		post.addParameter("register_code",jacper.getStr("register_code"));
+		post.addParameter("address",jacper.getStr("address"));
+		post.addParameter("rand",rand);
+		post.addParameter("active_key",jacper.getStr("active_key"));
+		post.addParameter("introduce_id",jacper.getStr("introduce_id"));
+		post.addParameter("type","update");
+		
+
+		try {
+			 int statusCode = httpclient.executeMethod(post);
+			  if (statusCode != HttpStatus.SC_OK) {
+				<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+			  }
+			  activeCode=post.getResponseBodyAsString();
+			  if(activeCode.equals("faild")){
+				 <?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+			  }
+		} catch (HttpException e) {
+			  	<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+			  e.printStackTrace();
+		} catch (IOException e) {
+			  	<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+			  e.printStackTrace();
+		} finally {
+			 post.releaseConnection();
+		}  
+		return activeCode;
+}
+
+public String  getKey (Jacper jacper,int dbType){
+		
+		String platSystem = (String)com.susing.core.KingleSystem.getProperty("platSystem");
+		String url = (String)com.susing.core.KingleSystem.getProperty("support_url");
+		url=url+"/getRegister.jcp";
+	
+		String ip=getLocalHostIP();
+		String rand="";
+
+		HttpClient httpclient = new HttpClient();
+
+		GetMethod method = new GetMethod(url);
+		
+		method.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, 
+    		new DefaultHttpMethodRetryHandler(3, false));
+
+		try {
+		  int statusCode = httpclient.executeMethod(method);
+		  if (statusCode != HttpStatus.SC_OK) {
+			<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+		  }
+		  byte[] responseBody = method.getResponseBody();
+		  rand=new String(responseBody);
+		} catch (HttpException e) {
+			 <?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+		  e.printStackTrace();
+		} catch (IOException e) {
+			<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+		  e.printStackTrace();
+		} finally {
+		   method.releaseConnection();
+		}  
+		
+		String activeCode="";		
+
+        PostMethod post = new PostMethod(url);
+		post.addRequestHeader("Content-Type","application/x-www-form-urlencoded; charset=UTF-8");
+		post.addParameter("org_name", jacper.getStr("org_name"));
+		post.addParameter("ip", ip);
+		post.addParameter("short_name",jacper.getStr("short_name"));
+		post.addParameter("user_type",jacper.getStr("user_type"));
+		post.addParameter("country",jacper.getStr("country"));
+		post.addParameter("province",jacper.getStr("province"));
+		post.addParameter("city",jacper.getStr("city"));
+		post.addParameter("passwd",jacper.getStr("passwd"));
+		post.addParameter("contact_name",jacper.getStr("contact_name"));
+		post.addParameter("celler", jacper.getStr("celler"));
+		post.addParameter("phone",jacper.getStr("phone"));
+		post.addParameter("email",jacper.getStr("email"));
+		post.addParameter("postcode",jacper.getStr("postcode"));
+		post.addParameter("register_code",jacper.getStr("register_code"));
+		post.addParameter("address",jacper.getStr("address"));
+		post.addParameter("rand",rand);
+		post.addParameter("type","register");	
+		post.addParameter("platSystem",platSystem);
+		post.addParameter("dbType",dbType+"");
+		post.addParameter("introduce_id",jacper.getStr("introduce_id"));
+		
+		try {
+			 int statusCode = httpclient.executeMethod(post);
+			  if (statusCode != HttpStatus.SC_OK) {
+				<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+			  }
+			  activeCode=post.getResponseBodyAsString();
+			  if(activeCode.equals("faild")){
+				 <?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+				 activeCode="";
+			  }
+		} catch (HttpException e) {
+			  	<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+			  e.printStackTrace();
+		} catch (IOException e) {
+			  	<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+			  e.printStackTrace();
+		} finally {
+			 post.releaseConnection();
+		}  
+		return activeCode;
+ }
+
+ public static String getLocalHostIP(){
+	  String ip;
+	  try{
+		   InetAddress addr = InetAddress.getLocalHost();
+		   ip = addr.getHostAddress(); 
+	  } catch(Exception ex){
+		  ip = "";
+	  }
+		 return ip;
+ }
+ public static String getLocalHostName(){
+  String hostName;
+  try{
+	   InetAddress addr = InetAddress.getLocalHost();
+	   hostName = addr.getHostName();
+  }catch(Exception ex){
+	   hostName = "";
+  }
+  return hostName;
+ }  
+ public static class UTF8PostMethod extends PostMethod{
+	public UTF8PostMethod(String url){
+		super(url);
+	}
+	public String getRequestCharSet() {
+		return "UTF-8";
+	}
+}  
+}

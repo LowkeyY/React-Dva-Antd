@@ -1,0 +1,99 @@
+
+import java.io.IOException;
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+
+public void doPost(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		String _id = jacper.getString("node");
+		String[] rs=conPlat.getRow("select option_name from $[plat].first_dict where option_id=?",new String[]{_id});
+		if ( rs != null ) {
+			jacper.print("{id:'"+_id+"',name:'"+rs[0]+"'}");
+		}
+		conPlat.close();
+}
+
+public void doGet(Jacper jacper){
+
+	String level = jacper.getString("level");
+	String _id = jacper.getString("node");
+	if(level==null) level="0";
+	String nextLevel="";
+	try{
+	    nextLevel=String.valueOf(Integer.parseInt(level)+1);
+	}catch(Exception e){
+		nextLevel="1";
+	}
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String icon="";
+	Connection conPlat = jacper.getConnection("plat");
+	String[][] rs=null;
+	
+	if (level.equals("0")){
+		icon="/themes/icon/xp/spzl.gif";			
+		String[][] rsa = conPlat.get("select a.system_id,a.system_name,0 from $[plat].system_base a ",new String[]{},0);
+		if(rsa!=null){		
+			ObjectManager OM=ObjectManager.getInstance();
+			for(int i=0;i<rsa.length;i++){			
+				ObjectNode systemNode=OM.getObject(rsa[i][0]);
+				ObjectNode[] ONS=systemNode.findAllChildsByType(ObjectType.APPLICATION);
+				if(ONS.length>0) rsa[i][2]="1";						
+			}
+			rs=new String[rsa.length+1][3];
+			System.arraycopy(rsa,0,rs,1,rsa.length);
+			rs[0]=new String[]{"0",jacper.trans("公用字典"),"1"};
+		}
+	}else  if (level.equals("1")){
+			rs=conPlat.get("SELECT a.object_id,a.applogic_name,0 FROM $[plat].application_base a ,$[plat].application_group b where a.system_id=b.group_id and b.system_id=? order by a.object_id asc",new String[]{_id+""},0);
+			icon="/themes/icon/xp/spzl.gif";  
+			if (rs != null ) {
+				for ( int i=0; i<rs.length; i++ ) {
+					String dict_count =  conPlat.getRow("select count(kind_id) from $[plat].dict_kind where application_obj_id=?",new String[]{rs[i][0]})[0];
+					if ( !dict_count.equals("0") )
+						rs[i][2]="1";
+				}
+			}
+	}else  if (level.equals("2")){
+			icon="/themes/icon/common/submit1.gif";
+			rs=conPlat.get("SELECT  kind_id, name, 0 FROM $[plat].dict_kind where application_obj_id=?",new String[]{_id},0);
+
+			if ( rs != null ) {
+				for ( int i=0; i<rs.length; i++ ) {
+					String kind_count =  conPlat.getRow("select count(kind_id) from $[plat].first_dict where kind_id=?",new String[]{rs[i][0]})[0];
+					if ( !kind_count.equals("0") )
+						rs[i][2]="1";
+				}
+		}
+	}else  if(level.equals("3")){
+		icon="/themes/icon/common/redo1.gif";
+		rs=conPlat.get("select option_id,option_name,0 from $[plat].first_dict where kind_id=?",new String[]{_id},0);
+	}
+	try{
+		JSONArray treeJSONArray=new JSONArray();
+		for(int i=0;i<rs.length;i++){
+			JSONObject resultJSON = new JSONObject("{}");
+			resultJSON.put("text",rs[i][1]);
+			resultJSON.put("leaf",rs[i][2].equals("0"));
+			resultJSON.put("allowSelect",level.equals("3"));
+			resultJSON.put("id",rs[i][0]);
+			resultJSON.put("icon",icon);
+			resultJSON.put("level",rs[i][0].equals("0")?"2":nextLevel);
+			treeJSONArray.put(resultJSON);
+		}			
+		jacper.print(treeJSONArray.toString());
+	}catch(Exception e){
+		e.printStackTrace();
+	}
+	conPlat.close();
+}}
+
+

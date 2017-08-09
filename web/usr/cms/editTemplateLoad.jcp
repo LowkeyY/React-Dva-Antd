@@ -1,0 +1,189 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.ctrl.EditTemplateUtil;
+import com.kinglib.service.cms.model.HTMLPage;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.util.json.JSONPart;
+
+import java.io.File;
+import java.util.HashMap;
+import java.util.UUID;
+
+import com.susing.core.KingleSystem;
+import com.susing.upload.FileUpload;
+
+@class{
+	public void doGet(Jacper jacper) {
+
+		String dataId = jacper.getString("dataId", "") , types = "previewPage";
+		
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		ZhanDian zhandian = getBelongToZhandian(service , dataId);
+		
+		if (zhandian == null) {
+			jacper.print("{success:false,message:'未找到该文件，请刷新页面重试。'}");
+			return;
+		}
+		
+		HTMLPage page = service.getCache(dataId);
+		
+		boolean isLoadParam = jacper.getString("types", "").equals(types);
+		String uuid = jacper.getString("uuid", "") , path = "" ;
+		uuid = uuid.length() == 0 ? UUID.randomUUID().toString() : uuid;
+		
+		if (isLoadParam) {
+			if ((path = EditTemplateUtil.getPreviewPagePath(service, page, uuid, types)).length() == 0) {
+				jacper.print("{success:false,message:'获取模板文件失败0。'}");
+				return;
+			}
+		}
+		
+		String loadLocalPath = isLoadParam ? path : jacper.getString("loadLocalPath", "");
+		loadLocalPath = loadLocalPath.endsWith("index."+service.getPageSuffixName()) ? loadLocalPath : loadLocalPath + File.separator + "index."+service.getPageSuffixName();
+		String zhandianBaseUrl = zhandian.yuming.startsWith("http://") ? "" : "http://" + zhandian.yuming;
+
+		JSONObject obj;
+		if ((obj = EditTemplateUtil.getHTMLContent(service, page, types , uuid , false)) == null) {
+			jacper.print("{success:false,message:'获取模板文件失败1。'}");
+			return;
+		}
+		try {
+			obj.put("isLanmu", page instanceof LanMu);
+			if (isLoadParam) {
+				obj.put("uuid", uuid);
+				obj.put("loadLocalPath", loadLocalPath);
+			} else {
+				obj.put("allLanmu", EditTemplateUtil.getPageProperty(page));
+				
+				JSONObject config = page.getConifg();
+				if (config.has("shuxin")) {
+					JSONArray shuxin = config.getJSONArray("shuxin");
+					JSONArray arr = new JSONArray() , defaultValues;
+					StringBuilder imports = new StringBuilder();
+					try {
+						defaultValues = config.getJSONArray("defaultValues");
+						EditTemplateUtil.getDefaultShuxin(page, defaultValues);
+					} catch (Exception e) {
+						e.printStackTrace();
+						defaultValues = new JSONArray();
+					}
+				
+					JSONArray copyOfDefaultValues = new JSONArray(defaultValues.toString());
+					HashMap<String, String> map = getKeyValue(service, dataId);
+					for (int i = 0; i < shuxin.length(); i++) {
+						arr.put(EditTemplateUtil.getMySelfItems(shuxin.get(i), imports , copyOfDefaultValues , map , false));
+					}
+					obj.put("propertyModel", arr);
+					JSONPart jp = new JSONPart();
+					for (int i = 0; i < shuxin.length(); i++) {
+						EditTemplateUtil.setValues(jp, shuxin.get(i), defaultValues, getKeyValue(service, dataId), zhandianBaseUrl + "/common/shuxing");
+					}
+					try {
+						String prop = "loadAddCss";
+						if (map.containsKey(prop) && map.get(prop).length() > 0)
+							jp.put(prop, new JSONObject(map.get(prop)));
+					} catch (JSONException e) {
+					}
+					obj.put("propertyLoadDatas", jp);
+					if (imports.length() > 0) {
+						obj.put("imports", imports.toString());
+					}
+				}
+			}
+		} catch (JSONException e) {
+			e.printStackTrace();
+			jacper.print("{success:false,message:'获取模板文件失败2。'}");
+			return;
+		}
+		
+		jacper.print("{success:true,datas:" + obj.toString() + "}");
+	
+		
+	}
+	public void doPost(Jacper jacper){
+		String dataId = "" , msg = "";
+		JSONArray json = new JSONArray();
+		Param param = new Param(jacper);
+		
+		if (FileUpload.isMultipartContent(jacper.getRequest().getContentType())) {
+			FileUpload upload = new FileUpload(jacper.getSession().uid);
+			try {
+				upload.parseRequest(jacper.getRequest());
+				dataId = upload.getParameter("dataId");
+				json = new JSONArray(upload.getParameter("formJson"));
+				for(String name : upload.getParameterNames())
+					param.put(name,upload.getParameter(name));
+				for(String name : upload.getFileNames())
+					param.put(name,upload.getFile(name));
+			} catch (Exception e) {
+				msg = e.getMessage();
+			}
+		}else{
+			try {
+				dataId = jacper.getString("dataId");
+				json = new JSONArray(jacper.getString("formJson"));
+			} catch (JSONException e) {
+				msg = e.getMessage();
+			}
+		}
+		
+		if(msg.length() > 0){
+			jacper.print("{success:false,msg:'"+msg+"'}");
+			return;
+		}
+		
+		if (dataId.length() > 0 && json.length() > 0) {
+			CMSService service = (CMSService) KingleSystem.getService("CMS");
+			ZhanDian zhandian = getBelongToZhandian(service , dataId);
+			
+			if (zhandian == null) {
+				jacper.print("{success:false,message:'未找到该文件，请刷新页面重试。'}");
+				return;
+			}
+			try {
+				EditTemplateUtil.savePropertyByParam(json, service, param, dataId , zhandian.yingwenmingcheng);
+				jacper.print("{success:true,msg:'修改成功。'}");
+			} catch (Exception e) {
+				jacper.print("{success:false,msg:'"+e.getMessage()+"'}");
+				return;
+			}
+		} else {
+			jacper.print("{success:false,msg:'缺失参数。'}");
+		}
+	}
+	
+	public ZhanDian getBelongToZhandian(CMSService service, String id) {
+		
+		HTMLPage page = service.getCache(id);
+		
+		if (page == null) {
+			page = service.getZhanDian(id) == null ? service.getLanMu(id) : service.getZhanDian(id);
+		}
+		
+		if(page == null)
+			return null;
+		
+		return page instanceof ZhanDian ? (ZhanDian) page : ((LanMu) page).getZhanDian();
+	}	
+	
+	public HashMap<String, String> getKeyValue(CMSService service, String dataId){
+		HashMap<String, String> v = new HashMap<String, String>();
+		Connection con;
+		try {
+			con = service.getConnection();
+			String[][] rs = con.get("select name,value from " + service.getTableName("CMS_shuxin") + " where id=?", new String[] { dataId });
+			if (rs != null && rs.length > 0)
+				for (String[] r : rs)
+					v.put(r[0], r[1]);
+		} catch (Exception e) {
+			v = new HashMap<String, String>();
+		}	
+		return v;
+	}
+}

@@ -1,0 +1,116 @@
+
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+import java.awt.Color;
+import java.awt.GradientPaint;
+import java.io.OutputStream;
+
+
+import com.kinglib.*;
+import com.kinglib.ui.menu.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+
+import org.w3c.dom.*;
+
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conUtils = jacper.getConnection("utils");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+	
+
+	String type = jacper.getStr("type");
+	int id = jacper.getInt("id",0);
+	
+	String[] rs = conUtils.getRow("select portal_id,portal_name,portal_pname,lang,current_stat,portal_desc from $[utils].portal where portal_id=?",new String[]{""+id});
+
+	try{
+		JSONObject portalJSON = new JSONObject("{}");
+		portalJSON.put("id",rs[0]);
+		portalJSON.put("portal_name",rs[1]);
+		portalJSON.put("portal_pname",rs[2]);
+		portalJSON.put("lang",rs[3]);
+		portalJSON.put("current_stat",rs[4]);
+		portalJSON.put("portal_desc",rs[5]);
+		portalJSON.put("portal_id",rs[0]);
+		<?[?>portalJSON.toString()<?]?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conUtils.close();
+	}
+	
+	
+}
+
+public void doPost(Jacper jacper){
+	
+	Connection conUtils = jacper.getConnection("utils");
+	Connection conPlat = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = String.valueOf(hs.uid);
+
+	String type=jacper.getString("type");
+	
+	String portal_id = "";
+	String portal_name = jacper.getStr("TopPortalName");
+	String portal_pname = jacper.getStr("TopPortalPname");
+	String lang = jacper.getStr("lang");
+	String current_stat = jacper.getStr("currentStat");
+	String portal_desc = jacper.getStr("PortalDesc");
+	
+	ObjectManager OM=ObjectManager.getInstance();
+	
+	if ( type.equals("save") ) {
+			try{
+				portal_id = SQLUtils.getNextVal(conPlat,18)+"";
+				conUtils.exec("update $[utils].portal set current_stat='0'",new String[]{});
+				
+				conUtils.exec("insert into $[utils].portal ( portal_id,portal_name,portal_pname,lang,current_stat,portal_desc) values (?,?,?,?,?,?)",new String[]{portal_id,portal_name,portal_pname,lang,current_stat,portal_desc});
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conUtils.close();
+			}		
+	}
+	else if (type.equals("updatesave") ) {
+	
+		try{
+				portal_id = jacper.getString("id");		
+				conUtils.exec("update $[utils].portal set current_stat='0'",new String[]{});
+		
+				conUtils.exec("update $[utils].portal set portal_name=?,portal_pname=?,lang=?,current_stat=?,portal_desc=? where portal_id=?",new String[]{portal_name,portal_pname,lang,current_stat,portal_desc,portal_id});
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conUtils.close();
+			}
+		
+	}else if(type.equals("delete")){
+	
+		try{
+				portal_id = jacper.getString("id");	
+				conUtils.exec("delete from $[utils].portal where portal_id = ?",new String[]{""+portal_id});
+				conUtils.exec("delete from $[utils].portal_node where parent_id = ?",new String[]{""+portal_id});
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conUtils.close();
+			}
+	
+			
+	}
+}
+}

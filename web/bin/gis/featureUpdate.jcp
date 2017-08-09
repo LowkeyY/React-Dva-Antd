@@ -1,0 +1,109 @@
+                                                                                   
+                                                                                                                    
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+import java.sql.Types;
+import com.kinglib.bi.*;
+import com.kinglib.util.json.*;
+import com.kinglib.database.*;
+
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.workbench.program.*;
+import com.kinglib.ui.core.input.AbstractSave;
+import com.kinglib.Err;
+
+@class{
+
+	public void doPost(Jacper jacper){
+
+		HttpSession hs = jacper.getSession();
+ 		
+		long user_id=hs.uid;   
+
+		String imptab = jacper.getStr("exportTab");
+		String import_data = jacper.getStr("exportData");
+		String import_item = jacper.getStr("exportItem");
+		String data_id = jacper.getStr("dataId");
+		
+		String pageType = jacper.getStr("pageType");
+
+		Connection conTmp1 = null;
+		if(pageType.equals("move")){
+			String geoData = jacper.getStr("geoData");
+			try{
+				if(!imptab.equals("")){
+					MetaTable mt = MetaFactory.getObject(imptab);
+
+					String DbLink=mt.getDblink();
+					String tab_pname=mt.getName();
+
+					conTmp1=jacper.getConnection(DbLink);
+
+					Param param=new Param(jacper);
+					param.set("local", conTmp1);
+					param.set("tableId", Integer.parseInt(imptab));
+					param.set("dataId", data_id);
+					ExtractSave extSave=new ExtractSave(param);
+					extSave.init(param);
+
+					MetaColumn[] mc=mt.getColumnArray();
+
+					String[] toColumn=new String[1];
+
+					for(int i=0;i<mc.length;i++){
+						if(mc[i].getDataType()==DataType.GEOMETRY){
+							toColumn[0]=mc[i].getPname();
+							break;
+						};
+					}
+					Object [] dataFrom=new Object[]{geoData};
+
+					try{	
+						extSave.update(param,toColumn,dataFrom);
+					}catch(Exception e){
+						e.printStackTrace();
+					}finally{
+						param.closeAllConnection();
+					}
+				}
+				jacper.print("{success:true}");
+			}catch(Exception e){
+				e.printStackTrace();
+				jacper.print("{success:false,message:"+e.getMessage()+"}");
+				throw new RuntimeException(e);
+			}
+		}else if(pageType.equals("delete")){
+			try{
+				if(!imptab.equals("")){
+					MetaTable mt = MetaFactory.getObject(imptab);
+
+					String DbLink=mt.getDblink();
+					String tab_pname=mt.getName();
+
+					conTmp1=jacper.getConnection(DbLink);
+
+					Param param=new Param(jacper);
+					param.set("local", conTmp1);
+					param.set("tableId", imptab);
+					param.set("dataId", data_id);
+					ExtractSave extSave=new ExtractSave(param);
+					extSave.init(param);
+
+					try{	
+						extSave.delete(param);
+					}catch(Exception e){
+						e.printStackTrace();
+					}finally{
+						param.closeAllConnection();
+					}
+				}
+				jacper.print("{success:true}");
+			}catch(Exception e){
+				e.printStackTrace();
+				jacper.print("{success:false,message:"+e.getMessage()+"}");
+				throw new RuntimeException(e);
+			}
+		}
+	}
+}

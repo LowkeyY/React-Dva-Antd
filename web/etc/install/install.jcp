@@ -1,0 +1,114 @@
+
+
+
+import com.kinglib.*;
+import com.susing.*;
+import com.susing.util.*;
+import com.susing.upload.FileUpload;
+import com.kinglibx.query.Database;
+import java.io.*;
+import java.util.*;
+import java.nio.channels.FileChannel;
+import java.nio.MappedByteBuffer;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.CharBuffer;
+import java.nio.charset.CharsetDecoder;
+import java.util.jar.*;
+import java.util.zip.*;
+import com.kinglib.workbench.*;
+@class{
+Hashtable itemHash=new Hashtable();
+
+public void doPost(Jacper jacper){
+	if(FileUpload.isMultipartContent(jacper.getRequest().getContentType())){
+		jacper=new JacperFile(jacper);
+		((JacperFile)jacper).action();
+	}
+	
+	Connection conPlat = jacper.getConnection("plat");
+	EFile file = ((JacperFile)jacper).getFile("installfile");
+	
+	File jarFile=file.getFile(); 
+	Install it=new Install();
+	String version="";
+
+	try{
+		ZipFile jf=new ZipFile(jarFile); 
+		Enumeration fileEnum =jf.entries();  		
+		while (fileEnum.hasMoreElements()){	
+			ZipEntry ze=new ZipEntry(fileEnum.nextElement().toString()); 
+			String fileName=ze.getName();
+			if(ze.isDirectory()){
+				continue;
+			}else{
+				if(fileName.substring(0,fileName.indexOf("/")).toUpperCase().indexOf("SQL")!=-1){
+					if(fileName.toUpperCase().indexOf("CREATE.SQL")!=-1){
+						InputStream in=jf.getInputStream(ze);
+						String sqlString=it.readString(new InputStreamReader(in));
+						String rt=it.executeSql(jacper,conPlat,sqlString);
+						if(rt.length()!=0){
+							<?<div style='font-size:14px;color:#ff0000'>?>jacper.trans("Sql语句执行失败,请检查或与应用提供商联系!")<?");</div>?>;
+						}
+					}
+				}
+			}
+		 }
+		fileEnum =jf.entries(); 
+		while (fileEnum.hasMoreElements()){	
+			ZipEntry ze=new ZipEntry(fileEnum.nextElement().toString()); 
+			String fileName=ze.getName();
+			if(ze.isDirectory()){
+				continue;
+			}else{
+				if(fileName.substring(0,fileName.indexOf("/")).toUpperCase().indexOf("ANT")!=-1){
+					if(fileName.toUpperCase().indexOf("BUILD.XML")!=-1){
+						InputStream in=jf.getInputStream(ze);
+						String installStr=it.readString(new InputStreamReader(in));
+						it.installFile(jacper,installStr,jf,version);
+					}
+				}
+			}
+		 }
+		 fileEnum =jf.entries(); 
+		 while (fileEnum.hasMoreElements()){	
+			ZipEntry ze=new ZipEntry(fileEnum.nextElement().toString()); 
+			String fileName=ze.getName();
+			if(ze.isDirectory()){
+				continue;
+			}else{
+				if(fileName.substring(0,fileName.indexOf("/")).toUpperCase().indexOf("IMPORT")!=-1){
+					if(fileName.toUpperCase().indexOf("XML")!=-1&&!fileName.toUpperCase().equals("BUILD.XML")){
+						InputStream in=jf.getInputStream(ze);
+						String installStr=it.readString(new InputStreamReader(in, "UTF-8"));
+						it.installExec(jacper,conPlat,installStr);
+					}
+				}
+			}
+		 }
+		 fileEnum =jf.entries(); 
+		 while (fileEnum.hasMoreElements()){
+			ZipEntry ze=new ZipEntry(fileEnum.nextElement().toString()); 
+			String fileName=ze.getName();
+			if(ze.isDirectory()){
+				continue;
+			}else{
+				if(fileName.substring(0,fileName.indexOf("/")).toUpperCase().indexOf("SQL")!=-1){
+					if(fileName.toUpperCase().indexOf("INSERT.SQL")!=-1){
+						InputStream in=jf.getInputStream(ze);
+						String sqlString=it.readString(new InputStreamReader(in));
+						String rt=it.executeSql(jacper,conPlat,sqlString);
+						if(rt.length()!=0){
+							<?<div style='font-size:14px;color:#ff0000'>?>jacper.trans("Sql语句执行失败,请检查或与应用提供商联系!")<?");</div>?>;
+						}
+					}
+				}
+			}
+		 }
+	}catch (Exception e){			
+		e.printStackTrace();
+		<?<div style='font-size:14px;color:#ff0000'>?>jacper.trans("文件格式错误,请检查上传文件是否是标准的Zip格式或安装文件错误")<?</div>?>;
+	}
+	<?<script></script>?>;
+}
+}

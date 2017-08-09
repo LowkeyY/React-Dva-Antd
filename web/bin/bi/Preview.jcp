@@ -1,0 +1,257 @@
+
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import com.kinglib.*;
+import com.xreport.web.servlets.*;
+import com.kinglib.util.Numbers;
+import java.util.*;
+import java.io.*;
+import java.util.Map;
+import com.kinglib.util.*;
+import com.kinglib.util.json.*;
+import electric.xml.*;
+import com.kinglibx.query.*;
+import com.kinglib.bi.*;
+import com.kinglib.database.*;
+import com.kinglib.util.DefaultValue;
+import com.kinglib.workbench.program.*;
+import com.xreport.engine.data.JRTableModelDataSource;
+import com.xreport.engine.util.JRLoader;
+import com.xreport.engine.JRException;
+import com.xreport.engine.JasperExportManager;
+import com.xreport.engine.JasperFillManager;
+import com.xreport.engine.JasperPrint;
+import com.xreport.engine.JasperPrintManager;
+import com.xreport.engine.XReport;
+import com.xreport.engine.JRVariable;
+import com.xreport.engine.JRParameter;
+import com.xreport.engine.JREmptyDataSource;
+import com.xreport.engine.export.JRXhtmlExporter;
+import com.xreport.engine.export.JRXlsExporter;
+import com.xreport.engine.export.JRXlsExporterParameter;
+import com.xreport.engine.export.JRPdfExporter;
+import com.xreport.engine.export.JRHtmlExporterParameter;
+import com.xreport.engine.JRExporterParameter;
+import com.xreport.engine.fill.JRFillVariable;
+import com.xreport.engine.fill.JRFillParameter;
+import com.xreport.j2ee.servlets.ImageServlet;
+import com.xreport.engine.ReportContext;
+
+@class{
+
+	public static final String separator = File.separator;
+
+	public void doGet(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		Connection conTemp =null;
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String report_id = jacper.getStr("report_id");
+		String type = jacper.getStr("type");
+		int startRow = jacper.getInt("start",0);
+		int rowCount = jacper.getInt("limit",0);
+
+		String objectId="";
+		if(report_id.equals("")){
+			objectId=jacper.getStr("objectId");
+			Program prg =ProgramFactory.getInstance().getProgram(conPlat,objectId);
+			report_id=prg.getReportId()+"";
+		}
+		
+		String query_id="0";
+
+		ReportFactory tf=ReportFactory.getInstance();
+		Report rpt=tf.getReport(conPlat,report_id);
+		query_id=rpt.getQueryId();
+		
+	//	String reportContent=rpt.getContent();
+
+		QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+		QueryExtend QE=queryEF.getQueryExtend(conPlat,query_id);
+		Query query =QE.getQuery();
+		String server=QE.getServer(conPlat,query_id+"");
+		conTemp=jacper.getConnection(server);
+
+		Map p = Factory.newHashMap();
+
+		try{
+			try{
+				String retQuery=jacper.getStr("query");
+				if(retQuery.equals("")) 
+					retQuery="{}";
+
+				JSONObject searchJson=new JSONObject(retQuery);
+				if(objectId.equals("")){
+					p=QE.getAllQuerySearchCondition(jacper,conPlat,query,p,searchJson);
+				}else{
+					p=QE.getQueryImportCondition(jacper,conPlat,query_id+"");
+					p=QE.getQuerySearchCondition(jacper,conPlat,query,p,searchJson);
+				}
+
+				HttpServletResponse response=jacper.getResponse();
+				try{
+						String tempDir=(String)com.susing.core.KingleSystem.getProperty("temp_path");
+						File reportFile = new File(tempDir + separator + report_id + ".jasper");
+						XReport xReport = (XReport) JRLoader.loadObject(reportFile.getPath());
+
+
+					    JRParameter[] params= xReport.getParameters();
+						HashMap paramMap=new HashMap();
+						
+						for(int i=0;i<params.length;i++){
+							if(DefaultValue.getInstance().contains(params[i].getName())){
+								paramMap.put(params[i].getName(),DefaultValue.getInstance().getValue(jacper, params[i].getName()));
+							}
+						}
+
+						String name=xReport.getName();
+
+						String[] titles = query.getCells();
+						String sql = query.parseSql(conPlat,titles,p); 
+						String[][] rptData=conTemp.get(sql,new String[]{},startRow,rowCount);
+
+						String sqlStr = query.parseNoConditionSql(conPlat,titles);
+						int[] types=conTemp.getTypes(sqlStr);
+
+						Object[][] resultData=new Object[rptData.length][types.length];
+
+						for(int i=0;i<rptData.length;i++){
+							for(int j=0;j<types.length;j++){
+								com.kinglib.database.DataType dataType= com.kinglib.database.DataType.parseByValue(types[j]);
+								if(dataType==com.kinglib.database.DataType.INT){
+								//resultData[i][j]=Double.parseDouble(rptData[i][j]);
+									resultData[i][j]=Integer.parseInt(rptData[i][j]);
+								}else if(dataType==com.kinglib.database.DataType.FLOAT){
+								System.out.println(rptData[i][j]);
+									resultData[i][j]=Double.parseDouble(rptData[i][j]);
+								}/*else if(dataType==com.kinglib.database.DataType.DATE){
+									//Date 类型如何处理
+								}*/else{
+									resultData[i][j]=rptData[i][j];
+								}		
+							}
+						}
+						ReportDataModel reportDataModel=new ReportDataModel(titles,resultData);
+						JasperPrint jasperPrint = JasperFillManager.fillReport(xReport, paramMap,new JRTableModelDataSource(reportDataModel));
+
+					
+						if(type.equals("pdf")){
+							response.setContentType("application/pdf");
+							try{
+								name = new String(name.getBytes(),"iso-8859-1");
+							}catch(Exception e){}
+							response.setHeader("Content-Disposition", "attachment;filename=" + name+".pdf");
+							JRPdfExporter exporter = new JRPdfExporter();
+							exporter.setParameter(JRExporterParameter.JASPER_PRINT, jasperPrint);
+							OutputStream ouputStream = response.getOutputStream();
+							exporter.setParameter(JRExporterParameter.OUTPUT_STREAM, ouputStream);
+							try {
+								exporter.exportReport();
+							}catch (JRException e){
+								printException(jacper,response,e);
+							}finally{
+								if (ouputStream != null){
+									try{
+										ouputStream.close();
+									}catch (IOException ex){}
+								}
+							}
+						}else if(type.equals("xls")){
+							response.setContentType("application/xls");
+							try{
+								name = new String(name.getBytes(),"iso-8859-1");
+							}catch(Exception e){}
+							response.setHeader("Content-Disposition", "attachment;filename=" + name+".xls");
+							JRXlsExporter exporter = new JRXlsExporter();
+							OutputStream ouputStream = response.getOutputStream();
+							exporter.setParameter(JRExporterParameter.JASPER_PRINT, jasperPrint);
+							exporter.setParameter(JRExporterParameter.OUTPUT_STREAM, ouputStream);
+							exporter.setParameter(JRXlsExporterParameter.IS_ONE_PAGE_PER_SHEET, Boolean.FALSE);
+							try {
+								exporter.exportReport();
+							}catch (JRException e){
+								printException(jacper,response,e);
+							}finally{
+								if (ouputStream != null){
+									try{
+										ouputStream.close();
+									}catch (IOException ex){}
+								}
+							}
+						}else{
+							JRXhtmlExporter exporter = new JRXhtmlExporter();
+
+							exporter.setParameter(JRHtmlExporterParameter.SIZE_UNIT,"pt"); 
+							exporter.setParameter(JRHtmlExporterParameter.FRAMES_AS_NESTED_TABLES,false);
+
+							jacper.getRequest().getSession().setAttribute(ImageServlet.DEFAULT_JASPER_PRINT_SESSION_ATTRIBUTE,jasperPrint);
+							exporter.setParameter(JRExporterParameter.JASPER_PRINT, jasperPrint);
+							exporter.setParameter(JRExporterParameter.OUTPUT_WRITER, jacper.getWriter());
+							exporter.exportReport();
+						}
+				}catch (JRException e){
+					printException(jacper,response,e);
+					return;
+				}
+			}catch(KingleException e){
+				<??>jacper.trans("报表设置错误:")+e.sysMsg<??>;
+			}
+		}catch(Exception ex){
+			ex.printStackTrace();
+		}finally{
+			conPlat.close();
+			if(conTemp!=null){
+				conTemp.close();
+			}
+		}
+	}
+	private void printException(Jacper jacper,HttpServletResponse response,JRException e){
+		try{
+			response.setContentType("text/html");
+			PrintWriter out = response.getWriter();
+			out.println("<html>");
+			out.println("<head>");
+			out.println("<title>"+jacper.trans("报表错误")+"</title>");
+			out.println("<link rel=\"stylesheet\" type=\"text/css\" href=\"stylesheet.css\" title=\"Style\">");
+			out.println("</head>");
+			out.println("<body bgcolor=\"white\">");
+			out.println("<span class=\"bnew\">"+jacper.trans("报表没能成功执行,原因:")+"</span>");
+			out.println("<pre>");
+			e.printStackTrace(out);
+			out.println("</pre>");
+			out.println("</body>");
+			out.println("</html>");
+		}catch(Exception ex){
+			ex.printStackTrace();
+		}
+	}
+	private MetaColumn[] getMetaColumns(Connection con,String query_id,String[] titles){
+		MetaColumn[] columns=new MetaColumn[titles.length];
+		for(int i=0;i<titles.length;i++){
+			try{
+				String colName=QueryExtend.getFinalItem(con,query_id,titles[i]);
+				if(colName!=null && colName.length()>0){
+					String[] np=colName.split("\\.");
+					MetaTable mt=MetaFactory.getObjectWithFullName(np[0]+"."+np[1]);
+					if(mt!=null){
+						for(MetaColumn mc:mt.getColumns()){
+							if(mc.getPname().toUpperCase().equals(np[2].toUpperCase())){
+								columns[i]=mc;
+							}
+						}
+					}
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+		return columns;
+	}
+	public void doPost(Jacper jacper){
+		doGet(jacper);
+	}
+
+}

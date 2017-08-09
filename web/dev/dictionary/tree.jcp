@@ -1,0 +1,122 @@
+
+import java.io.IOException;
+
+import com.kinglib.*;
+import com.social.api.core.model.User;
+import com.social.api.core.model.User;
+import com.social.api.core.model.UserType;
+
+@class{
+
+public void doGet(Jacper jacper){
+	String _id = jacper.getString("_id");
+	String level = jacper.getString("level");
+	String _name = jacper.getString("name");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String userId = hs.uid+"";
+	String deptId=hs.getString("dept_id");
+	User u = User.getUser(userId+"");
+	UserType userType=u.getUserType();
+
+
+	String app_type=jacper.getStr("app_type");
+
+	String endicon="";
+	String starticon="";
+	if(level==null) level="0";
+	Connection conPlat = jacper.getConnection("plat");
+	
+	<?<root _id="?>_id<?">?>;
+	<?<forder _parent="?>_id<?" event="event1">?>;	
+	if (level.equals("0")) {
+			starticon="/themes/icon/xp/spzl.gif";
+			endicon="/themes/icon/xp/spzl.gif";	
+			if (userType.getValue()==1||userType.getValue()==0){
+				<?<e _id="0" _parent="top" title="?>jacper.trans("公用字典")<?" icon0="?>starticon<?" icon1="?>endicon<?" program="kind"  type="new" params="application_obj_id=0" url="/dev/dictionary/tree.jcp?_id=0&amp;level=1&amp;name=?>jacper.trans("公用字典")<?" _hasChild="1"/>?>;
+			}
+			String sql="";
+			String[] params=new String[]{};
+			if (userType.getValue()==1||userType.getValue()==0){
+				sql="select a.system_id,a.system_name from $[plat].system_base a ";
+			}else{
+				params=new String[]{deptId,userId};
+				sql="select a.system_id,a.system_name from $[plat].system_base a,$[plat].system_auth b where a.system_id=b.id and b.deptid=? and b.roleid=?";
+			}
+			String[][] rs = conPlat.get(sql,params,0);
+			if(rs!=null){	
+				String hasChild = "0";			
+				for(int i=0;i<rs.length;i++){
+					sql="";
+					params=new String[]{rs[i][0]};
+					if (userType.getValue()==1||userType.getValue()==0){
+						sql="select count(object_id) from $[plat].application_base a,$[plat].application_group b where a.system_id=b.group_id  and  b.system_id=? ";
+					}else{
+						params=new String[]{rs[i][0],deptId,userId};
+						sql="select count(object_id) from $[plat].application_base a,$[plat].application_group b,$[plat].system_auth c where a.system_id=b.group_id  and a.object_id=c.id  and  b.system_id=?and c.deptid=? and c.roleid=?";
+					}
+					String app_count = conPlat.getRow(sql,params)[0];
+					hasChild = Integer.parseInt(app_count)>0?"1":"0";
+
+					<?<e _id="?>rs[i][0]<?" _parent="top" title="?>rs[i][1]<?" _hasChild ="?>hasChild<?" icon0="/themes/icon/xp/axx.gif" icon1="/themes/icon/xp/axx.gif"   program="portal"  url="/dev/dictionary/tree.jcp?level=1&amp;_id=?>rs[i][0]<?&amp;app_type=system&amp;parent_app=?>rs[i][0]<?"/>?>;
+				}
+			}
+	}else  if (level.equals("1")&&app_type.equals("system")){
+
+		String sql="";
+		String[] params=new String[]{_id+""};
+		if (userType.getValue()==1||userType.getValue()==0){
+			sql="SELECT a.object_id,a.applogic_name,a.database_link FROM $[plat].application_base a ,$[plat].application_group b where a.system_id=b.group_id  and b.system_id=? order by a.object_id asc ";
+		}else{
+			params=new String[]{_id,deptId,userId};
+			sql="SELECT a.object_id,a.applogic_name,a.database_link FROM $[plat].application_base a ,$[plat].application_group b,system_auth c where a.system_id=b.group_id  and a.object_id=c.id  and b.system_id=? and c.deptid=? and c.roleid=? order by a.object_id asc";
+		}
+		String[][] selBuf=conPlat.get(sql,params,0);
+			
+		starticon="/themes/icon/xp/spzl.gif";
+		endicon="/themes/icon/xp/spzl.gif";
+
+		if (selBuf != null ) {
+			String hasChild = "0";
+			for ( int i=0; i<selBuf.length; i++ ) {
+				hasChild = "0";
+				String dict_count =  conPlat.getRow("select count(kind_id) from $[plat].dict_kind where application_obj_id=?",new String[]{selBuf[i][0]})[0];
+				if ( !dict_count.equals("0") )
+					hasChild = "1";
+				<?<e _id="?>selBuf[i][0]<?" _parent="?>_id<?" _hasChild="?>hasChild<?"  icon0="?>starticon<?" icon1="?>endicon<?"  title="?>selBuf[i][1]<?"  program="kind"  type="new" params="application_obj_id=?>selBuf[i][0]<?"  url="/dev/dictionary/tree.jcp?_id=?>selBuf[i][0]<?&amp;level=1&amp;name=?>selBuf[i][1]<?" />?>;
+			}
+		}
+	}else  if (level.equals("1")&&!app_type.equals("system")){
+
+		String[][] telBuf=conPlat.get("SELECT  kind_id, name, kind_desc FROM $[plat].dict_kind where application_obj_id=?",new String[]{_id},0);
+
+		if ( telBuf != null ) {
+			String hasChild = "0";
+			starticon="/themes/icon/common/submit1.gif";
+			endicon="/themes/icon/common/submit1.gif";
+
+			for ( int i=0; i<telBuf.length; i++ ) {
+				hasChild = "0";
+				String kind_count =  conPlat.getRow("select count(kind_id) from $[plat].first_dict where kind_id=?",new String[]{telBuf[i][0]})[0];
+				if ( !kind_count.equals("0") )
+					hasChild = "1";
+				<?<e _id="?>telBuf[i][0]<?" _parent="?>_id<?" title="?>telBuf[i][1]<?"  icon0="?>starticon<?" icon1="?>endicon<?"    program="kind"  type="view" params="application_obj_id=?>_id<?&amp;kind_id=?>telBuf[i][0]<?"    url="/dev/dictionary/tree.jcp?_id=?>telBuf[i][0]<?&amp;level=2&amp;name=?>_name<?&amp;kind_name=?>telBuf[i][1]<?" _hasChild="?>hasChild<?"/>?>;
+			}
+		}
+	}else  if(level.equals("2") ){
+		String[][] listBuf=conPlat.get("select option_id,option_name,kind_id from $[plat].first_dict where kind_id=? order by option_name",new String[]{_id},0);
+		
+		if ( listBuf != null ) {
+			starticon="/themes/icon/common/redo1.gif"; 
+			endicon="/themes/icon/common/redo1.gif";
+			for ( int i=0; i<listBuf.length; i++ ) {
+				<?<e _id="?>listBuf[i][0]<?" _parent="?>_id<?" title="?>listBuf[i][1]<?"  icon0="?>starticon<?" icon1="?>endicon<?"  program="option"  type="view" params="option_id=?>listBuf[i][0]<?&amp;kind_id=?>listBuf[i][2]<?"   url="/dev/dictionary/tree.jcp?_id=?>listBuf[i][0]<?&amp;level=3" _hasChild="0"/>?>;
+			}			
+		}
+	}
+	conPlat.close();
+	<?</forder></root>?>;
+}}
+
+

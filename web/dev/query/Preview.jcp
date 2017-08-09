@@ -1,0 +1,193 @@
+
+
+import java.util.Map;
+import java.util.Set;
+import com.kinglib.*;
+
+import com.kinglib.util.*;
+import com.kinglibx.query.*;
+import java.util.Calendar;
+import org.w3c.dom.NodeList;
+import electric.xml.*;
+
+import com.kinglib.ui.grid.*;
+import com.kinglib.util.json.*;
+import com.kinglibx.query.Database;
+import com.susing.sql.DataSourceFactory;
+import com.kinglib.bi.*;
+
+@class{
+	public void doGet(Jacper jacper){
+
+		Connection conPlat= jacper.getConnection("plat");
+		Connection conTemp =null;
+
+		String query_id = jacper.getString("query_id","-1");
+		
+		String name = jacper.getString("query_name");
+		String type = jacper.getStr("type");
+
+		if(name==null)
+			return;
+
+		String sql;
+		String[] title = null;
+
+
+		if(!query_id.equals("-1")){	
+			QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+			QueryExtend QE=queryEF.getQueryExtend(conPlat,query_id);
+			String server =QE.getServer(conPlat,query_id+"");
+
+			conTemp = jacper.getConnection(server);
+			Query query = QueryFactory.getInstance().getQuery(conPlat,query_id);
+			String flename="field";
+			Map p = Factory.newHashMap();
+			String param= jacper.getStr("param");
+			if(!param.equals("")){
+				String[] paramsArr=param.split("::");
+				for(int j=0;j<paramsArr.length;j++) {
+					String tempValue=jacper.getStr(flename+j);;
+					p.put(paramsArr[j],tempValue);
+				}
+			}else{
+				ParamNode[] params=query.getParamNode();
+				for(int j=0;j<params.length;j++) {
+					String paramCol=params[j].getParamName();
+					String tempValue=params[j].getDefaultValue();
+					if (!"".equals(tempValue)){
+					   tempValue=DefaultValue.getInstance().replace(jacper,tempValue);
+						p.put(paramCol,tempValue);
+					}else{
+						p.put(paramCol,"-99999");
+					}
+				}
+			}
+			title = query.getCells();
+			sql = query.parseSql(conPlat,title,p); 
+		}else{	
+			String connString=name.substring(2,name.indexOf("]"));
+			conTemp = jacper.getConnection(connString);
+			String schemaString=DataSourceFactory.getConnectionMap(connString);
+			String catalog="";
+			String schema="";
+			if(schemaString.indexOf(".")==-1){
+				schema=schemaString;
+			}else{
+				String[] schemaArray=schemaString.split(".");
+				catalog=schemaArray[0];
+				schema=schemaArray[1];
+			}
+			String[][] dataItem = Database.getColumns(conPlat,catalog,schema,name.substring(name.indexOf(".")+1,name.length()));
+			title =new String[dataItem.length];
+			String colString="";
+			for(int i=0;i<dataItem.length;i++){
+				title[i]=dataItem[i][0];
+				colString+=","+title[i];
+			}
+			sql = "select "+colString.substring(1)+" from "+name; 
+		}
+		try{
+
+			ShowDBGrid(jacper,conTemp,sql,title);
+		}catch(KingleException ex){
+			throw new KingleException(jacper.trans("SQL执行错误"),ex,jacper.trans("错误信息:")+ex.sysMsg+"\n\n"+sql);
+		}finally{
+			conPlat.close();
+		}
+	}
+	public void XMLPost(JacperXML jacper){
+
+		Element xml;
+		Connection conTemp =null;
+		String server="";
+		try{
+			xml = jacper.getXML().getRoot();
+		}catch(Exception ex){
+			throw new KingleException(jacper.trans("整理XML文件错误"),ex);
+		}
+		String[][] query_info = new String[1][3];
+		String id = "-1";
+		query_info[0][0] = xml.getAttribute("name");
+		query_info[0][1] = xml.getAttribute("where");
+
+		query_info[0][2] = xml.getAttribute("level");
+		NodeList cols = xml.getElement("columns").getChildNodes();
+		int len = cols.getLength();
+		String[][] column_info = new String[len][2];
+		String[] cells = new String[len];
+		for(int i=0;i<len;i++){
+			Element e = (Element)cols.item(i);
+			cells[i] = column_info[i][0] = e.getAttribute("name");
+			column_info[i][1] = e.getAttribute("point");
+		}
+
+		NodeList imports = xml.getElement("import").getChildNodes();
+		len = imports.getLength();
+		Matrix mx = new Matrix(4);
+		for(int i=0;i<len;i++){
+			Element e = (Element)imports.item(i);
+			String rename = e.getAttribute("rename");
+			String name = e.getAttribute("name");
+			server =e.getAttribute("server");
+			NodeList l = e.getElement("param").getChildNodes();
+			int size = l.getLength();
+
+			if(size>0){
+				for(int j=0;j<size;j++){
+					Element o = (Element)l.item(j);
+					mx.add(new String[]{rename,name,o.getAttribute("name"),o.getAttribute("value")});
+				}
+			}else
+				mx.add(new String[]{rename,name,"",""});			
+		}
+		String[][] import_info = mx.toArray();
+
+		NodeList params = xml.getElement("param").getChildNodes();
+		len = params.getLength();
+
+		String[][] param_info = new String[len][6];
+		Map map = Factory.newHashMap();
+
+		for(int i=0;i<len;i++){
+			Element e = (Element)params.item(i);
+			String name = e.getAttribute("name");
+			String value = e.getAttribute("value");
+			value=DefaultValue.getInstance().replace(jacper,value);
+
+			param_info[i][0] = name;
+			param_info[i][1] = e.getAttribute("perfix");
+			param_info[i][2] = e.getAttribute("suffix");
+			param_info[i][3] = e.getAttribute("notnull");
+			param_info[i][4] = e.getAttribute("utype");
+			param_info[i][5] = e.getAttribute("default");
+			map.put(name,value);
+		}
+
+		Query q = new Query(id,query_info,column_info,import_info,param_info);
+		Connection conPlat= jacper.getConnection("plat");
+		String sql = q.parseSql(conPlat,cells,map);
+		int row = jacper.getInt("row",50);
+		conTemp = jacper.getConnection(server);
+		try{
+			ShowDBGrid(jacper,conTemp,sql,cells);
+		}catch(KingleException ex){
+			<?{success:"false","message":"?>ex.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}   
+	private void ShowDBGrid(Jacper jacper,Connection conTemp,String sql,String[] titleArr){
+		sql=sql.replaceAll("\r\n"," ");
+		String sort = jacper.getStr("sort");
+		String dir = jacper.getStr("dir");
+		int startRow = jacper.getInt("start",0);
+		int rowCount = jacper.getInt("limit",0);
+		String[] param=new String[]{};
+		Grid gd=new Grid(sql,titleArr[0],titleArr);
+		JSONObject gridJSON=gd.getJSON(conTemp,param,startRow,rowCount,dir,sort);
+		jacper.getResponse().setContentType("application/x-json");
+		<?(?>gridJSON.toString()<?)?>;
+		conTemp.close();
+	}
+}

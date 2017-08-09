@@ -1,0 +1,59 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import com.susing.core.KingleSystem;
+
+	//public class up{
+@class{
+	public void doPost(Jacper jacper) {
+		String id = jacper.getString("node");
+		Connection con = jacper.getConnection("education");
+		JSONArray arr = new JSONArray();
+		try {
+			if (id.equals("root")) {
+				String sql="select node_id,node_value from dir_node_info where p_node_id is null";
+				String[][] rs = con.get(sql);
+				for (String[] strings : rs) {
+					JSONObject js = new JSONObject();
+					js.put("text", strings[1]);
+					js.put("id", strings[0]);
+					js.put("leaf", getNextNode(con,strings[0]));
+					js.put("icon","/themes/icon/all/folder.gif");
+					arr.put(js);
+				}
+			} else {
+				String[] ids = id.split("::");
+				String sql="select node_id,node_value from dir_node_info where p_node_id=?";
+				String[][] rs = con.get(sql,new String[]{ids[0]});
+				for (String[] strings : rs) {
+					JSONObject js = new JSONObject();
+					js.put("text", strings[1]);
+					js.put("id", strings[0]);
+					js.put("leaf", getNextNode(con,strings[0]));
+					js.put("icon","/themes/icon/all/folder.gif");
+					arr.put(js);
+				}
+			}
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		jacper.print(arr);
+	}
+
+	public boolean getNextNode(Connection con,String id){
+		String sql="select node_id from dir_node_info where p_node_id='"+id+"'";
+		String[][] rs = con.get(sql);
+		if (rs!=null && rs.length>0) {
+			return false;
+		}else{
+			return true;
+		}
+	}
+}

@@ -1,0 +1,105 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+import com.kinglib.util.parser.*;
+import java.io.StringReader;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.susing.core.*;
+import com.susing.server.*;
+
+@class{
+
+	public void doGet(Jacper jacper){
+		
+		Connection conPlat=jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String type = jacper.getStr("type");
+		String parent_id = jacper.getStr("parent_id");
+		String[] rs=null;
+		
+		jacper.getResponse().setContentType("application/x-json");
+
+		try{
+			JSONObject notifyJSON = new JSONObject("{}");
+			
+			rs = conPlat.getRow("select	object_id,query_id,address_item,content,notify_type,subject,smpt_server,smtp_user,smtp_passwd,from_address from $[plat].ctrl_notify  where object_id=?",new String[]{parent_id});
+			if(rs!=null){
+				notifyJSON.put("object_id",parent_id);
+				notifyJSON.put("query_id",rs[1]);
+				notifyJSON.put("address_item",rs[2]);
+				notifyJSON.put("content",rs[3]);
+				notifyJSON.put("notify_type",rs[4]);	
+				notifyJSON.put("subject",rs[5]);
+				notifyJSON.put("smpt_server",rs[6]);
+				notifyJSON.put("smtp_user",rs[7]);
+				notifyJSON.put("smtp_passwd",rs[8]);
+				notifyJSON.put("from_address",rs[9]);	
+			}
+			jacper.print("{success:true,data:"+notifyJSON+"}");
+
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+
+	public void doPost(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+	
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+
+		String parent_id = jacper.getStr("parent_id");
+		String query_id = jacper.getStr("query_id");
+		String query_item = jacper.getStr("query_column");
+		String notify_type = jacper.getStr("notify_type");
+		String content = jacper.getStr("content");
+		String ctrl_type = jacper.getStr("ctrl_type");
+
+		String subject = jacper.getStr("subject");
+		String smpt_server = jacper.getStr("smpt_server");
+		String smtp_user = jacper.getStr("smtp_user");
+		String smtp_passwd = jacper.getStr("smtp_passwd");
+		String from_address = jacper.getStr("from_address");
+		try{	
+				boolean isCreate = true;
+				String[][] rs = conPlat.get("select object_id from $[plat].CTRL_NOTIFY where object_id=?",new String[]{parent_id});
+				if (rs.length!=0) {
+					isCreate = false;
+				}
+
+				if(isCreate){
+					conPlat.execLarge("INSERT INTO  $[plat].CTRL_NOTIFY  (object_id,notify_type,query_id,address_item,content,subject,smpt_server,smtp_user,smtp_passwd,from_address) VALUES (?,?,?,?,?,?,?,?,?,?)",new Object[]{parent_id+"",notify_type,query_id+"",query_item,content,subject,smpt_server,smtp_user,smtp_passwd,from_address});
+				}else{
+					conPlat.execLarge("UPDATE $[plat].CTRL_NOTIFY SET  notify_type=?,query_id=?,address_item=?,content=?,subject=?,smpt_server=?,smtp_user=?,smtp_passwd=?,from_address=? WHERE object_id=?",new Object[]{notify_type,query_id+"",query_item,content,subject,smpt_server,smtp_user,smtp_passwd,from_address,parent_id+""});
+					String type = jacper.getStr("type");
+					if(type.equals("task")){
+						String[][] rs1 = conPlat.get("select schedule_id from $[plat].sys_task_schedule a where a.task_id=?",new String[]{parent_id});
+						String[] serviceArray=KingleSystem.getServiceNames();
+						for(int i=0;i<serviceArray.length;i++){
+								if((jacper.trans("任务服务")).equals(serviceArray[i])){
+									for(int j=0;j<rs1.length;j++){
+											KingleTaskService taskService=(KingleTaskService)KingleSystem.getService(serviceArray[i]);
+											taskService.stopTask(parent_id+"_"+rs1[j][0]);
+											taskService.startTask(parent_id+"_"+rs[j][0]);
+									}
+							}
+						}
+					}	
+				}
+			<?{success:true,id:'?>parent_id<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+			e.printStackTrace();
+		}finally {
+			conPlat.close();
+		}
+	}
+}

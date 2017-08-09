@@ -1,0 +1,64 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.util.json.JSONPart;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.search.SearchUnits;
+
+/**
+ * 
+ * <此处填写该类的简介或功能描述>
+ * 
+ * @version 1.0
+ * 
+ * @author qiaolin
+ * 
+ * @date: Oct 24, 2016日2:02:39 PM
+ * 
+ */
+
+//public class userSearch {
+@class{
+	public void doPost(Jacper jacper) {
+		HttpSession hs = jacper.getSession();
+		String textQuery = jacper.getString("textQuery", "");
+		Connection con = jacper.getConnection(HWUnits.HW_DBLINK);
+		String userId = String.valueOf(hs.uid);
+		JSONPart result = new JSONPart();
+		JSONArray data = new JSONArray();
+		long begin = System.currentTimeMillis();
+		if (textQuery.length() > 0) {
+			try {
+				if(textQuery.matches("^[\\w ]+$")){
+					for (String row : SearchUnits.getPinyinrecordWithstart(con, textQuery))
+						data.put(new JSONObject().put("title", row));
+				} else{
+					for (String row : SearchUnits.getSearchrecordWithstart(con, textQuery))
+						data.put(new JSONObject().put("title", row));	
+				}
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+			result.join("data", data);
+			jacper.print(result.toString());
+		} else {
+			try {
+				if(HWUnits.isGuestUser(userId))
+					for (String row : SearchUnits.getMyaddrsearhrecord(con, jacper.getRequest().getRemoteAddr()))
+						data.put(new JSONObject().put("title", row));
+				else
+					for (String row : SearchUnits.getMyselfsearhrecord(con, userId))
+						data.put(new JSONObject().put("title", row));
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+			result.join("data", data);
+			jacper.print(result.toString());
+		}
+		System.out.println("userSearch.jcp -62- query use("+(System.currentTimeMillis() - begin)+"ms).");
+	}
+}

@@ -1,0 +1,59 @@
+            
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.social.api.core.model.*;
+
+               
+@class{
+
+
+	public void doGet(Jacper jacper){  
+
+	    String id=jacper.getString("node");
+		if(id.equals("")) id="0";
+		Dept d = Dept.getDept(id);
+		System.out.println(d);
+		if (d == null)
+			return;
+		JSONArray treeJSONArray = new JSONArray();
+		JSONObject js = null;
+		try {
+			for (Dept cd : d.getChilds()) {
+				js = new JSONObject();
+				js.put("id", cd.getDeptId());
+				js.put("text", cd.getShortName());
+				//js.put("leaf", !cd.hasChild() && !cd.hasRole());
+				js.put("leaf", false);
+				js.put("icon", "/themes/icon/common/group.gif");
+				js.put("allowSelect", false);
+				treeJSONArray.put(js);
+			}
+			for(Role u:Dept.getDept("0").getRolesBySort()){
+				js = new JSONObject();
+				js.put("id", id+"role_"+u.getRoleId());
+				js.put("role_id", u.getRoleId());
+				js.put("dept_id",d.getDeptId());
+				js.put("dept_name",d.getShortName());
+				js.put("text",u.getRoleName());
+				js.put("leaf", true);
+				js.put("icon", "/themes/icon/all/folder_user.gif");
+				js.put("allowSelect", true);
+
+				treeJSONArray.put(js);
+			}
+			jacper.print(treeJSONArray);
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+	}
+	public void doPost(Jacper jacper){  
+		String roleId=jacper.getString("roleId");
+		Role u=Role.getRole(roleId);
+		if(u!=null){
+			Dept d=u.getDept();
+			jacper.print("{success:true,value:'"+u.getRoleName()+"',deptId:'"+d.getDeptId()+"',deptName:'"+d.getShortName()+"'}");
+		}else{
+			jacper.print("{success:false}");
+		}
+	}
+}

@@ -1,0 +1,38 @@
+import com.kinglib.*;
+
+import com.social.api.core.model.*;
+import gpra.filesystem.HWUnits;
+
+//public class showshenpiyijian{
+@class{
+	public void doPost(Jacper jacper){
+		try{
+	    Connection conDocmgr = jacper.getConnection(HWUnits.HW_DBLINK);
+	    String fileid=jacper.getString("fileId");
+	    String userid=String.valueOf(jacper.getSession().uid);
+	    
+	    String usr = jacper.getString("upusr");
+	    
+	    String exportData=jacper.getString("exportData","");
+	    String sqr=jacper.getString("sqr","");
+	    String sql="";
+	    if(!exportData.equals("8")){
+	    	sql="select FILE_NAME,APPLY_DATA,AUDIT_DATA,AUDITOR,AUDIT_MSG from DIR_APPLY_BASIC where file_id='"+fileid+"' and APPLY_USER ='"+userid+"'";
+	    }else{
+	    	sql="select FILE_NAME,APPLY_DATA,AUDIT_DATA,AUDITOR,AUDIT_MSG from DIR_APPLY_BASIC where file_id='"+fileid+"' and AUDITOR ='"+userid+"' and APPLY_USER='"+usr+"'";
+	    }
+	    System.out.println(sql);
+	    String[][]rs=conDocmgr.get(sql);
+	    System.out.println(sql);
+	    if(rs!=null && rs.length>0){
+	    	String user=rs[0][3];
+	    	User cccuser= CertManager.getUser(user);
+	    	String msg="{FILE_NAME:'"+rs[0][0]+"',APPLY_DATA:'"+rs[0][1]+"',AUDIT_DATA:'"+rs[0][2]+"',AUDITOR:'"+cccuser.getRealName()+"',AUDIT_MSG:'"+rs[0][4]+"'}";
+	    	System.out.println(msg);
+	    	jacper.print(msg);
+	    }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

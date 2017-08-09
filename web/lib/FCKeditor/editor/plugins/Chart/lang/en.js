@@ -1,0 +1,1 @@
+FCKLang.ChartBtn="Insert/Edit Chart";FCKLang.ChartDlgTitle="Chart Properties";FCKLang.ChartDlgName="Chart Name";FCKLang.ChartErrNoName="Please type the Chart name";FCKLang.ChartErrNameInUse="The specified name is already in use";

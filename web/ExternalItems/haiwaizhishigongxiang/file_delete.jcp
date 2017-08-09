@@ -1,0 +1,67 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+
+import gpra.filesystem.HWUnits;
+
+import java.io.File;
+
+import org.apache.solr.client.solrj.SolrServer;
+import org.apache.solr.client.solrj.impl.HttpSolrServer;
+//public class file_delete{
+@class{
+	public void doPost(Jacper jacper){
+	    Connection conDocmgr =jacper.getConnection(HWUnits.HW_DBLINK);
+	    String fileIdArr=jacper.getString("file_id","");
+	    String exportItem=jacper.getString("exportItem","");
+	    String exportData=jacper.getString("exportData","");
+	    HttpSession hs = jacper.getSession();
+		String userId=hs.uid+"";
+	    try{
+	        conDocmgr.setAutoCommit(false);
+		    if(!"".equals(fileIdArr)){
+		         for(String fileid:fileIdArr.split(",")){
+		            
+			    		System.out.println("删除");
+						conDocmgr.exec("delete from file_arr where FILEID=?",new String[]{fileid});
+				    	String[] url = conDocmgr.getRow("select url,filename from FILEMGRNEW where file_id=?",new String[]{fileid});
+				    	url[0]=url[0].replace("\\","\\\\");
+				    	url[0]=url[0].substring(5);
+			    		File file =new File(url[0]);
+			    		file.delete();
+			    		conDocmgr.exec("delete from FILEMGRNEW where FILE_ID=?",new String[]{fileid});			    	    
+			    	
+			    		String SOLR_URL = "http://" + jacper.getRequest().getServerName() + ":" + jacper.getRequest().getServerPort()
+								+ "/"+getSolrWebName()+"/TEST/";
+						SolrServer server = new HttpSolrServer(SOLR_URL);
+						server.deleteById(fileid+"::"+url[1]);
+						System.out.println("删除solr:"+fileid+"::"+url[1]);
+						server.commit();
+						System.out.println("solr删除成功");
+			    			    							
+				 }
+				 conDocmgr.commit();
+				 jacper.print("{success:true}");
+		    }
+	    }catch(Exception e){
+	        try {
+			 conDocmgr.rollback();
+		    } catch (Exception ecc) {
+		    }
+	        e.printStackTrace();
+		}finally{
+		    try {
+			 conDocmgr.setAutoCommit(true);
+		    } catch (Exception ecc) {
+		    }
+		    conDocmgr.close();
+		}	    	    
+	}
+		public String getSolrWebName(){
+		String name = "GRIS 2.0";
+		StringBuilder sb = new StringBuilder();
+		for(char c : name.toCharArray())
+			sb.append(String.valueOf((int) c));
+		return sb.toString();
+	}
+}

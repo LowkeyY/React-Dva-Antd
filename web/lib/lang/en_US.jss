@@ -1,0 +1,1 @@
+lib.lang={"修改者":"Modified by","时":"When","分":"Points","年":"Years","必需设置":"Required Settings","修改时间":"Modify the time","月":"Month","毫秒":"Milliseconds","日":"Day","本项不能为空":"This can not be empty","季度":"Quarter","日期":"Date","秒":"Second"}

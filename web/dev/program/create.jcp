@@ -1,0 +1,677 @@
+import com.kinglib.*; 
+import com.kinglib.util.json.*;
+import com.kinglib.dictionary.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.bi.*;
+import com.kinglib.bi.chart.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.gis.*;
+import com.kinglib.workbench.module.*;
+import com.kinglib.workbench.integrate.*;
+import com.kinglib.workbench.workflow.*;
+import com.kinglib.workbench.search.*;
+import com.kinglib.bi.*;
+import com.kinglib.workbench.search.*;
+import com.kinglib.workbench.quality.*;
+import com.kinglib.ui.core.CustomizeFactory;
+import com.kinglib.ui.folder.*;
+
+import java.util.UUID;
+ 
+import com.kinglib.ui.menu.*;
+import  com.kinglib.ui.core.*;
+import com.social.api.core.model.*;
+import com.social.api.core.model.User;
+import com.social.api.core.model.User;
+import com.social.api.core.model.UserType;
+
+@class{
+private static String[] fields={"prglogic_name","prgphy_name","prgtype","tab_id","main_program","default_export","have_search","be_linked","print_title","export_item","import_item","data_auth","authlink_tab","icon_url","column_num","tab_type","button_type","tab1_id","frame_type","condition_tab","CONDITION_ITEM","CONDITION_VALUE","task_type","query_id","drawout_type","valid_check","order_column","order_type","query_id2","report_id","seq","start_type","sql_extend","map_id","out_url","chart_id","is_iframe","default_show","integrate_id","portlet_id","textreport_id","search_type","link_id","my_query","have_favorite","prg_folder","extra_tables","TO_CREATE_WITHOUT_DATA","event_name","log_name","label_width","enable_chart_menu","quality_type"};
+
+public void doGet(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+	String parent_id = jacper.getStr("parent_id");
+	String[] rs = conPlat.getRow(
+		"select prglogic_name,prgphy_name,prgtype,tab_id,main_prg,default_export,have_search,be_linked,print_title, export_item, import_item, data_auth, authlink_tab, icon_url,column_num,tab_type,button_type,tab1_id,frame_type,condition_tab,CONDITION_ITEM,CONDITION_VALUE,task_type,query_id,drawout_type,valid_check,order_column,order_type,query_id2,report_id,seq,start_type,sql_extend,map_id,url,chart_id,is_iframe,default_show,integrate_id,portlet_id,textreport_id,search_type,link_id,my_query,have_favorite,prg_folder,extra_tables,TO_CREATE_WITHOUT_DATA,EVENT_NAME,LOG_NAME,LABEL_WIDTH,ENABLE_CHART_MENU,QUALITY_TYPE from  $[plat].prg_base where object_id=?",new String[]{parent_id});                     
+	jacper.getResponse().setContentType("application/x-json");
+
+	if(rs[4].equals("y")) rs[4]="true";
+	if(rs[7].equals("y")) rs[7]="true";
+	try{
+		
+		JSONObject pj = new JSONObject();
+		for(int i=0;i<fields.length;i++)
+			pj.put(fields[i],rs[i]);
+
+		ObjectNode node=ObjectManager.getObject(parent_id);
+		if(node!=null){
+			pj.put("lastModifyTime",node.getLastModifyTime());
+			pj.put("lastModifyName",node.getLastModifyName());
+		}
+		String oid=pj.getString("tab_id");
+		if(!oid.equals("") && !oid.equals("0")){
+			try{
+				MetaTable mt=MetaFactory.getObject(oid);
+				if(mt!=null){
+					JSONObject tab = new JSONObject();
+					tab.put("text",mt.getLname());
+					tab.put("value",mt.getObjectId());
+					pj.put("tab_id",tab);
+					oid=pj.getString("order_column");
+					if(!oid.equals("") && !oid.equals("0")){ 
+						MetaColumn mc=mt.getColumn(oid);
+						if(mc!=null){
+							tab = new JSONObject();
+							tab.put("text",mc.getLname());
+							tab.put("value",mc.getId());
+							pj.put("order_column",tab);
+						}
+					}
+				}
+			}catch(Exception e){e.printStackTrace();}
+		}
+
+
+		oid=pj.getString("tab1_id");
+		if(!oid.equals("") && !oid.equals("0")){
+			try{
+				MetaTable mt=MetaFactory.getObject(oid);
+				if(mt!=null){
+					JSONObject tab = new JSONObject();
+					tab.put("text",mt.getLname());
+					tab.put("value",mt.getObjectId());
+					pj.put("tab1_id",tab);
+				}
+			}catch(Exception e){e.printStackTrace();}
+		}
+
+		oid=pj.getString("query_id");
+		if(!oid.equals("") && !oid.equals("0")){
+			try{
+				QueryExtend qe=QueryExtendFactory.getInstance().getQueryExtend(conPlat,oid);
+				if(qe!=null){
+					JSONObject tab = new JSONObject();
+					tab.put("text",qe.getQuery().getName());
+					tab.put("value",oid);
+					pj.put("query_id",tab);
+				}
+			}catch(Exception e){e.printStackTrace();}
+		}
+
+		oid=pj.getString("query_id2");
+		if(!oid.equals("") && !oid.equals("0")){
+			try{
+				QueryExtend qe=QueryExtendFactory.getInstance().getQueryExtend(conPlat,oid);
+				if(qe!=null){
+					JSONObject tab = new JSONObject();
+					tab.put("text",qe.getQuery().getName());
+					tab.put("value",oid);
+					pj.put("query_id2",tab);
+				}
+			}catch(Exception e){e.printStackTrace();}
+		}
+
+		oid=pj.getString("map_id");
+		if(!oid.equals("") && !oid.equals("0")){
+			try{
+				WebMap wm=WebMapFactory.getInstance().getWebMap(conPlat,oid);
+				if(wm!=null){
+					JSONObject tab = new JSONObject();
+					tab.put("text",wm.getMapTitle());
+					tab.put("value",oid);
+					pj.put("map_id",tab);
+				}
+			}catch(Exception e){e.printStackTrace();}
+		}
+
+		oid=pj.getString("integrate_id");
+		if(!oid.equals("") && !oid.equals("0")){
+			try{
+				Integrate it=IntegrateFactory.getInstance().getIntegrate(conPlat,oid);
+				if(it!=null){
+					JSONObject tab = new JSONObject();
+					tab.put("text",it.getLogicName());
+					tab.put("value",oid);
+					pj.put("integrate_id",tab);
+				}
+			}catch(Exception e){e.printStackTrace();}
+		}
+
+		oid=pj.getString("portlet_id");
+		if(!oid.equals("") && !oid.equals("0")){
+			try{
+				ObjectNode lnode=ObjectManager.getObject(oid);
+				if(lnode!=null){
+					JSONObject tab = new JSONObject();
+					tab.put("text",lnode.getName());
+					tab.put("value",oid);
+					pj.put("portlet_id",tab);
+				}
+			}catch(Exception e){e.printStackTrace();}
+		}
+
+		oid=pj.getString("textreport_id");
+		if(!oid.equals("") && !oid.equals("0")){
+			try{
+				ObjectNode lnode=ObjectManager.getObject(oid);
+				if(lnode!=null){
+					JSONObject tab = new JSONObject();
+					tab.put("text",lnode.getName());
+					tab.put("value",oid);
+					pj.put("textreport_id",tab);
+				}
+			}catch(Exception e){e.printStackTrace();}
+		}
+
+		oid=pj.getString("chart_id");
+		if(!oid.equals("") && !oid.equals("0")){
+			try{
+				Chart ce=ChartFactory.getInstance().getChart(conPlat,oid);
+				if(ce!=null){
+					JSONObject tab = new JSONObject();
+					tab.put("text",ce.get("Title"));
+					tab.put("value",oid);
+					pj.put("chart_id",tab);
+				}
+			}catch(Exception e){e.printStackTrace();}
+		}
+
+		oid=pj.getString("report_id");
+		if(!oid.equals("") && !oid.equals("0")){
+			Report ce=ReportFactory.getInstance().getReport(conPlat,oid);
+			try{
+				if(ce!=null){
+					JSONObject tab = new JSONObject();
+					tab.put("text",ce.getName());
+					tab.put("value",oid);
+					pj.put("report_id",tab);
+				}
+			}catch(Exception e){e.printStackTrace();}
+		}
+		oid=pj.getString("extra_tables");
+		if(oid.length()>0){
+			String[] tabs=oid.split(",");
+			JSONArray jarr=new JSONArray();
+			for(int i=0;i<tabs.length;i++){
+				try{
+					MetaTable mt=MetaFactory.getMetaTable(tabs[i]);
+					if(mt!=null){
+						JSONObject tab = new JSONObject();
+						tab.put("text",mt.getLname());
+						tab.put("value",tabs[i]);
+						jarr.put(tab);
+					}
+				}catch(Exception e){e.printStackTrace();}		
+			}
+			pj.put("extra_tables",jarr);
+
+		}
+		oid=pj.getString("search_type");
+		if(!oid.equals("") && !oid.equals("0")){
+			SearchCategory  SC=SearchCategoryFactory.getInstance().getSearchCategory(conPlat,oid);
+			try{
+				if(SC!=null){
+					JSONObject tab = new JSONObject();
+					tab.put("text",SC.getLogicName());
+					tab.put("value",oid);
+					pj.put("search_type",tab);
+				}
+			}catch(Exception e){e.printStackTrace();}
+		}
+		oid=pj.getString("quality_type");
+		if(!oid.equals("")){
+			ObjectNode pnode=ObjectManager.getObject(oid);
+			String qualityName=pnode.getName();
+			try{
+				if(!qualityName.equals("")){
+					JSONObject tab = new JSONObject();
+					tab.put("text",qualityName);
+					tab.put("value",oid);
+					pj.put("quality_type",tab);
+				}
+			}catch(Exception e){e.printStackTrace();}
+		}
+		oid=pj.getString("link_id");
+		if(!oid.equals("") && !oid.equals("0")){
+			Program ce=ProgramFactory.getInstance().getProgram(conPlat,oid);
+			try{
+				if(ce!=null){
+					JSONObject tab = new JSONObject();
+					tab.put("text",ce.getTitle());
+					tab.put("value",oid);
+					pj.put("link_id",tab);
+				}
+			}catch(Exception e){e.printStackTrace();}
+		}
+		oid=pj.getString("prg_folder");
+		if(!oid.equals("") && !oid.equals("0")){
+			ObjectNode pnode=ObjectManager.getObject(parent_id);
+			if(pnode==null) return;
+			ProgramFactory prgFactory=ProgramFactory.getInstance();
+			Program prg=null;
+			for(ObjectNode n:pnode.upTo(ObjectType.MODULE).findAllChildsByType(ObjectType.PROGRAM)){
+				conPlat = jacper.getConnection("plat");	
+				prg=prgFactory.getProgram(conPlat,n.getId());
+				if(prg.getType()==ProgramType.FOLDER.getValue()){
+					String programId=prg.getId()+"";
+					ProgramFolder pf=ProgramFolderFactory.getInstance().getProgramFolder(programId);
+					FolderNode pn=pf.getNode(oid);
+					try{
+						if(pn!=null){
+							JSONObject tab = new JSONObject();
+							tab.put("text",pn.getTitle());
+							tab.put("value",oid);
+							pj.put("prg_folder",tab);
+						}
+					}catch(Exception e){e.printStackTrace();}
+				}
+			}	
+		}
+		jacper.print("{success:true,data:"+pj.toString()+"}");
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+private static String Bool2Char(String bool){
+	return bool.equalsIgnoreCase("true")?"y":"n";
+}
+
+
+public void doPost(Jacper jacper){
+
+   	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long userId=hs.uid;
+	Connection conPlat = jacper.getConnection("plat");
+	String type = jacper.getStr("type");
+	String acttype = jacper.getStr("acttype");
+	String prglogic_name = jacper.getStr("prglogic_name");
+	String prgphy_name = jacper.getStr("prgphy_name");
+	ProgramType prgtype = ProgramType.parseProgramType(jacper.getStr("prgtype"));
+	String main_program = Bool2Char(jacper.getStr("main_program"));
+	String have_search = "n";
+	String be_linked = Bool2Char(jacper.getStr("be_linked"));
+	String frame_type = jacper.getStr("frame_type");
+	String default_export = "y";
+	String note = jacper.getStr("note");
+	String view = jacper.getStr("view");
+	String tab_id = jacper.getStr("tab_id");
+	String tab1_id = jacper.getStr("tab1_id");
+	String import_item = jacper.getStr("contentin");
+	String export_item = jacper.getStr("contentout");
+	String data_auth = jacper.getStr("data_auth");
+	String valid_check= jacper.getStr("valid_check");
+	String authlink_tab = jacper.getStr("authlink_tab");
+	String icon_url = jacper.getStr("icon_url");
+	String button_type = jacper.getStr("button_type");
+	String dbtab_id = jacper.getStr("dbtab_id");
+	String itemtab_name = jacper.getStr("itemtab_name");
+	String condition_value = jacper.getStr("condition_value");
+	String task_type = jacper.getStr("task_type");
+	String query_id = jacper.getStr("query_id");
+	String report_id = jacper.getStr("report_id");
+	String query_id2 = jacper.getStr("query_id2");
+	String drawout_type = jacper.getStr("drawout_type");
+	String order_type = jacper.getStr("order_type");
+	String order_column = jacper.getStr("order_column");
+	String start_type = jacper.getStr("start_type");
+	String seq = jacper.getStr("seq");
+	String map_id = jacper.getStr("map_id");
+	String out_url = jacper.getStr("out_url");
+	String chart_id = jacper.getStr("chart_id");
+	String integrate_id = jacper.getStr("integrate_id");
+	String portlet_id = jacper.getStr("portlet_id");
+	String is_iframe = jacper.getStr("is_iframe");
+	String default_show = jacper.getString("default_show","0");
+	String textreportId = jacper.getStr("textreport_id");
+	String search_type = jacper.getStr("search_type");
+	String link_id = jacper.getStr("link_id");
+
+	String my_query = jacper.getStr("my_query");
+	String have_favorite = jacper.getStr("have_favorite");
+	String prg_folder = jacper.getStr("prg_folder").split(":")[0];
+
+	String object_name = "";
+	String prg_url="";
+	String column_num = jacper.getStr("column_num");
+	String toCreateWithoutData = jacper.getString("TO_CREATE_WITHOUT_DATA","false");
+	String event_name = jacper.getStr("event_name");
+	String log_name = jacper.getStr("log_name");
+	String label_width = jacper.getString("label_width","140");	
+	String enable_chart_menu = jacper.getString("enable_chart_menu","true");	
+
+	String quality_type = jacper.getStr("quality_type");
+	String tab_type = "";
+	String url = "";
+
+	if ( condition_value == null || condition_value.equals("") ) condition_value = "-999";
+	
+	if(main_program.equals("")||main_program==null) main_program="0";
+
+	if (prgtype != ProgramType.NAVIGATOR){
+		tab_type = jacper.getString("tab_type");
+	}
+	
+	String extra_tables="";
+	if(prgtype == ProgramType.COMBINEDINPUT){
+		//此处用来校验表是否重复，主键是否相同,暂时没工夫写--tz
+		String[] tables=jacper.getArray("tab_id");
+		StringBuilder sb=new StringBuilder();
+		for(int i=0;i<tables.length;i++){
+			if(!tables[i].equals("-999999")){
+				if(sb.length()>0)
+					sb.append(",");
+				sb.append(tables[i]);
+			}
+		}
+		extra_tables=sb.toString();
+	}	
+	String tab_name=acttype.equals("program")?"mod_base":"workflowact";
+
+	if(main_program.equals("y")){	
+		prg_url=String.valueOf(prgtype.getValue());
+	}
+
+	String parent_id = jacper.getString("parent_id","-1");
+	if(type.equals("sav")){
+		try{
+			conPlat.setAutoCommit(false);	
+			String taid=(tab_id.equals(""))?"0":tab_id;
+			String object_id  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+
+			ObjectNode frameNode=ObjectManager.getObject(parent_id);
+			int frame_loc=frameNode.getType();
+
+			if (!(prgtype == ProgramType.LIST || prgtype == ProgramType.LISTINPUT)) {
+				order_column = "";
+				order_type = "";
+			}
+			conPlat.exec("INSERT INTO $[plat].prg_base (prglogic_name, prgphy_name, prgtype, object_id, tab_id,main_prg,default_export,frame_loc,have_search,be_linked,import_item,export_item,data_auth,authlink_tab,icon_url,column_num,tab_type,button_type,tab1_id,frame_type,condition_tab,CONDITION_ITEM,CONDITION_VALUE,task_type,query_id,report_id,query_id2,drawout_type,valid_check,order_column,order_type,seq,start_type,map_id,url,chart_id,is_iframe,default_show,integrate_id,portlet_id,textreport_id,search_type,link_id,my_query,have_favorite,prg_folder,EXTRA_TABLES,TO_CREATE_WITHOUT_DATA,event_name,log_name,label_width,enable_chart_menu,quality_type) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",new String[]{prglogic_name,prgphy_name,String.valueOf(prgtype.getValue()),object_id+"",taid+"",main_program,default_export,frame_loc+"",have_search,be_linked,import_item,export_item,data_auth,authlink_tab,icon_url,column_num,tab_type,button_type,tab1_id,frame_type,dbtab_id,itemtab_name,condition_value,task_type,query_id,report_id,query_id2,drawout_type,valid_check,order_column,order_type,seq,start_type,map_id,out_url,chart_id,is_iframe,default_show,integrate_id,portlet_id,textreportId,search_type,link_id,my_query,have_favorite,prg_folder,extra_tables,toCreateWithoutData,event_name,log_name,label_width,enable_chart_menu,quality_type});
+
+			if(!prg_folder.equals("")){
+				ProgramFolderFactory.getInstance().clear();
+			}
+
+			frameNode.addChild(conPlat,object_id,prglogic_name,ObjectType.PROGRAM,userId);
+
+			if(acttype.equals("Gis")||acttype.equals("GisEdit")){
+				ObjectNode mapNode=frameNode.upTo(ObjectType.MAP);
+				String mapId=mapNode.getId();
+				WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+				webMap.reloadPOILayer(conPlat);
+				webMap.reloadEditLayer(conPlat);
+			}else if(acttype.equals("Search")){
+				ObjectNode searchNode=frameNode.upTo(ObjectType.SEARCH);
+				String searchId=searchNode.getId();
+				SearchFactory.getInstance().remove(searchId);
+			}else if(acttype.equals("portlet")){
+				ObjectNode portletNode=frameNode.upTo(ObjectType.PORTALET);
+				String portletId=portletNode.getId();
+				PortaletFactory.getInstance().remove(portletId+"");
+			}else if(acttype.equals("Quality")){
+				QualityFactory.getInstance().remove(frameNode.getId());
+			}else{
+				String moduleId="0";
+				if(acttype.equals("workflow")){
+					moduleId=frameNode.upTo(ObjectType.WORKFLOW).getId();
+					WorkflowFactory wf=WorkflowFactory.getInstance();
+					wf.reload(conPlat,moduleId+"");
+				}else{
+					ModuleFactory mf1=ModuleFactory.getInstance();
+					moduleId=frameNode.upTo(ObjectType.MODULE).getId();
+					mf1.reload(conPlat,moduleId+"");
+				}
+				if(main_program.equals("y")&&( prgtype != ProgramType.LOGIC)){
+					String out_show = prg_url+"?type="+start_type+"&parent_id="+object_id;
+
+					if ( prgtype == ProgramType.EMBED )
+						out_show = "1?"+jacper.getString("out_url");
+					
+					switch(frame_loc){
+						case 23:
+								conPlat.exec("UPDATE $[plat]."+tab_name+" SET main_frame = '"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+								break;
+						case 24:
+								conPlat.exec("UPDATE $[plat]."+tab_name+" SET left_frame='"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+								break;
+						case 25:
+								conPlat.exec("UPDATE $[plat]."+tab_name+" SET right_frame ='"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+								break;
+						case 26:
+								conPlat.exec("UPDATE $[plat]."+tab_name+" SET upper_frame ='"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+								break;
+						case 27:
+								conPlat.exec("UPDATE $[plat]."+tab_name+" SET lower_frame ='"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+								break;
+					}
+				}
+			}
+			String temp_id="";
+			if(!frame_type.equals("")&&(prgtype == ProgramType.FRAME)){
+					int modt =Integer.parseInt(frame_type);
+					ObjectNode prgNode=ObjectManager.getObject(object_id);
+					switch(modt){
+						case 1:
+							if(idType==null||idType.equals("0")){
+								temp_id = SQLUtils.getNextVal(conPlat,1)+"";
+							}else{
+								temp_id =UUID.randomUUID().toString();
+							}
+							prgNode.addChild(conPlat,temp_id,jacper.trans("主窗口"),23,userId);
+							break;
+						case 2:  
+							if(idType==null||idType.equals("0")){
+								temp_id = SQLUtils.getNextVal(conPlat,1)+"";
+							}else{
+								temp_id =UUID.randomUUID().toString();
+							}
+							prgNode.addChild(conPlat,temp_id,jacper.trans("左框架"),24,userId);
+							if(idType==null||idType.equals("0")){
+								temp_id = SQLUtils.getNextVal(conPlat,1)+"";
+							}else{
+								temp_id =UUID.randomUUID().toString();
+							}
+							prgNode.addChild(conPlat,temp_id,jacper.trans("右框架"),25,userId);
+							break;
+						case 3:  
+							if(idType==null||idType.equals("0")){
+								temp_id = SQLUtils.getNextVal(conPlat,1)+"";
+							}else{
+								temp_id =UUID.randomUUID().toString();
+							}
+							prgNode.addChild(conPlat,temp_id,jacper.trans("上框架"),26,userId);
+							if(idType==null||idType.equals("0")){
+								temp_id = SQLUtils.getNextVal(conPlat,1)+"";
+							}else{
+								temp_id =UUID.randomUUID().toString();
+							}
+							prgNode.addChild(conPlat,temp_id,jacper.trans("下框架"),27,userId);
+							break;
+					}
+			}
+			conPlat.commit();
+			jacper.print("{success:true,id:'"+object_id+"'}");
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if(type.equals("update")||type.equals("upd")){
+
+		try{	
+			conPlat.setAutoCommit(true);
+			ObjectNode prgNode=ObjectManager.getObject(parent_id);
+			prgNode.updateName(conPlat,prglogic_name);
+			view=prgNode.getParent().getType()+"";
+			conPlat.exec("UPDATE $[plat].prg_base SET prglogic_name =?,prgphy_name =?,be_linked =?,data_auth =?,icon_url = ?,column_num=?,tab_type=?,button_type=?,condition_tab=?,CONDITION_ITEM=?,CONDITION_VALUE=?,query_id=?,report_id=?,query_id2=?,drawout_type=?,valid_check=?,seq=?,start_type=?,import_item=?,export_item=?,main_prg=?,task_type=?,map_id=?,tab1_id=?,url=?,chart_id=?,is_iframe=?,default_show=?,order_column=?,order_type=?,integrate_id=?,portlet_id=?,textreport_id=?,search_type=?,link_id=?,my_query=?,have_favorite=?,prg_folder=?,EXTRA_TABLES=?,TO_CREATE_WITHOUT_DATA=?,event_name=?,log_name=?,label_width=?,enable_chart_menu=?,quality_type=? WHERE object_id=?",new String[]{prglogic_name,prgphy_name,be_linked,data_auth,icon_url,column_num,tab_type,button_type,dbtab_id,itemtab_name,condition_value,query_id,report_id,query_id2,drawout_type,valid_check,seq,start_type,import_item,export_item,main_program,task_type,map_id,tab1_id,out_url,chart_id,is_iframe,default_show,order_column,order_type,integrate_id,portlet_id,textreportId,search_type,link_id,my_query,have_favorite,prg_folder,extra_tables,toCreateWithoutData,event_name,log_name,label_width,enable_chart_menu,quality_type,parent_id+""});
+			
+			if(!prg_folder.equals("")){
+				ProgramFolderFactory.getInstance().clear();
+			}
+		
+			if(acttype.equals("Gis")||acttype.equals("GisEdit")){
+				ObjectNode mapNode=prgNode.upTo(ObjectType.MAP);
+				String mapId=mapNode.getId();
+				WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+				webMap.reloadPOILayer(conPlat);
+				webMap.reloadEditLayer(conPlat);
+			}else if(acttype.equals("Search")){
+				ObjectNode searchNode=prgNode.upTo(ObjectType.SEARCH);
+				String searchId=searchNode.getId();
+				SearchFactory.getInstance().remove(searchId);
+			}else if(acttype.equals("portlet")){
+				ObjectNode portletNode=prgNode.upTo(ObjectType.PORTALET);
+				String portletId=portletNode.getId();
+				PortaletFactory.getInstance().remove(portletId+"");
+			}else if(acttype.equals("Quality")){
+				String qualityId=prgNode.upTo(ObjectType.QUALITY).getId();
+				QualityFactory.getInstance().remove(qualityId+"");
+			}else{
+					if(main_program.equals("y")&&(prgtype != ProgramType.LOGIC)){
+					    String moduleId="";
+						if(acttype.equals("workflow")){
+							moduleId=prgNode.upTo(ObjectType.WORKFLOW).getId();
+						}else{
+							moduleId=prgNode.upTo(ObjectType.MODULE).getId();
+						}
+						int tempory=Integer.parseInt(view);
+						String out_show = prg_url+"?type="+start_type+"&parent_id="+parent_id;
+						if ( prgtype == ProgramType.EMBED)
+							out_show = jacper.getString("out_url");
+							switch(tempory){
+								case 23:
+										conPlat.exec("UPDATE $[plat]."+tab_name+" SET main_frame = '"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+										break;
+								case 24:
+										conPlat.exec("UPDATE $[plat]."+tab_name+" SET left_frame = '"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+										break;
+								case 25:
+										conPlat.exec("UPDATE $[plat]."+tab_name+" SET right_frame ='"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+										break;
+								case 26:
+										conPlat.exec("UPDATE $[plat]."+tab_name+" SET upper_frame ='"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+										break;
+								case 27:
+										conPlat.exec("UPDATE $[plat]."+tab_name+" SET lower_frame ='"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+										break;
+							}
+					}
+					try{
+						if(acttype.equals("workflow")){
+							String moduleId=prgNode.upTo(ObjectType.WORKFLOW).getId();
+							ProgramFactory.getInstance().remove(parent_id);
+							CustomizeFactory.remove(parent_id);
+							WorkflowFactory wf=WorkflowFactory.getInstance();
+							wf.reload(conPlat,moduleId);
+						}else{
+							String moduleId=prgNode.upTo(ObjectType.MODULE).getId();
+							ProgramFactory.getInstance().remove(parent_id);
+							CustomizeFactory.remove(parent_id);
+							ModuleFactory mf=ModuleFactory.getInstance();
+							mf.reload(conPlat,moduleId);
+						}
+					}catch(Exception e){
+						e.printStackTrace();
+					}
+				}
+				<?{success:true,id:'?>parent_id<?'}?>;
+			}catch(Exception e){
+				e.printStackTrace();
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+	}else if(type.equals("delete")){
+		try{
+			conPlat.setAutoCommit(false);
+			if(acttype.equals("Gis")||acttype.equals("GisEdit")){
+				ObjectNode prgNode=ObjectManager.getObject(parent_id);
+				String mapId=prgNode.upTo(ObjectType.MAP).getId();
+				prgNode.destroy(conPlat);
+				WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId);
+				webMap.reloadPOILayer(conPlat);
+				webMap.reloadEditLayer(conPlat);
+			}else if(acttype.equals("Search")){
+				ObjectNode prgNode=ObjectManager.getObject(parent_id);
+				String searchId=prgNode.upTo(ObjectType.SEARCH).getId();
+				prgNode.destroy(conPlat);
+				SearchFactory.getInstance().remove(searchId);
+			}else if(acttype.equals("portlet")){
+				ObjectNode prgNode=ObjectManager.getObject(parent_id);
+				String portletId=prgNode.upTo(ObjectType.PORTALET).getId();
+				prgNode.destroy(conPlat);
+				PortaletFactory.getInstance().remove(portletId+"");
+			}else if(acttype.equals("Quality")){
+				ObjectNode prgNode=ObjectManager.getObject(parent_id);
+				String qualityId=prgNode.upTo(ObjectType.QUALITY).getId();
+				prgNode.destroy(conPlat);
+				QualityFactory.getInstance().remove(qualityId+"");
+			}else if(acttype.equals("workflow")){	
+				ObjectNode prgNode=ObjectManager.getObject(parent_id);
+				String moduleId=prgNode.upTo(ObjectType.WORKFLOW).getId();
+				prgNode.destroy(conPlat);
+				ProgramFactory.getInstance().remove(parent_id);
+				CustomizeFactory.remove(parent_id);
+				WorkflowFactory wf=WorkflowFactory.getInstance();
+				wf.reload(conPlat,moduleId);
+			}else{	
+				CertManager cache=CertManager.getInstance();
+				ObjectNode prgNode=ObjectManager.getObject(parent_id);
+				String moduleId=prgNode.upTo(ObjectType.MODULE).getId();
+				prgNode.destroy(conPlat);
+				ProgramFolderFactory.getInstance().clear();
+				ProgramFactory.getInstance().remove(parent_id);
+				CustomizeFactory.remove(parent_id);
+				ModuleFactory mf=ModuleFactory.getInstance();
+				mf.reload(conPlat,moduleId);
+				String[][] rs1=conPlat.get("SELECT strategy_id,group_id FROM $[plat].sys_strategy_auth WHERE prg_id=?",new String[]{parent_id+""},0);
+				if(rs1.length>0){
+					for(int i=0;i<rs1.length;i++){
+						conPlat.exec("delete from $[plat].sys_strategy_auth where strategy_id=? and group_id=?",new String[]{rs1[i][0],rs1[i][1]});
+						cache.removeStrategyAuth(rs1[i][0]);
+					}
+					ButtonFactory.clearCache();
+					MenuFactory.getInstance().clearMenuPrivilege();
+				}
+			}
+				conPlat.commit();
+			<?{success:true}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

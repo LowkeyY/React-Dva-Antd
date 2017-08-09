@@ -1,0 +1,64 @@
+
+import com.kinglib.*;
+import gpra.filesystem.HWUnits;
+import java.sql.SQLException;
+import com.kinglib.user.*;
+//public class HWDeleteFile{
+@class{
+	public void doPost(Jacper jacper){	
+		boolean isLogin = jacper.setSession();
+	    String file_Id=jacper.getString("fileId");
+	    Connection conTmp = jacper.getConnection(HWUnits.HW_DBLINK);
+	    
+	   
+	    try {
+	    	 conTmp.setAutoCommit(false);
+	    	 
+	    	 String sql="select FILE_COUNT from DIR_FILE_PHYSICAL where PHY_FILE_ID=(select PHY_FILE_ID from DIR_FILE_BASE where FILE_ID='"+file_Id+"')";
+	    	 String[][]rs=conTmp.get(sql);
+	    	 
+	    	 if(rs!=null && rs.length>0 && rs[0][0].equals("1")){
+	    		 conTmp.exec("delete from DIR_FILE_PHYSICAL where PHY_FILE_ID=(select PHY_FILE_ID from DIR_FILE_BASE where FILE_ID='"+file_Id+"') and FILE_COUNT=1");
+	    	 }else{
+	    		 conTmp.exec("update DIR_FILE_PHYSICAL set FILE_COUNT=FILE_COUNT-1 where PHY_FILE_ID=(select PHY_FILE_ID from DIR_FILE_BASE where FILE_ID='"+file_Id+"')");
+	    	 }
+	    	 
+	    	 conTmp.exec("delete from DIR_FILE_BASE where file_id='"+file_Id+"'");
+	    	 
+	    	 conTmp.commit();
+	    	 jacper.print("{success:true}");
+		} catch (Exception e) {
+			e.printStackTrace();
+			jacper.print("{success:false,message:'删除失败'}");
+			try {
+				conTmp.rollback();
+			} catch (SQLException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		}
+	    
+	    
+	    
+	}
+	
+	public void doGet(Jacper jacper){
+	    doPost(jacper);
+	}
+	public String StringFilter(String res) throws Exception{	
+		 return res.replaceAll("[\\s|\\\\|\\/|\\:|\\*|\\?|\\\"|\\<|\\>|\\|]","");
+	}
+	
+	public String getDeptId(Dept t){
+        Dept temp=t.getParent();
+        String deptId=temp.getDeptId();
+        if(temp!=null){
+           if(temp.getDeptType().equals("1")){
+              deptId=t.getDeptId();
+           }else{
+              getDeptId(temp);
+           }
+        }       
+        return deptId;
+    }
+}

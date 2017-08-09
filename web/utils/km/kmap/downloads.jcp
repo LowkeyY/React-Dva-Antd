@@ -1,0 +1,88 @@
+
+/*
+ * @(#)/bbs/download.jcp	1.0.0 03/04/16
+ *
+ * Copyright 2003 Bizdict Co.,Ltd. All rights reserved.
+ *
+ * 主程序作者：
+ * @author lzy
+ *
+ * 修改者:
+ *
+ * 修改日期:
+ *
+ * 修改理由:
+ *
+ */
+
+import java.io.InputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.ResultSet;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import com.kinglib.*;
+
+import com.kinglib.util.Files;
+
+
+@class{
+
+public void doGet(Jacper jacper){
+	Connection conUtils=jacper.getConnection("utils");
+
+	HttpServletResponse res = jacper.getResponse();
+	int knowledge_id = jacper.getInt("knowledge_id","discussID出错");
+	int category_id = jacper.getInt("category_id","topicID出错");
+	int dispic = jacper.getInt("dispic","dispic出错");
+	if(jacper.checkError()) return;
+
+	String fileName="";
+	String ContentType="";
+	Statement stmt=null;
+	ResultSet rs=null;
+
+	try{
+
+		stmt = conUtils.createStatement();
+		String sqlstr="select file_type,file_name,attach_file from utils.kmap_attach where category_id="+category_id+" and knowledge_id="+knowledge_id;
+		rs = stmt.executeQuery(sqlstr);
+
+		rs.next();
+
+		ContentType = rs.getString(1);
+		fileName = rs.getString(2);
+		InputStream dis = rs.getBinaryStream(3);
+		if(conUtils.getType()==com.susing.EasyConnection.SQLSERVER){
+			try {fileName=new String(fileName.getBytes("GBK"),"8859_1");}
+			catch(Exception se){}
+		}
+
+		if(dispic==1)
+		jacper.getResponse().setContentType(ContentType);
+
+		jacper.getResponse().setHeader("Content-Disposition","attachment;filename="+fileName);
+
+		byte[] buff = new byte[4096];
+
+		int size;
+		Files.copyRange(dis,res.getOutputStream(),2048);
+	}catch(SQLException se){
+			throw new KingleException(jacper.trans("数据库更新错误!"),se);
+		}catch(IOException oe){
+			throw new KingleException(jacper.trans("数据写入错误"),oe);
+		} finally{
+			if(stmt!=null){
+				try{
+					rs.close();
+					stmt.close();
+				} catch(Throwable e){ }
+			}
+		}
+	}
+	}
+

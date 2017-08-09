@@ -1,0 +1,92 @@
+
+
+import com.kinglib.*;
+import com.kinglib.ui.folder.*;
+import com.kinglib.util.json.*;
+import com.social.api.core.model.*; 
+@class{
+	public void doGet(Jacper jacper){
+		Connection conUtils = jacper.getConnection("utils");
+		String archive_id=jacper.getStr("archive_id");
+		String authType=(String)com.susing.core.KingleSystem.getProperty("auth_type");
+
+		String[][] authArray=conUtils.get("select c.user_id,c.dept_id from $[utils].ELECTRONIC_ARCHIVE_MANAGER c  where c.archive_id=?",new String[]{archive_id});
+		jacper.getResponse().setContentType("application/x-json");		
+		try{
+				JSONObject authJSON = new JSONObject("{}");
+				JSONArray authJSONArray=new JSONArray();
+				String[] oneUser;
+				for(int i=0;i<authArray.length;i++){
+					JSONObject tempJSON = new JSONObject("{}");
+					String roleName="";
+					oneUser=authArray[i];
+
+					if(oneUser[0].equals("-9")){
+						roleName=jacper.trans("当前部门所有人员");
+					}else if(oneUser[0].equals("-99")){
+						roleName=jacper.trans("当前部门及所有子部门人员");
+					}else{
+						if(authType.equals("0")){			 
+							 roleName=CertManager.getUser(oneUser[0]).getRealName();
+						}else if(authType.equals("1")){
+							 roleName=CertManager.getRole(oneUser[0]).getRoleName();
+						}	
+					}
+					oneUser[0]=oneUser[1]+"_"+oneUser[0];
+					tempJSON.put("user_id",oneUser[0]);
+					tempJSON.put("user_name",roleName);
+					tempJSON.put("dept_name",CertManager.getDept(oneUser[1]).getShortName());
+					tempJSON.put("dept_id",oneUser[1]);
+					authJSONArray.put(tempJSON);
+				}
+				authJSON.put("authArray",authJSONArray);
+				jacper.print(authJSON.toString());
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conUtils.close();
+		}
+}
+public void doPost(Jacper jacper){	
+
+	Connection conUtils = jacper.getConnection("utils");
+	String[] ids = jacper.getArray("ids");
+	String archive_id=jacper.getStr("archive_id");
+	String[][] values=new String[ids.length][3];
+	String[] temp=null;
+	
+	if(ids.length==1 && ids[0].equals("")){ //getArray 有bug?
+		conUtils.exec("delete from $[plat].ELECTRONIC_ARCHIVE_MANAGER where archive_id=?",new String[]{archive_id});
+		<?{success:true}?>;
+	}
+	else{
+		for(int i=0;i<ids.length;i++){
+			values[i][0]=archive_id;
+			temp=ids[i].split("_");
+			values[i][1]=temp[0];
+			values[i][2]=temp[1];
+		}
+		try{	
+			conUtils.setAutoCommit(false);
+			conUtils.exec("delete from $[utils].ELECTRONIC_ARCHIVE_MANAGER where ARCHIVE_ID=?",new String[]{archive_id});
+			conUtils.exec("insert into $[utils].ELECTRONIC_ARCHIVE_MANAGER(ARCHIVE_ID,dept_id,user_id) values(?,?,?)",values);
+			conUtils.commit();
+			<?{success:true}?>;
+		}catch(Exception e){
+			try {
+				conUtils.rollback();
+			}catch(Exception e1) {}
+			e.printStackTrace();
+			String msg=e.toString().replaceAll("\\'","\\\\'");
+			<?{success:false,message:"?>jacper.trans("错误:")+msg<?"}?>;
+		}finally {
+			try {
+				conUtils.setAutoCommit(true);
+			}catch(Exception e2) {}
+			conUtils.close();
+		}
+	}
+	//更新缓存
+	com.km.file.FileConfigFactory.getInstance().resetArchiveCache();
+  }	
+}

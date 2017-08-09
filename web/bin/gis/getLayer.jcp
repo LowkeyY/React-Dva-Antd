@@ -1,0 +1,103 @@
+
+import java.util.*;
+
+import com.kinglib.*;
+import com.kinglib.bi.*;
+import com.kinglib.gis.*;
+import com.kinglibx.query.*;
+import com.kinglib.util.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.program.*;
+import oracle.spatial.geometry.JGeometry;
+import oracle.sql.STRUCT;
+import com.kinglib.gis.kml.*;
+import com.kinglib.util.json.*;
+
+@class{
+	public void doGet(Jacper jacper){
+	
+	boolean isLogin = jacper.setSession();   
+	HttpSession hs = jacper.getSession();
+
+	String parent_id=jacper.getString("parent_id","0");
+
+	String leftX = jacper.getStr("leftX");
+	String leftY = jacper.getStr("leftY");
+	String rightX = jacper.getStr("rightX");
+	String rightY = jacper.getStr("rightY");
+
+	String layer = jacper.getStr("layer");
+
+	Connection conPlat = jacper.getConnection("plat");
+	Connection conTemp =null;
+
+	Program prg =ProgramFactory.getInstance().getProgram(conPlat,parent_id);
+	String mapId=prg.getMapId()+"";
+
+	Kml kml = new Kml();
+	Document document = new Document();
+
+	LayerRenderer layerRenderer=new LayerRenderer(jacper,conPlat,mapId,layer);
+	layerRenderer.resetMinMax();
+	layerRenderer.setMinMax(Float.parseFloat(leftX), Float.parseFloat(leftY));
+	layerRenderer.setMinMax(Float.parseFloat(rightX), Float.parseFloat(rightY));
+
+	document.setDescription(layerRenderer.getLayerTitle());
+	document.setName(layerRenderer.getLayerName());
+	String layerType=layerRenderer.getLayerType();
+
+	if (layerType.equals("1")){
+		PlaceMarkerSet markerPlaceMarker=layerRenderer.getPolyMarkerList(jacper,conPlat);
+		if(!markerPlaceMarker.isNull()){
+			for (Object key: markerPlaceMarker.getStyleMap().keySet()) {
+				Style style=new Style();
+				IconStyle iconStyle=(IconStyle)markerPlaceMarker.getStyleMap().get(key);
+				style.setId(key.toString());
+				style.setIconStyle(iconStyle);
+				document.addStyleSelector(style);
+			}
+			for (Object item : markerPlaceMarker.getPlaceMarkerList()) {
+				document.addFeature((Placemark)item);
+			}
+		}
+	}else if (layerType.equals("2")){
+		PlaceMarkerSet linearStringPlaceMarker=layerRenderer.getLinearStringList(jacper,conPlat);
+		if(!linearStringPlaceMarker.isNull()){
+			for (Object key: linearStringPlaceMarker.getStyleMap().keySet()) {
+				Style style=new Style();
+				LineStyle lineStyle=(LineStyle)linearStringPlaceMarker.getStyleMap().get(key);
+				style.setId(key.toString());
+				style.setLineStyle(lineStyle);
+				document.addStyleSelector(style);
+			}
+			for (Object item : linearStringPlaceMarker.getPlaceMarkerList()) {
+				document.addFeature((Placemark)item);
+			}
+		}
+	}else if (layerType.equals("3")){
+		PlaceMarkerSet polygonPlaceMarker=layerRenderer.getPolygonList(jacper,conPlat);
+		if(!polygonPlaceMarker.isNull()){
+			for (Object key: polygonPlaceMarker.getStyleMap().keySet()) {
+				Style style=new Style();
+				PolyStyle polyStyle=(PolyStyle)polygonPlaceMarker.getStyleMap().get(key);
+				style.setId(key.toString());
+				style.setPolyStyle(polyStyle);
+				LineStyle lineStyle=(LineStyle)polygonPlaceMarker.getSecondStyleMap().get(key);
+				style.setLineStyle(lineStyle);
+				document.addStyleSelector(style);
+			}
+			for (Object item : polygonPlaceMarker.getPlaceMarkerList()) {
+				document.addFeature((Placemark)item);
+			}
+		}
+	}
+	kml.setFeature(document);
+	try {
+		kml.createKml(jacper.getWriter());
+		kml.createKml("c:kml.xml");
+	}catch (Exception e) {
+		e.printStackTrace();
+	}
+}}
+
+

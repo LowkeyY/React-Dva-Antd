@@ -1,0 +1,96 @@
+
+
+import com.kinglib.*;
+import com.social.api.core.model.*; 
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.dataservice.DataServiceFactory;
+@class{
+	public void doGet(Jacper jacper){
+		
+		Connection conPlat = jacper.getConnection("plat");
+
+		String folderID=jacper.getStr("folder_id");
+		String[][] userArray=null;
+		String authType=(String)com.susing.core.KingleSystem.getProperty("auth_type");
+
+		String[][] authArray=conPlat.get("select c.roleid,c.deptid from $[plat].data_service_auth c where c.object_id=?",new String[]{folderID});
+
+		jacper.getResponse().setContentType("application/x-json");		
+		try{
+				JSONObject authJSON = new JSONObject("{}");
+				JSONArray authJSONArray=new JSONArray();
+				String[] oneUser;
+				for(int i=0;i<authArray.length;i++){
+					JSONObject tempJSON = new JSONObject("{}");
+					String roleName="";
+					oneUser=authArray[i];
+
+					if(oneUser[0].equals("-9")){
+						roleName=jacper.trans("当前部门所有人员");
+					}else if(oneUser[0].equals("-99")){
+						roleName=jacper.trans("当前部门及所有子部门人员");
+					}else{
+						if(authType.equals("0")){			 
+							 roleName=CertManager.getUser(oneUser[0]).getRealName();
+						}else if(authType.equals("1")){
+							 roleName=CertManager.getRole(oneUser[0]).getRoleName();
+						}	
+					}
+					oneUser[0]=oneUser[1]+"_"+oneUser[0];
+					tempJSON.put("user_id",oneUser[0]);
+					tempJSON.put("user_name",roleName);
+					tempJSON.put("dept_name",CertManager.getDept(oneUser[1]).getShortName());
+					tempJSON.put("dept_id",oneUser[1]);
+					authJSONArray.put(tempJSON);
+				}
+				authJSON.put("authArray",authJSONArray);
+				jacper.print(authJSON.toString());
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+}
+public void doPost(Jacper jacper){	
+
+	Connection conPlat = jacper.getConnection("plat");
+	String[] ids = jacper.getArray("ids");
+	String folderID=jacper.getStr("folder_id");
+	String[][] values=new String[ids.length][3];
+	String[] temp=null;
+
+
+	if(ids.length==1 && ids[0].equals("")){ //getArray 有bug?只有找到要删除位置的部门处，才能删除
+		conPlat.exec("delete from $[plat].data_service_auth where object_id=?",new String[]{folderID});
+		DataServiceFactory.getInstance().remove(folderID);
+		<?{success:true}?>;
+		return;
+	}
+	for(int i=0;i<ids.length;i++){
+		values[i][0]=folderID;
+		temp=ids[i].split("_");
+		values[i][1]=temp[0];
+		values[i][2]=temp[1];
+	}
+	try{	
+		conPlat.setAutoCommit(false);
+		conPlat.exec("delete from $[plat].data_service_auth where object_id=?",new String[]{folderID});
+		conPlat.exec("insert into $[plat].data_service_auth(object_id,deptid,roleid) values(?,?,?)",values);
+		DataServiceFactory.getInstance().remove(folderID);
+		conPlat.commit();
+		<?{success:true}?>;
+	}catch(Exception e){
+		try {
+			conPlat.rollback();
+		}catch(Exception e1) {}
+		e.printStackTrace();
+		String msg=e.toString().replaceAll("\\'","\\\\'");
+		<?{success:false,message:"?>jacper.trans("错误:")+msg<?"}?>;
+	}finally {
+		try {
+			conPlat.setAutoCommit(true);
+		}catch(Exception e2) {}
+		conPlat.close();
+	}
+}	
+}

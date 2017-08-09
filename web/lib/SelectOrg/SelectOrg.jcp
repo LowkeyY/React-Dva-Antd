@@ -1,0 +1,44 @@
+            
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.Organization;
+
+               
+@class{
+
+	public void doGet(Jacper jacper) {
+
+		try {
+			JSONObject result = new JSONObject();
+			JSONArray jArr = new JSONArray();
+			System.out.println(CertManager.getAllOrgID().length);
+			for (String id : CertManager.getAllOrgID()) {
+				Organization org = CertManager.getOrganization(id);
+				//if (!org.isPrimary()) {  
+					JSONObject orgJSON = new JSONObject();
+					orgJSON.put("short_name", org.getShortName());
+					orgJSON.put("org_type", org.getType());
+					orgJSON.put("org_id", id);
+					orgJSON.put("entry_date", org.getCreateDate());
+				//}
+				jArr.put(orgJSON);
+			}
+			result.put("success", true);
+			result.put("data", jArr);
+			jacper.print(result);
+		} catch (Exception e) {
+			try {
+				JSONObject result = new JSONObject();
+				result.put("success", false);
+				result.put("message", e.getMessage());
+				jacper.print(result);
+			} catch (Exception ee) {
+				ee.printStackTrace();
+			}
+		}
+
+	}
+}

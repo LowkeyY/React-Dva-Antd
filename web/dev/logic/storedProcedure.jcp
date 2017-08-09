@@ -1,0 +1,120 @@
+
+import java.io.IOException;
+import com.kinglib.*;
+
+
+import com.susing.core.KingleSystem;
+import com.susing.core.*;
+import com.susing.server.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String parent_id = jacper.getStr("parent_id");
+	String[] result=conPlat.getRow("select content from $[plat].ctrl_logic where ctrl_id=?",new String[]{parent_id});
+	if(result!=null)
+		jacper.print(result[0]);
+	conPlat.close();
+}
+
+public void doPost(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+
+	String parent_id = jacper.getStr("parent_id");
+	String title = jacper.getStr("title");
+	String content = jacper.getStr("content");
+	String type = jacper.getStr("type");
+	String database_link = jacper.getString("database_link");
+	Connection conTemp = null;
+	dropProcedure(jacper,conPlat,parent_id);
+	
+	StringBuffer msg=new StringBuffer();
+	try{
+		conTemp=jacper.getConnection(database_link);
+		content=content.replaceAll("\r\n","\n");
+		conTemp.exec(content,new String[]{});
+		if(conTemp.getType()==com.susing.EasyConnection.ORACLE){
+			try {
+					String[][] debug = conTemp.get("select a.line,a.position#,a.text from $[sys].error$ a,$[sys].obj$ b where b.obj#=a.obj# and b.name=?",new String[]{title.toUpperCase()});
+					if ( debug == null ) {
+						msg.append(jacper.trans("编译成功"));
+					}else {
+						for ( int i=0; i<debug.length; i++ ) {
+							msg.append("<br>"+jacper.trans("行号= ")).append(debug[i][0]);
+							msg.append("<br>"+jacper.trans("列号= ")).append(debug[i][1]);
+							msg.append("<br>"+jacper.trans("错误文本= ")).append(debug[i][2]).append("<br>");
+						}
+					}
+			}catch(Exception e1) {
+				msg.append(e1.getCause());
+			}
+		}
+	}catch(Exception e){
+		msg.append(e.getCause());
+		e.printStackTrace();
+	}
+	if(msg.length()>0){
+		<?{success:false,message:"?>jacper.trans("错误:")+msg.toString().replaceAll("\"","\\\\\"")<?"}?>;
+		return;	
+	}
+
+	try{
+		conPlat.setAutoCommit(false);
+		conPlat.exec("delete from $[plat].ctrl_logic where ctrl_id=?",new String[]{parent_id});
+		conPlat.exec("INSERT INTO $[plat].ctrl_logic (ctrl_id,title, content,database_link,PROG_TYPE) VALUES (?,?,?,?,?)",new String[]{parent_id,title,content,database_link,type});
+		conPlat.commit();
+		String method = jacper.getStr("method");
+		if(method.equals("task")){
+			String[][] rs = conPlat.get("select schedule_id from $[plat].sys_task_schedule a where a.task_id=?",new String[]{parent_id});
+			String[] serviceArray=KingleSystem.getServiceNames();
+			for(int i=0;i<serviceArray.length;i++){
+					if((jacper.trans("任务服务")).equals(serviceArray[i])){
+					for(int j=0;j<rs.length;j++){
+						KingleTaskService taskService=(KingleTaskService)KingleSystem.getService(serviceArray[i]);
+						taskService.stopTask(parent_id+"_"+rs[j][0]);
+						taskService.startTask(parent_id+"_"+rs[j][0]);
+					}
+				}
+			}
+		}
+		<?{success:true}?>;
+	}catch(Exception e){
+		try {
+			conPlat.rollback();
+		}catch(Exception e1) {}
+		e.printStackTrace();
+		String msg2=e.toString().replaceAll("\\'","\\\\'");
+		<?{success:false,message:"?>jacper.trans("错误:")+msg2<?"}?>;
+	}finally {
+		try {
+			conPlat.setAutoCommit(true);
+			conPlat.close();
+			conTemp.close();
+		}catch(Exception e2) {}
+	}
+}
+
+public boolean dropProcedure(Jacper jacper,Connection conPlat,String parent_id){
+	boolean success=true; 
+	String[] rs=conPlat.getRow("select title,PROG_TYPE,database_link from $[plat].ctrl_logic where ctrl_id=?",new String[]{parent_id});
+	if(rs==null)
+		return true;
+	try{
+		Connection conTemp=jacper.getConnection(rs[2]);
+		try {
+			String sql="drop "+rs[1]+" $["+rs[2]+"]."+rs[0];
+			if(conTemp.getType()==com.susing.EasyConnection.POSTGRESQL)
+			   sql+=rs[3];
+			conTemp.exec(sql,new String[]{});
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}catch(Exception e){
+		success=false;
+	}
+	return success;
+}
+}

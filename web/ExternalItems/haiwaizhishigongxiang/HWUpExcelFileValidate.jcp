@@ -1,0 +1,285 @@
+import gpra.filesystem.HWCreateSWFFileQueue;
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.HWUpExcealUnits;
+import gpra.filesystem.HWUnits.HWSpaceConfig;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.sql.SQLException;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import com.kinglib.*;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.user.CertManager;
+import com.kinglib.user.User;
+import com.susing.EFile;
+import com.susing.upload.FileUpload;
+
+	//public class up{
+@class{
+	public void doPost(Jacper jacper){
+		System.out.println("批量上传重文件验证开始>>>");
+		Param param =new Param(jacper);
+		Connection conDocmgr= param.getConnection("docmgr");
+		Connection conPlatForm= param.getConnection("plat");
+		String userId=param.getStr("userId");
+		FileUpload upload = new FileUpload(Integer.parseInt(userId));
+		try {
+			upload.parseRequest(param.getRequest());
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		upload.appendParamToMap(param);
+		User user=CertManager.getUser(userId);
+		
+		EFile eexcel=param.getEFile("EXCEL");
+		String type=eexcel.getAttribute("file-name");
+		type=type.substring(type.indexOf(".")+1);
+		boolean isOver = true;
+
+		if(!type.equals("xls") && !type.equals("xlsx")&& !type.equals("xlsm")){
+			System.out.println("请上传excel文件。");
+			jacper.print("{success:true,err:true,message:'请上传excel文件。'}");
+			return;
+		}
+		if(isOver){
+			jacper.print("{success:true,message:'检查成功'}");
+			return;
+		}
+		try {
+			List<String> allName=getAllName(eexcel.getInputStream(),type);
+			String eFilePath=getConfig(eexcel.getInputStream(), type);
+			int i=1;
+			
+			for (String string : allName) {
+				i++;
+				System.out.println(i);
+				String spaceid=(String) param.getFromSession("HW_BASE_SPACEID");	//空间id
+				String nodeid=param.getString("exportData");							//节点id
+				
+				if(nodeid!=null && !nodeid.equals("")){
+					nodeid=nodeid.split("::")[0];
+				}
+				
+				
+				String path=eFilePath+string;		 //填写的文件路径
+				String notpath=path.replace(eFilePath, "");
+				
+				int pos = -1;
+				String Name = (pos = path.lastIndexOf("\\")) != -1 ? path.substring(pos + 1) : path; //文件名称
+				pos = -1;
+				String[] nodes=notpath.split("\\\\");
+				String exportItem=param.getString("export_data","");
+				if(nodes.length>1){
+					for (int j = 0; j < nodes.length - 1; j++) {
+						String nodeName = nodes[j];
+						String verifySql = "";
+						if (!exportItem.equals("") && j==0) {
+							//verifySql = "select node_id from DIR_NODE_INFO where DIR_ID='" + nodeid + "' and node_value='" + nodeName + "' and P_NODE_ID is null";
+							verifySql = "select node_id from DIR_NODE_INFO where DIR_ID=? and node_value=? and P_NODE_ID is null";
+						} else {
+							//verifySql = "select node_id from DIR_NODE_INFO where p_node_id='" + nodeid + "' and node_value='" + nodeName + "'";
+							verifySql = "select node_id from DIR_NODE_INFO where p_node_id=? and node_value=?";
+						}
+
+						//String[][] verifyRs = conDocmgr.get(verifySql);
+						String[][] verifyRs = conDocmgr.get(verifySql , new String[]{nodeid , nodeName});
+						if (verifyRs != null && verifyRs.length > 0) {
+							nodeid = verifyRs[0][0];
+						}
+					}
+				}
+				
+				String fileName=Name;
+				if(Name.lastIndexOf(".")>-1){
+					fileName=Name.substring(0,Name.lastIndexOf("."));
+				}
+				//String sql="select file_info_name from dir_file_base where node_id='"+nodeid+"' and file_info_name=?";
+				String sql="select file_info_name from dir_file_base where node_id=? and file_info_name=?";
+				//System.out.println(sql);
+				//String[][]rs=conDocmgr.get(sql,new String[]{fileName});
+				String[][]rs=conDocmgr.get(sql,new String[]{nodeid , fileName});
+				if(rs!=null && rs.length>0){
+				System.out.println("有重复文件。:"+fileName);
+					jacper.print("{success:true,sf:true}");
+					return;
+				}
+			}
+			System.out.println("没有重复文件。");
+			jacper.print("{success:true,message:'检查成功'}");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+
+
+	protected static final String dateTimeFmtPattern = "yyyy/MM/dd HH:mm:ss";
+
+	protected static final String dateFmtPattern = "yyyy/MM/dd";
+
+
+
+	public static List<String> getAllName(FileInputStream fis,String type)
+	{
+		String allName="";
+		Workbook wb = null;  
+		List<String> allListValue=new ArrayList<String>();
+		try
+		{
+			if ("xls".equalsIgnoreCase(type)) {
+				wb = new HSSFWorkbook(fis);
+			} else if ("xlsx".equalsIgnoreCase(type) || "xlsm".equalsIgnoreCase(type)) {
+				wb = new XSSFWorkbook(fis);
+			} else {
+				throw new Exception("file is not office excel");
+			}
+
+			Sheet sheet = wb.getSheetAt(0);
+			int RowCount= sheet.getLastRowNum();
+
+
+			for (int i = 1; i <= RowCount; i++) {
+
+
+				Row  row = sheet.getRow((short)i);
+				if(row!=null){
+					Cell  Datecells = row.getCell(0);
+					String date ="";
+					if(Datecells!=null){
+						date = getCellValue(Datecells);
+					}
+					
+					if(!date.equals("")){
+						date=date.trim();
+						allListValue.add(date);
+					}else{
+						break;
+					}
+				}
+			}
+
+		}catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+		return allListValue;
+	}
+
+
+
+	public static String getConfig(FileInputStream fis,String type)
+	{
+		try {
+			Workbook wb = null;  
+			if ("xls".equalsIgnoreCase(type)) {
+				wb = new HSSFWorkbook(fis);
+			} else if ("xlsx".equalsIgnoreCase(type) || "xlsm".equalsIgnoreCase(type)) {
+				wb = new XSSFWorkbook(fis);
+			} else {
+				throw new Exception("file is not office excel");
+			}
+
+			int configIndex=0;
+			for (int i = 0; i < wb.getNumberOfSheets(); i++) {//获取每个Sheet表
+				Sheet sheet = wb.getSheetAt(i);
+				String sheetName=sheet.getSheetName();
+				if(sheetName.equals("config")){
+					configIndex=i;
+				}
+			}
+			Sheet configSheet = wb.getSheetAt(configIndex);
+			Row  configrow = configSheet.getRow((short)0);
+			Cell configcell =configrow.getCell(0);
+			String configvalue =getCellValue(configcell);
+
+			return configvalue;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return "";
+	}
+
+	protected static String getCellValue(Cell cell) {
+		String value = null;
+		switch (cell.getCellType()) {
+		case Cell.CELL_TYPE_FORMULA: // 公式
+		case Cell.CELL_TYPE_NUMERIC: // 数字
+
+			double doubleVal = cell.getNumericCellValue();
+			short format = cell.getCellStyle().getDataFormat();
+			String formatString = cell.getCellStyle().getDataFormatString();
+
+			if (format == 14 || format == 31 || format == 57 || format == 58 || (format >= 176 && format <= 183)) {
+				// 日期
+				Date date = DateUtil.getJavaDate(doubleVal);
+				value = formatDate(date, dateFmtPattern);
+			} else if (format == 20 || format == 32 || (format >= 184 && format <= 187)) {
+				// 时间
+				Date date = DateUtil.getJavaDate(doubleVal);
+				value = formatDate(date, "HH:mm");
+			} else {
+				value = String.valueOf(doubleVal);
+			}
+
+			break;
+		case Cell.CELL_TYPE_STRING: // 字符串
+			value = cell.getStringCellValue();
+
+			break;
+		case Cell.CELL_TYPE_BLANK: // 空白
+			value = "";
+			break;
+		case Cell.CELL_TYPE_BOOLEAN: // Boolean
+			value = String.valueOf(cell.getBooleanCellValue());
+			break;
+		case Cell.CELL_TYPE_ERROR: // Error，返回错误码
+			value = String.valueOf(cell.getErrorCellValue());
+			break;
+		default:
+			value = "";
+		break;
+		}
+		return value;
+	}
+
+	@SuppressWarnings("deprecation")
+	private static String formatDate(Date d, String sdf) {
+		String value = null;
+
+		if (d.getSeconds() == 0 && d.getMinutes() == 0 && d.getHours() == 0) {
+			SimpleDateFormat sdf2=new SimpleDateFormat(dateFmtPattern);
+			value=sdf2.format(d);
+			// value = DateTimeUtil.getFormatedDate(d, dateFmtPattern);
+		} else {
+			SimpleDateFormat sdf2=new SimpleDateFormat(dateTimeFmtPattern);
+			value=sdf2.format(d);
+			// value = DateTimeUtil.getFormatedDate(d, sdf);
+
+		}
+
+		return value;
+	}
+}

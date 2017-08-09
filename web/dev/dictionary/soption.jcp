@@ -1,0 +1,143 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.dictionary.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.application.*;
+@class{
+	public void doGet(Jacper jacper){
+		Connection conPlat =jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+ 		HttpSession hs = jacper.getSession();
+
+		String sort = jacper.getStr("sort");
+		String dir = jacper.getStr("dir");
+		String sql="";
+		String kind_id=jacper.getString("kind_id","0");
+		String[] rs= conPlat.getRow("select application_obj_id from $[plat].dict_kind where kind_id=?",new String[]{kind_id+""});
+		Connection conApp =null;
+		if(rs[0].equals("0")){
+			sql = "select index_id,option_code,option_value,is_default,allow_used from $[plat].second_dict where option_id=? order by index_id";
+		}else{
+				ObjectManager OM=ObjectManager.getInstance();
+				ObjectNode applicationNode=OM.getObject(rs[0]);
+				ApplicationFactory appFactory=ApplicationFactory.getInstance();
+				Application app=appFactory.getApplication(conPlat,rs[0]);
+				String dbLink=app.getDatabaseLink();
+				conApp=jacper.getConnection(dbLink);
+				sql = "select index_id,option_code,option_value,is_default,allow_used from $["+dbLink+"].second_dict where option_id=?  order by index_id";
+		}
+		int startRow = jacper.getInt("start",0);
+		int rowCount = jacper.getInt("limit",0);
+		String option_id=jacper.getString("option_id","-1");
+		jacper.getResponse().setContentType("application/x-json");
+
+		if(rs[0].equals("0")){
+			Grid gd=new Grid(sql,"index_id",new String[]{"index_id","option_code","option_value","is_default","allow_used"});
+			JSONObject gridJSON=gd.getJSON(conPlat,new String[]{option_id+""},startRow,rowCount,dir,sort);
+			<?(?>gridJSON.toString()<?)?>;
+		}else{
+			Grid gd=new Grid(sql,"index_id",new String[]{"index_id","option_code","option_value","is_default","allow_used"});
+			JSONObject gridJSON=gd.getJSON(conApp,new String[]{option_id+""},startRow,rowCount,dir,sort);
+			<?(?>gridJSON.toString()<?)?>;
+			conApp.close();
+		}
+		conPlat.close();
+}
+
+public void doPost(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		Connection conPlat = jacper.getConnection("plat");
+
+		String types=jacper.getStr("type");
+
+		String option_code=jacper.getStr("option_code");
+		String option_value=jacper.getStr("option_value");
+		String is_default=jacper.getStr("is_default");
+		String allow_used=jacper.getStr("allow_used");
+		String option_id=jacper.getString("option_id","0");
+		String kind_id=jacper.getString("kind_id","0");
+		String[] rs= conPlat.getRow("select application_obj_id from $[plat].dict_kind where kind_id=?",new String[]{kind_id+""});
+
+		if(types.equals("save")){
+			try{	
+				int index_id=jacper.getInt("index_id",0);
+				if(rs[0].equals("0")){
+					if(is_default.equals("true")) conPlat.exec("update $[plat].second_dict set is_default='false' where option_id=?",new String[]{option_id+""});
+					String insertStr="insert into $[plat].second_dict (index_id,option_id,option_code,option_value,allow_used,is_default)  values (?,?,?,?,?,?)";
+					conPlat.exec(insertStr,new String[]{String.valueOf(index_id)+"",option_id+"",option_code,option_value+"",allow_used,is_default});
+				}else{
+					ObjectManager OM=ObjectManager.getInstance();
+					ObjectNode applicationNode=OM.getObject(rs[0]);
+					ApplicationFactory appFactory=ApplicationFactory.getInstance();
+					Application app=appFactory.getApplication(conPlat,rs[0]);
+					String dbLink=app.getDatabaseLink();
+					Connection conApp=jacper.getConnection(dbLink);
+					if(is_default.equals("true")) conApp.exec("update $["+dbLink+"].second_dict set is_default='false' where option_id=?",new String[]{option_id+""});
+					String insertStr="insert into $["+dbLink+"].second_dict (index_id,option_id,option_code,option_value,allow_used,is_default)  values (?,?,?,?,?,?)";
+					conApp.exec(insertStr,new String[]{String.valueOf(index_id)+"",option_id+"",option_code,option_value+"",allow_used,is_default});
+					conApp.close();
+				}
+				<?{success:true,option_id:'?>option_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(types.equals("updatesave")){	
+			int index_id=jacper.getInt("index_id",0);
+			int new_index=jacper.getInt("new_index",0);
+			try{	
+				if(rs[0].equals("0")){
+					if(is_default.equals("true")) conPlat.exec("update $[plat].second_dict set is_default='false' where option_id=?",new String[]{option_id+""});
+					String updStr="update $[plat].second_dict set index_id=?,option_code=?,option_value=?,allow_used=?,is_default=? where  option_id=? and index_id=?";
+					conPlat.exec(updStr,new String[]{new_index+"",option_code,option_value+"",allow_used,is_default,option_id+"",index_id+""});
+				}else{
+					ObjectManager OM=ObjectManager.getInstance();
+					ObjectNode applicationNode=OM.getObject(rs[0]);
+					ApplicationFactory appFactory=ApplicationFactory.getInstance();
+					Application app=appFactory.getApplication(conPlat,rs[0]);
+					String dbLink=app.getDatabaseLink();
+					Connection conApp=jacper.getConnection(dbLink);
+					if(is_default.equals("true")) conApp.exec("update $["+dbLink+"].second_dict set is_default='false' where option_id=?",new String[]{option_id+""});
+					String updStr="update $["+dbLink+"].second_dict set index_id=?,option_code=?,option_value=?,allow_used=?,is_default=?  where  option_id=? and index_id=?";
+					conApp.exec(updStr,new String[]{new_index+"",option_code,option_value+"",allow_used,is_default,option_id+"",index_id+""});
+					conApp.close();
+				}
+				<?{success:true,option_id:'?>option_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+				DictFactory.getInstance().remove(option_id);
+			}
+		}else if(types.equals("delete")){
+			try{	
+				int index_id=jacper.getInt("index_id",0);
+				if(rs[0].equals("0")){
+					String delStr="delete from $[plat].second_dict where  option_id=? and index_id=?";
+					conPlat.exec(delStr,new String[]{option_id+"",index_id+""});
+				}else{
+					ObjectManager OM=ObjectManager.getInstance();
+					ObjectNode applicationNode=OM.getObject(rs[0]);
+					ApplicationFactory appFactory=ApplicationFactory.getInstance();
+					Application app=appFactory.getApplication(conPlat,rs[0]);
+					String dbLink=app.getDatabaseLink();
+					Connection conApp=jacper.getConnection(dbLink);
+					String delStr="delete from $["+dbLink+"].second_dict where  option_id=? and index_id=?";
+					conApp.exec(delStr,new String[]{option_id+"",index_id+""});
+					conApp.close();
+				}
+				<?{success:true,option_id:'?>option_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+				DictFactory.getInstance().remove(option_id);
+			}
+		}
+	}
+}

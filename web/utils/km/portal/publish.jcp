@@ -1,0 +1,103 @@
+
+
+import java.io.IOException;
+
+
+import com.kinglib.*;
+import com.susing.*;
+import com.kinglib.util.json.*;
+import com.susing.upload.FileUpload;
+import javax.servlet.ServletException;
+import com.susing.core.KingleSystem;
+import java.io.File;
+
+
+@class{
+
+	public void doGet(Jacper jacper){
+		
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+
+		Connection conUtils = jacper.getConnection("utils");
+
+		String  parent_id = jacper.getStr("parent_id");
+		String type = jacper.getStr("type");
+		int  page_id = jacper.getInt("id",0);
+		String[] rs = {"","","","","n"};
+		Object[] rs1=conUtils.getLarge("select page_id,node_id,title,content,first_page from $[utils].portal_content where page_id=?",new String[]{""+page_id});
+		for (int i=0;i<rs1.length;i++){
+				rs[i]=rs1[i].toString();
+			}
+		try{
+			JSONObject pageJSON = new JSONObject("{}");
+			pageJSON.put("pageId",rs[0]);
+			pageJSON.put("parent_id",rs[1]);
+			pageJSON.put("page_title",rs[2]);
+			pageJSON.put("comment",rs[3]);
+			pageJSON.put("first_page",rs[4]);
+			<?[?>pageJSON.toString()<?]?>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conUtils.close();
+		}
+		
+}
+	public void doPost(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		Connection conUtils = jacper.getConnection("utils");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String user_id = hs.uid+"";
+		
+		String type = jacper.getStr("type");
+
+		String parent_id = jacper.getStr("parent_id");
+		String page_title = jacper.getStr("page_title");
+		String comment = jacper.getStr("comment");
+		String first_page = jacper.getStr("first_page");
+		String pageId =""; 
+
+                                 
+		if(type.equals("save")){		
+			try{
+				pageId =SQLUtils.getNextVal(conPlat,18)+"";
+
+				if(first_page.equals("y"))
+				conUtils.exec("update $[utils].portal_content set first_page='n' where node_id=?",new String[]{parent_id});
+	
+				conUtils.execLarge("insert into $[utils].portal_content (page_id,node_id,title,content,first_page) values (?,?,?,?,?)",new Object[]{pageId,parent_id,page_title,comment,first_page});
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conUtils.close();
+			}	
+		}else if(type.equals("updatesave")){
+			try{
+				pageId =jacper.getStr("page_id");
+
+				if(first_page.equals("y"))
+				conUtils.exec("update $[utils].portal_content set first_page='n' where node_id=?",new String[]{parent_id});
+	
+				conUtils.execLarge("update $[utils].portal_content set title=?,content=?,first_page=? where page_id=?",new String[]{page_title,comment,first_page,pageId});
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conUtils.close();
+			}
+		}else if(type.equals("delete")){
+			try{
+				pageId =jacper.getStr("page_id");
+				conUtils.exec("delete from $[utils].portal_content where page_id = ?",new String[]{""+pageId});
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conUtils.close();
+			}
+		}
+	}
+}

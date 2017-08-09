@@ -1,0 +1,90 @@
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.util.json.*;
+import com.social.api.core.model.*; 
+
+@class{
+private static int id=0;
+public void doPost(Jacper jacper){
+	Connection conUtils = jacper.getConnection("utils");
+	String instanceId=jacper.getStr("instanceId");
+	String dept_id=jacper.getStr("node");
+
+
+	Dept p=Dept.getDept(dept_id);
+
+	String[][] userArray=null;
+	ArrayList<User> userList=new ArrayList<User>();
+	p.getUsers(userList) ;
+	userArray=new String[userList.size()][2];
+	int r=0;
+	for(User u:userList){
+		userArray[r][0]=u.getUserId();
+		userArray[r][1]=u.getRealName();
+		r++;
+	}
+	StringBuffer sbf=new StringBuffer(100);
+	String[][] authArray=conUtils.get("select c.user_id,c.dept_id from $[utils].file_auth c where c.folder_id=? ",new String[]{instanceId});
+
+	conUtils.close();
+	for(int i=0;i<authArray.length;i++){
+		sbf.append(",");
+		sbf.append(authArray[i][1]);
+		sbf.append("_");
+		sbf.append(authArray[i][0]);
+	}
+	sbf.append(",");
+	String entered=sbf.toString();
+	sbf=null;
+
+	String[] ids = jacper.getArray("ids");
+	sbf=new StringBuffer(100);
+	for(int i=0;i<ids.length;i++){
+		sbf.append(",");
+	}
+	String haveEntered=sbf.toString();
+	sbf=null;
+
+	String[][] result1=new String[userArray.length+2][2];
+    for(int i=0;i<userArray.length;i++){
+		 result1[i][0]=dept_id+"_"+userArray[i][0];
+		 result1[i][1]=userArray[i][1];
+	}
+	result1[userArray.length][0]=dept_id+"_"+"-9";
+	result1[userArray.length][1]=jacper.trans("当前部门所有人员");
+	result1[userArray.length+1][0]=dept_id+"_"+"-99";
+	result1[userArray.length+1][1]=jacper.trans("当前部门及所有子部门人员");
+
+	try{
+		JSONArray treeJSONArray=new JSONArray();
+		
+		for(Dept d:p.getChilds()){
+			JSONObject resultJSON = new JSONObject("{}");
+			resultJSON.put("text",d.getShortName());
+			resultJSON.put("allowDrag",false);
+			resultJSON.put("leaf",false);
+			resultJSON.put("id",d.getDeptId());
+			resultJSON.put("icon","/themes/icon/all/chart_organisation.gif");
+			treeJSONArray.put(resultJSON);
+		}
+	   for(int i=0;i<result1.length;i++){
+			if(entered.indexOf(","+result1[i][0]+",")!=-1) continue;
+			if(haveEntered.indexOf(","+result1[i][0]+",")!=-1) continue;
+			JSONObject resultJSON = new JSONObject("{}");
+			resultJSON.put("text",result1[i][1]);
+			resultJSON.put("allowDrag",true);
+			resultJSON.put("id",result1[i][0]);
+			resultJSON.put("leaf",true);
+			resultJSON.put("icon","/themes/icon/all/user.gif");
+			treeJSONArray.put(resultJSON);
+		}
+		jacper.print(treeJSONArray.toString());
+	}catch(Exception e){
+		e.printStackTrace();
+	}
+}
+}
+
+
+		

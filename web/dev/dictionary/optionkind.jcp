@@ -1,0 +1,67 @@
+
+import java.io.IOException;
+import java.awt.Color;
+import java.awt.GradientPaint;
+import java.io.OutputStream;
+
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+    
+@class{	   
+
+public void doPost(Jacper jacper){
+	
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	String types=jacper.getStr("type");
+	String kind_id=jacper.getString("kind_id","0");
+	String application_obj_id=jacper.getString("application_obj_id","0");
+
+	String name=jacper.getStr("name");
+	name=name.replaceAll("'","\\\\'");
+
+	if(types.equals("save")){	
+		try{	
+			String dict_kind  = "";
+
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				dict_kind = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				dict_kind =UUID.randomUUID().toString();
+			}
+			String insertStr="insert into $[plat].dict_kind (kind_id,name,application_obj_id) values (?,?,?)";
+			conPlat.exec(insertStr,new String[]{dict_kind+"",name,application_obj_id+""});
+			kind_id = dict_kind;
+			<?{success:true,kind_id:'?>dict_kind<?',application_obj_id:'?>application_obj_id<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}else if(types.equals("updatesave")){
+		try{	
+			String updStr="update $[plat].dict_kind set name=? where kind_id=?";
+			conPlat.exec(updStr,new String[]{name,kind_id+""});
+			<?{success:true,kind_id:'?>kind_id<?',application_obj_id:'?>application_obj_id<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}else if(types.equals("delete")){
+		try{	
+			conPlat.exec("delete from $[plat].dict_kind where kind_id=?", new String[]{kind_id+""});
+			<?{success:true,application_obj_id:'?>application_obj_id<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}
+}
+}

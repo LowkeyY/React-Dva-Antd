@@ -1,0 +1,175 @@
+
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.workbench.site.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+	             
+public void doGet(Jacper jacper) {
+		Connection conPlat = jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		String type = jacper.getStr("type");
+		String parent_id = jacper.getStr("parent_id");
+		String object_id = jacper.getStr("object_id");
+
+		jacper.getResponse().setContentType("application/x-json");
+   
+		try{	
+				JSONObject searchJSON = new JSONObject("{}");
+				String[] rs = conPlat.getRow("select object_id,logicname,name,is_default,google_analytics,key_words,note from $[plat].site_base where object_id=?",new String[]{object_id});
+				if(rs!=null){
+					searchJSON.put("object_id",rs[0]);
+					searchJSON.put("logic_name",rs[1]);
+					searchJSON.put("phy_name",rs[2]);
+					searchJSON.put("is_default",rs[3]);
+					searchJSON.put("google_analytics",rs[4]);
+					searchJSON.put("keyword",rs[5]);
+					searchJSON.put("note",rs[6]);
+
+					ObjectNode node=ObjectManager.getObject(object_id);
+					if(node!=null){
+						searchJSON.put("lastModifyTime",node.getLastModifyTime());
+						searchJSON.put("lastModifyName",node.getLastModifyName());
+					}
+				}
+			   <?[?>searchJSON.toString()<?]?>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+}
+public void doPost(Jacper jacper) {
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	int user_id = (int)hs.uid;
+
+	String type = jacper.getStr("type");
+	String name = jacper.getStr("phy_name");
+	String logicname = jacper.getStr("logic_name");
+	String is_default = jacper.getStr("is_default");
+	String google_analytics = jacper.getStr("google_analytics");
+	String keyword = jacper.getStr("keyword");
+	String note = jacper.getStr("note");
+
+	SiteFactory  SF=SiteFactory.getInstance();
+	ObjectManager OM=ObjectManager.getInstance();
+	if(type.equals("save")){
+		try{	
+
+			conPlat.setAutoCommit(false);	
+			String object_id  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+			String parent_id = jacper.getStr("parent_id");
+			ObjectNode applicationNode=OM.getObject(parent_id);
+			applicationNode.addChild(conPlat,object_id,logicname,ObjectType.SITE,user_id);	
+
+
+			ObjectNode siteNode=OM.getObject(object_id);
+			String resource_id  = "";
+			if(idType==null||idType.equals("0")){
+				resource_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				resource_id =UUID.randomUUID().toString();
+			}
+			siteNode.addChild(conPlat,resource_id,"资源",ObjectType.SITERESOURCEDIR,user_id);	
+
+			String widget_id  = "";
+			if(idType==null||idType.equals("0")){
+				widget_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				widget_id =UUID.randomUUID().toString();
+			}
+			siteNode.addChild(conPlat,widget_id,"组件",ObjectType.SITEWIDGETDIR,user_id);
+
+			String template_id  = "";
+			if(idType==null||idType.equals("0")){
+				template_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				template_id =UUID.randomUUID().toString();
+			}
+			siteNode.addChild(conPlat,template_id,"模板",ObjectType.SITETEMPLATEDIR,user_id);	
+
+
+			String structure_id  = "";
+			if(idType==null||idType.equals("0")){
+				structure_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				structure_id =UUID.randomUUID().toString();
+			}
+			siteNode.addChild(conPlat,structure_id,"结构",ObjectType.SITESTRUCTUREDIR,user_id);
+
+
+			conPlat.exec("insert into $[plat].site_base (object_id,name,logicname,is_default,google_analytics,key_words,note) values(?,?,?,?,?,?,?)",new String[]{object_id+"",name,logicname,is_default,google_analytics,keyword,note});
+			conPlat.commit();
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if(type.equals("updatesave")){
+			String object_id = jacper.getStr("object_id");
+			try{	
+				ObjectNode siteNode=OM.getObject(object_id);
+				siteNode.updateName(conPlat,logicname);
+				conPlat.exec("update $[plat].site_base set name=?,logicname=?,IS_DEFAULT=?,GOOGLE_ANALYTICS=?,KEY_WORDS=?,NOTE=? where object_id=?",new String[]{name,logicname,is_default,google_analytics,keyword,note,object_id});
+				SF.remove(object_id);
+				conPlat.commit();
+				<?{success:true,id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				conPlat.close();
+			}
+	}else if(type.equals("delete")){
+		String object_id = jacper.getStr("object_id");
+		try{	
+			conPlat.setAutoCommit(false);	
+			ObjectNode siteNode=OM.getObject(object_id);
+
+			ObjectNode[] subNodes= siteNode.getChilds();
+
+			for(int i=0;i<subNodes.length;i++){
+				subNodes[i].destroy(conPlat);
+			}
+			siteNode.destroy(conPlat);
+			SF.remove(object_id);
+			conPlat.commit();
+			//conPlat.exec("delete from $[plat].site_index where site_id=?",new String[]{object_id});
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

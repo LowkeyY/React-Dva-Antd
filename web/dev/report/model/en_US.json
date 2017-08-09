@@ -1,0 +1,195 @@
+{
+    "cats": [
+        [
+            "Report",
+            "报表"
+        ],
+        [
+            "Page",
+            "页面"
+        ],
+        [
+            "Column",
+            "列"
+        ],
+        [
+            "Group",
+            "组内"
+        ]
+    ],
+    "funcs": [
+        [
+            "SUM",
+            "SUM(number1,number2,...)",
+            "返回某一单元格区域中所有数字之和.",
+            [
+                {
+                    "t": "sequence",
+                    "c": 30,
+                    "m": [
+                        {
+                            "t": "数值",
+                            "n": "Number",
+                            "d": "number1,number2,... 为1到30个需要求和的数值(包括逻辑值及TEXT表达式)、区域或引用."
+                        }
+                    ]
+                }
+            ]
+        ],
+        [
+            "COUNT",
+            "COUNT(value1,value2,...)",
+            "返回数字参数的个数。它可以STATISTICAL数组或单元格区域中含有数字的单元格个数.",
+            [
+                {
+                    "t": "sequence",
+                    "c": 30,
+                    "m": [
+                        {
+                            "t": "数值",
+                            "n": "Value",
+                            "d": "Value1: value1,value2,... 是包含或引用各种类型数据的参数."
+                        }
+                    ]
+                }
+            ]
+        ],
+        [
+            "DISTINCTCOUNT",
+            "DISTINCTCOUNT(value1,value2,...)",
+            "返回数字参数不重复个数。它可以STATISTICAL数组或单元格区域中含有数字的单元格个数.",
+            [
+                {
+                    "t": "sequence",
+                    "c": 30,
+                    "m": [
+                        {
+                            "t": "数值",
+                            "n": "Value",
+                            "d": "Value1: value1,value2,... 是包含或引用各种类型数据的参数."
+                        }
+                    ]
+                }
+            ]
+        ],
+        [
+            "AVERAGE",
+            "AVERAGE(number1,number2,...)",
+            "计算所有参数的算术平均值, 参数可以是数字、名称、数组或包含数字的引用.",
+            [
+                {
+                    "t": "sequence",
+                    "c": 30,
+                    "m": [
+                        {
+                            "t": "数值",
+                            "n": "Number",
+                            "d": "number1,number2,... 是要计算平均值的参数."
+                        }
+                    ]
+                }
+            ]
+        ],        
+	[
+            "MAX",
+            "MAX(number1,number2,...)",
+            "返回数据集中的最大数值.",
+            [
+                {
+                    "t": "sequence",
+                    "c": 30,
+                    "m": [
+                        {
+                            "t": "数值",
+                            "n": "Number",
+                            "d": "number1,number2,... 为需要从中查找最大数值的1到30个参数."
+                        }
+                    ]
+                }
+            ]
+        ],
+        [
+            "MIN",
+            "MIN(number1,number2,...)",
+            "返回给定参数表中的最小值.",
+            [
+                {
+                    "t": "sequence",
+                    "c": 30,
+                    "m": [
+                        {
+                            "t": "数值",
+                            "n": "Number",
+                            "d": "number1,number2,... 是要从中找出最小值的1到30 个数字参数."
+                        }
+                    ]
+                }
+            ]
+        ],
+       [
+            "STDEV",
+            "STDEV(number1,number2,...)",
+            "估算样本的标准偏差。它反映了数据相对于平均值(mean)的离散程度.",
+            [
+                {
+                    "t": "sequence",
+                    "c": 30,
+                    "m": [
+                        {
+                            "t": "数值",
+                            "n": "Number",
+                            "d": "number1,number2,... 为对应于总体样本的参数。"
+                        }
+                    ]
+                }
+            ]
+        ], 
+        [
+            "VAR",
+            "VAR(number1,number2,...)",
+            "估算样本方差.",
+            [
+                {
+                    "t": "sequence",
+                    "c": 30,
+                    "m": [
+                        {
+                            "t": "数值",
+                            "n": "Number",
+                            "d": "number1,number2,... 对应于与总体样本的参数."
+                        }
+                    ]
+                }
+            ]
+        ],
+	[
+            "FIRST",
+            "FIRST(number1,number2,...)",
+            "返回给定参数中的第一个参数值.",
+            [
+                {
+                    "t": "sequence",
+                    "c": 30,
+                    "m": [
+                        {
+                            "t": "数值",
+                            "n": "Number",
+                            "d": "number1,number2,... 是要从中找出第一个参数值."
+                        }
+                    ]
+                }
+            ]
+        ]
+    ],
+    "lookup_func": {
+        "SUM": 0,
+        "COUNT": 1,
+        "DISTINCTCOUNT": 2,
+        "AVERAGE": 3,
+        "MAX": 4,
+        "MIN": 5,
+        "STDEV": 6,
+        "VAR": 7,
+        "FIRST": 8
+    }
+}

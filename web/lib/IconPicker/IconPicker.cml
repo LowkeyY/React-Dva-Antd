@@ -1,0 +1,72 @@
+<root><class name="lib.IconPicker.IconPicker"><IconPicker><![CDATA[
+ 	p.cfg,p.header{
+        font-family: verdana,lucida,arial,helvetica,sans-serif;
+    }
+    pre {
+        font-size : 11px;
+    }
+    p.cfg {
+        font-size : 12px;
+        margin-left:10px;
+        margin-top:5px;
+    }
+    p.header {
+        font-size : 13px;
+        font-weight : bold;
+    }
+    p.cfg span{
+        font-weight : bold;
+    }
+
+    .images-view .x-window-body{
+    	background: #ffffff;
+    	color: #000000;
+    }
+    .images-view .thumb{
+        border:1px solid #dddddd;
+    	padding: 0px;
+    	height: 21px;
+    	width: 21px;
+    }
+    .images-view .thumb-wrap table{
+        font: 11px Arial, Helvetica, sans-serif;
+    	text-align: center;
+    }
+    .images-view .thumb-wrap{
+    	float: left;
+    	margin: 2px;
+    	margin-right: 0;
+    	padding: 3px;
+    	cursor: pointer;
+    }
+
+    .images-view .x-view-over{
+        border:1px solid #cccccc;
+        background: #eeeeee;
+    	padding: 2px;
+    }
+
+    .images-view .x-view-selected{
+        background: #ccddee;
+    	border:1px solid #6699cc;
+    	padding: 2px;
+    }
+
+    .images-view .x-view-selected .thumb{
+    	border:1px solid #6699cc;
+    }
+
+
+    .iconpicker-trigger{
+   		position:relative
+    }
+    .iconpicker-content{
+    	vertical-align:middle;
+    	background:#FFFFFF url(/Ext/resources/images/default/form/text-bg.gif) repeat-x scroll top;
+    	border:1px solid #B5B8C8;
+		padding:2px 0px 0px 2px;
+		height:18px;
+		width:26px;
+		float: left;
+	}
+]]></IconPicker></class></root>

@@ -1,0 +1,55 @@
+import com.kinglib.*;
+import com.susing.core.*;
+import com.susing.server.*;
+@class{
+
+	public void doGet(Jacper jacper){
+		
+		String tabId = jacper.getStr("resource_id");
+		Connection conPlat = jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		try{	
+			Object[] data = conPlat.getLarge("SELECT SCRIPT_CONTENT FROM $[plat].QUALITY_BASE WHERE TAB_ID=?",new String[]{tabId});
+			if(data!=null && data.length>0){
+				jacper.print(data[0]);
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally {
+			conPlat.close();
+		}
+	}
+
+	public void doPost(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		String tabId = jacper.getStr("resource_id");
+		String content = jacper.getString("content");
+		String type = jacper.getString("type");
+		try{	
+			conPlat.setAutoCommit(false);
+			if(type.equals("save")){
+				conPlat.exec("update $[plat].quality_base set have_script='true' where tab_id=?",new String[]{tabId});
+				conPlat.execLarge("update $[plat].quality_base set SCRIPT_CONTENT = ? where tab_id=?",new Object[]{new StringBuffer(content),tabId});
+				conPlat.commit();
+				<?{success:true,id:'?>tabId<?'}?>;
+			}else if(type.equals("delete")){
+				conPlat.exec("update $[plat].quality_base set have_script='false',script_content=null where tab_id=?",new String[]{tabId});
+				conPlat.commit();
+				<?{success:true,id:'?>tabId<?'}?>;
+			}
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+			e.printStackTrace();
+		}finally {
+			try{
+				conPlat.setAutoCommit(true);
+			}catch(Exception e2){}
+			
+			conPlat.close();
+		}
+	}
+}

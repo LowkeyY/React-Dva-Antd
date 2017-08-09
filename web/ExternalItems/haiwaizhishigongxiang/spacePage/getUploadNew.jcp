@@ -1,0 +1,36 @@
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import gpra.filesystem.HWUnits;
+import com.kinglib.*;
+import com.kinglib.user.*;
+
+		//	public class up{
+@class{
+	public void doPost(Jacper jacper) {
+		Connection con=jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			String spaceid=(String) jacper.getSession().get("HW_BASE_SPACEID");
+			String sql="select * from (select ba.file_info_name,ba.FILE_UPLOAD_DATE,ba.FILE_UPLOADER from dir_file_base ba inner join  DIR_DATUM_FILE_REVIEWED fr on ba.file_id=fr.file_id where fr.file_audit='1' and fr.audit_date is not null and ba.space_id='"+spaceid+"' order by audit_date desc) where rownum<=30";
+			System.out.println(sql);
+			String[][]rs=con.get(sql);
+			String date="";
+			for (int i = 0; i < rs.length; i++) {
+				User user = CertManager.getUser(rs[i][2]);
+				
+				SimpleDateFormat sf = null;
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+				String sdate=rs[i][1];
+				if(sdate.indexOf(":")>-1){
+					sf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				}else{
+					sf=new SimpleDateFormat("yyyy-MM-dd");
+				}
+				String da= sdf.format(sf.parse(sdate));
+				date+="<div style = \"padding-top:10px;padding-left:15px;height:auto;\"><p style=\"border-top: 1px dotted #e9e9e9;font: 400 14px Microsoft Yahei;\">"+rs[i][0]+" <span style=\"float:right\">"+da+"("+user.getRealName()+")</span></p></div>";
+			}
+			jacper.print("{success:true,data:{'data':'"+date+"'}}");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

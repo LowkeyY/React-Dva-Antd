@@ -1,0 +1,33 @@
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+		public void doGet(Jacper jacper){
+			Connection conPlat = jacper.getConnection("plat");
+			String pid="0";
+			try{	
+				String[][] resultData=conPlat.get("select category_name,object_id from $[plat].help_category where parent_id=?",new String[]{pid});
+				if(resultData!=null && resultData.length>0){
+					JSONObject data = new JSONObject();
+					JSONArray rowJSON = new JSONArray();
+					for(int i=0;i<resultData.length;i++){
+						JSONArray jo=new JSONArray();
+						jo.put(resultData[i][0]);
+						jo.put(resultData[i][1]);
+						rowJSON.put(jo);		
+					}
+				data.put("data",rowJSON);
+				jacper.print(data.toString());
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+				jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+			}finally{
+				try {
+					conPlat.close();
+				}catch(Exception e2) {
+				}
+			}	
+       }
+}

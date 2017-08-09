@@ -1,0 +1,71 @@
+
+
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import com.smartkms.file.FileConfigFactory;
+import com.smartkms.file.FolderType;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.Dept;
+
+@class{
+
+	public void doGet(Jacper jacper) {
+
+		try {
+
+			String userId = String.valueOf(jacper.getSession().uid);
+			String deptId = CertManager.getUser(userId).getDeptId();
+			Dept d = CertManager.getDept(deptId);
+			JSONObject json = null, temp = null, def = null;
+			String cls = FolderType.PublishedItems.getStyleSmall();
+			String als = FolderType.PublishedFiles.getStyleSmall();
+			FileConfigFactory fc = FileConfigFactory.getInstance();
+
+			while (d != null) {
+				String archives = fc.getArchiveCacheElement(d.getDeptId());
+				if (archives != null) {
+					temp = new JSONObject();
+					temp.put("text", d.getShortName());
+					temp.put("id", d.getDeptId());
+					temp.put("allowSelect", false);
+					temp.put("iconCls", cls);
+					JSONArray jarr = new JSONArray();
+					for (String eArchiveId : archives.split(",")) {
+						def = new JSONObject();
+						def.put("text", fc.getArchiveCacheElement(eArchiveId + "-NAME"));
+						def.put("id", eArchiveId);
+						def.put("allowSelect", true);
+						def.put("iconCls", als);
+						def.put("leaf", true);
+						jarr.put(def);
+					}
+					if(json!=null){
+						jarr.put(json);
+					}
+					temp.put("children", jarr);
+					temp.put("expanded", true);
+					json = temp;
+				}
+				d = d.getParent();
+			}
+			if (json == null) {
+				json = new JSONObject();
+				json.put("success", false);
+				json.put("message", "系统中没有设立您可以访问的电子档案室,发布功能无法使用,如需发布请通知管理员");
+			}
+			jacper.print(json);
+		} catch (Exception e) {
+			try {
+				JSONObject result = new JSONObject();
+				result.put("success", false);
+				result.put("message", e.getMessage());
+				jacper.print(result);
+			} catch (Exception ee) {
+				ee.printStackTrace();
+			}
+		}
+
+	}
+}

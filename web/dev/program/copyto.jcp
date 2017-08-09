@@ -1,0 +1,265 @@
+import com.kinglib.*; 
+import java.util.UUID;
+import com.kinglib.util.json.*;
+import com.kinglib.dictionary.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.bi.*;
+import com.kinglib.bi.chart.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.gis.*;
+import com.kinglib.workbench.module.*;
+import com.kinglib.workbench.integrate.*;
+import com.kinglib.workbench.workflow.*;
+import  com.kinglib.bi.*;
+import com.kinglib.workbench.search.*;
+import com.kinglib.ui.core.CustomizeFactory;
+import com.kinglib.ui.folder.*;
+@class{
+public void doPost(Jacper jacper){
+
+   	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long userId=hs.uid;
+	Connection conPlat = jacper.getConnection("plat");
+	String parent_id=jacper.getStr("parent_id");
+	String objectId=jacper.getStr("objectId");
+	String acttype=jacper.getStr("acttype");
+
+	String tab_name=acttype.equals("program")?"mod_base":"workflowact";
+	String [] rs=conPlat.getRow("select prglogic_name,prgtype,main_prg,start_type,frame_type,task_type from $[plat].prg_base where object_id=?",new String[]{objectId});
+    String prglogic_name=rs[0];
+    String prgtype=rs[1];
+    String main_program=rs[2];
+	String start_type=rs[3];
+	String frame_type=rs[4];
+	String task_type=rs[5];
+
+	int prgt=0;
+	if(!prgtype.equals("")) prgt =Integer.parseInt(prgtype);
+
+	String prg_url="";
+	if(main_program.equals("y")){	
+		prg_url=prgtype;
+	}
+	try{
+		conPlat.setAutoCommit(false);	
+		String object_id  = "";
+		String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+		if(idType==null||idType.equals("0")){
+			object_id = SQLUtils.getNextVal(conPlat,1)+"";
+		}else{
+			object_id =UUID.randomUUID().toString();
+		}
+		ObjectNode frameNode=ObjectManager.getObject(parent_id);
+		int frame_loc=frameNode.getType();
+
+		conPlat.exec("INSERT INTO $[plat].prg_base (prglogic_name, prgphy_name, prgtype, object_id, tab_id,main_prg,default_export,frame_loc,have_search,be_linked,import_item,export_item,data_auth,authlink_tab,icon_url,column_num,tab_type,button_type,tab1_id,frame_type,condition_tab,CONDITION_ITEM,CONDITION_VALUE,task_type,query_id,report_id,query_id2,drawout_type,valid_check,order_column,order_type,seq,start_type,map_id,url,chart_id,is_iframe,default_show,integrate_id,portlet_id,textreport_id,search_type,link_id,my_query,have_favorite,prg_folder,EXTRA_TABLES) select prglogic_name, prgphy_name, prgtype, '"+object_id+"', tab_id,main_prg,default_export,frame_loc,have_search,be_linked,import_item,export_item,data_auth,authlink_tab,icon_url,column_num,tab_type,button_type,tab1_id,frame_type,condition_tab,CONDITION_ITEM,CONDITION_VALUE,task_type,query_id,report_id,query_id2,drawout_type,valid_check,order_column,order_type,seq,start_type,map_id,url,chart_id,is_iframe,default_show,integrate_id,portlet_id,textreport_id,search_type,link_id,my_query,have_favorite,prg_folder,EXTRA_TABLES from $[plat].prg_base where object_id=?",new String[]{objectId});
+
+		frameNode.addChild(conPlat,object_id,prglogic_name,ObjectType.PROGRAM,userId);
+
+		if(acttype.equals("Gis")||acttype.equals("GisEdit")){
+			ObjectNode mapNode=frameNode.upTo(ObjectType.MAP);
+			String mapId=mapNode.getId();
+			WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+			webMap.reloadPOILayer(conPlat);
+			webMap.reloadEditLayer(conPlat);
+		}else if(acttype.equals("Search")){
+			ObjectNode searchNode=frameNode.upTo(ObjectType.SEARCH);
+			String searchId=searchNode.getId();
+			SearchFactory.getInstance().remove(searchId);
+		}else if(acttype.equals("portlet")){
+			ObjectNode portletNode=frameNode.upTo(ObjectType.PORTALET);
+			String portletId=portletNode.getId();
+			PortaletFactory.getInstance().remove(portletId+"");
+		}else{
+			String moduleId="0";
+			if(acttype.equals("workflow")){
+				moduleId=frameNode.upTo(ObjectType.WORKFLOW).getId();
+				WorkflowFactory wf=WorkflowFactory.getInstance();
+				wf.reload(conPlat,moduleId+"");
+			}else{
+				ModuleFactory mf1=ModuleFactory.getInstance();
+				moduleId=frameNode.upTo(ObjectType.MODULE).getId();
+				mf1.reload(conPlat,moduleId+"");
+			}
+			if(main_program.equals("y")&&(prgt!=8)){
+				String out_show = prg_url+"?type="+start_type+"&parent_id="+object_id;
+				if ( prgtype.equals("11"))
+					out_show = jacper.getString("out_url");
+				switch(frame_loc){
+					case 23:
+							conPlat.exec("UPDATE $[plat]."+tab_name+" SET main_frame = '"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+							break;
+					case 24:
+							conPlat.exec("UPDATE $[plat]."+tab_name+" SET left_frame='"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+							break;
+					case 25:
+							conPlat.exec("UPDATE $[plat]."+tab_name+" SET right_frame ='"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+							break;
+					case 26:
+							conPlat.exec("UPDATE $[plat]."+tab_name+" SET upper_frame ='"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+							break;
+					case 27:
+							conPlat.exec("UPDATE $[plat]."+tab_name+" SET lower_frame ='"+out_show+"' WHERE object_id =?",new String[]{moduleId+""});
+							break;
+				}
+			}
+		}
+		String temp_id="";
+		if(!frame_type.equals("")&&(prgt==7)){
+				int modt =Integer.parseInt(frame_type);
+				ObjectNode prgNode=ObjectManager.getObject(object_id);
+				switch(modt){
+						case 1:
+							if(idType==null||idType.equals("0")){
+								temp_id = SQLUtils.getNextVal(conPlat,1)+"";
+							}else{
+								temp_id =UUID.randomUUID().toString();
+							}
+							prgNode.addChild(conPlat,temp_id,jacper.trans("主窗口"),23,userId);
+							break;
+						case 2:  
+							if(idType==null||idType.equals("0")){
+								temp_id = SQLUtils.getNextVal(conPlat,1)+"";
+							}else{
+								temp_id =UUID.randomUUID().toString();
+							}
+							prgNode.addChild(conPlat,temp_id,jacper.trans("左框架"),24,userId);
+							if(idType==null||idType.equals("0")){
+								temp_id = SQLUtils.getNextVal(conPlat,1)+"";
+							}else{
+								temp_id =UUID.randomUUID().toString();
+							}
+							prgNode.addChild(conPlat,temp_id,jacper.trans("右框架"),25,userId);
+							break;
+						case 3:  
+							if(idType==null||idType.equals("0")){
+								temp_id = SQLUtils.getNextVal(conPlat,1)+"";
+							}else{
+								temp_id =UUID.randomUUID().toString();
+							}
+							prgNode.addChild(conPlat,temp_id,jacper.trans("上框架"),26,userId);
+							if(idType==null||idType.equals("0")){
+								temp_id = SQLUtils.getNextVal(conPlat,1)+"";
+							}else{
+								temp_id =UUID.randomUUID().toString();
+							}
+							prgNode.addChild(conPlat,temp_id,jacper.trans("下框架"),27,userId);
+							break;
+				}
+		}
+		switch(prgt){
+			case 1:
+				conPlat.exec("insert into $[plat].ctrl_input (tab_id,tabitem_id, ctrl_type, max_length, width,  row_index,object_id,LINK_WIDGET,hide_flag,readonly_flag,title,query_id,query_column,wrap_flag,min_length,textreport_id,annotation,regex,regexText,default_value) select tab_id,tabitem_id, ctrl_type, max_length, width,  row_index,'"+object_id+"',LINK_WIDGET,hide_flag,readonly_flag,title,query_id,query_column,wrap_flag,min_length,textreport_id,annotation,regex,regexText,default_value  from  $[plat].ctrl_input  where object_id=?",new String[] {objectId});
+				break;
+			case 2:  
+				conPlat.exec("insert into $[plat].ctrl_lst (module_id,list_item,tab_id,list_title,list_type,target_type,target,target_id,target_task,task_type,seq,SORTABLE,SORT_TYPE,ALIGN,width,RENDER_TYPE,widget_id) select '"+object_id+"',list_item,tab_id,list_title,list_type,target_type,target,target_id,target_task,task_type,seq,SORTABLE,SORT_TYPE,ALIGN,width,RENDER_TYPE,widget_id  from  $[plat].ctrl_lst  where module_id=?",new String[] {objectId});
+				break;
+			case 3:  
+				conPlat.exec("insert into $[plat].ctrl_input (tab_id,tabitem_id, ctrl_type, max_length, width,  row_index,object_id,LINK_WIDGET,hide_flag,readonly_flag,title,query_id,query_column,wrap_flag,min_length,textreport_id,annotation,regex,regexText,default_value) select tab_id,tabitem_id, ctrl_type, max_length, width,  row_index,'"+object_id+"',LINK_WIDGET,hide_flag,readonly_flag,title,query_id,query_column,wrap_flag,min_length,textreport_id,annotation,regex,regexText,default_value from  $[plat].ctrl_input  where object_id=?",new String[] {objectId});
+				conPlat.exec("insert into $[plat].ctrl_lst (module_id,list_item,tab_id,list_title,list_type,target_type,target,target_id,target_task,task_type,seq,SORTABLE,SORT_TYPE,ALIGN,width,RENDER_TYPE,widget_id) select "+object_id+",list_item,tab_id,list_title,list_type,target_type,target,target_id,target_task,task_type,seq,SORTABLE,SORT_TYPE,ALIGN,width,RENDER_TYPE,widget_id  from  $[plat].ctrl_lst  where module_id=?",new String[] {objectId});
+				break;
+			case 4:
+				//导航页面
+				String[][] rs1=conPlat.get("select data_type,datasource,tab_id,level_num,tree_type,titleitem_id,parentitem_id,sonitem_id,importitem, exportitem,order_column,order_type,start_icon,end_icon,data_auth,task_type,target_type,target,target_id,target_task,tree_herf,tree_herf2,tree_herf from $[plat].ctrl_tree where module_id=?",new String[]{objectId},0);
+				for(int i=0;i<rs1.length;i++){
+					String ctrl_id=String.valueOf(SQLUtils.getNextVal(conPlat, 1));
+					conPlat.exec("insert into $[plat].ctrl_tree (module_id,ctrl_id, data_type,datasource,tab_id,level_num,tree_type,titleitem_id,parentitem_id,sonitem_id,importitem, exportitem,order_column,order_type,start_icon,end_icon,data_auth,task_type,target_type,target,target_id,target_task,tree_herf,tree_herf2,tree_herf3) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",new String[] {object_id+"",ctrl_id,rs1[i][0],rs1[i][1],rs1[i][2],rs1[i][3],rs1[i][4],rs1[i][5],rs1[i][6],rs1[i][7],rs1[i][8],rs1[i][9],rs1[i][10],rs1[i][11],rs1[i][12],rs1[i][13],rs1[i][14],rs1[i][15],rs1[i][16],rs1[i][17],rs1[i][18],rs1[i][19],rs1[i][20],rs1[i][21],rs1[i][22]});
+
+					conPlat.exec("insert into $[plat].ctrl_tree_icon_map(module_id,ctrl_id,option_id,option_code,icon_path,column_name) select '"+object_id+"','"+ctrl_id+"',option_id,option_code,icon_path,column_name from  $[plat].ctrl_tree_icon_map where module_id=?",new String[] {objectId});
+				}
+
+				break;
+			case 5:
+				//统计图页面，无操作
+				break;
+			case 6:
+				conPlat.exec("insert into $[plat].ctrl_input (tab_id,tabitem_id, ctrl_type, max_length, width,  row_index,object_id,LINK_WIDGET,hide_flag,readonly_flag,title,query_id,query_column,wrap_flag,min_length,textreport_id,annotation,regex,regexText,default_value) select tab_id,tabitem_id, ctrl_type, max_length, width,  row_index,"+object_id+",LINK_WIDGET,hide_flag,readonly_flag,title,query_id,query_column,wrap_flag,min_length,textreport_id,annotation,regex,regexText,default_value from  $[plat].ctrl_input where object_id=?",new String[] {objectId});
+				break;
+			case 8:
+				if(task_type.equals("2")){
+					conPlat.exec("INSERT INTO $[plat].APP_SCRIPT (MODULE_ID, SCRIPT_CONTENT) select '"+object_id+"', SCRIPT_CONTENT from $[plat].APP_SCRIPT  where MODULE_ID=?",new String[] {objectId});	
+				}else if(task_type.equals("1")){
+					conPlat.exec("INSERT INTO $[plat].ctrl_logic (ctrl_id,title, content,database_link,PROG_TYPE) select "+object_id+",title,content,database_link,PROG_TYPE from  $[plat].ctrl_logic  where ctrl_id=?",new String[] {objectId});	
+				}else if(task_type.equals("3")){
+					conPlat.exec("insert into $[plat].ctrl_tabquery (object_id,index_id,dblink,tab_id,query_id) select '"+object_id+"',index_id,dblink,tab_id,query_id from $[plat].ctrl_tabquery  where OBJECT_ID=?",new String[] {objectId});	
+				}else if(task_type.equals("4")){
+					conPlat.exec("insert into $[plat].DATA_SERVICE(LOGIC_NAME,  SERVICE_TYPE, INTERFACE_TYPE, DATA_PATTERN, AUTHER_MODE,  OBJECT_ID, IS_CLIENT,PHYSICAL_NAME) select LOGIC_NAME,  SERVICE_TYPE, INTERFACE_TYPE, DATA_PATTERN, AUTHER_MODE,'"+object_id+"',IS_CLIENT,PHYSICAL_NAME from  $[plat].DATA_SERVICE where OBJECT_ID=?",new String[] {objectId});				
+				}else if(task_type.equals("5")){
+					conPlat.exec("insert into $[plat].ctrl_tabquery (object_id,index_id,dblink,tab_id,query_id) select '"+object_id+"',index_id,dblink,tab_id,query_id from  $[plat].ctrl_tabquery  where OBJECT_ID=?",new String[] {objectId});	
+				}else {
+					conPlat.exec("INSERT INTO  $[plat].CTRL_NOTIFY  (object_id,notify_type,query_id,address_item,content,subject,smpt_server,smtp_user,smtp_passwd,from_address) select '"+object_id+"',notify_type,query_id,address_item,content,subject,smpt_server,smtp_user,smtp_passwd,from_address from  $[plat].CTRL_NOTIFY  where OBJECT_ID=?",new String[] {objectId});	
+				}
+				break;
+			case 9:
+				//单记录查询，无操作
+				break;
+			case 10:
+			    //列表查询
+				break;
+			case 11:
+				//外挂程序，无操作
+				break;
+			case 12:
+				conPlat.exec("insert into $[plat].ctrl_input (tab_id,tabitem_id, ctrl_type, max_length, width,  row_index,object_id,LINK_WIDGET,hide_flag,readonly_flag,title,query_id,query_column,wrap_flag,min_length,textreport_id,annotation,regex,regexText,default_value) select tab_id,tabitem_id, ctrl_type, max_length, width,  row_index,'"+object_id+"',LINK_WIDGET,hide_flag,readonly_flag,title,query_id,query_column,wrap_flag,min_length,textreport_id,annotation,regex,regexText,default_value from  $[plat].ctrl_input  where object_id=?",new String[] {objectId});
+				break;
+			case 13:
+				conPlat.exec("insert into $[plat].ctrl_input (tab_id,tabitem_id, ctrl_type, max_length, width,  row_index,object_id,LINK_WIDGET,hide_flag,readonly_flag,title,query_id,query_column,wrap_flag,min_length,textreport_id,annotation,regex,regexText,default_value) select tab_id,tabitem_id, ctrl_type, max_length, width,  row_index,'"+object_id+"',LINK_WIDGET,hide_flag,readonly_flag,title,query_id,query_column,wrap_flag,min_length,textreport_id,annotation,regex,regexText,default_value from  $[plat].ctrl_input  where object_id=?",new String[] {objectId});
+				break;
+			case 14:
+				//外挂程序，无操作
+				break;
+			case 15:
+				//外挂程序，无操作
+				break;
+			case 16:
+				//外挂程序，无操作
+				break;
+			case 17:
+				//应用集成，无操作
+				break;
+			case 18:
+				//报告，无操作
+				break;
+			case 19:
+				//搜索引擎，无操作
+				break;
+			case 20:
+				//链接引用，无操作
+				break;
+			case 21:
+				//主题录入
+				conPlat.exec("insert into $[plat].ctrl_input (tab_id,tabitem_id, ctrl_type, max_length, width,  row_index,object_id,LINK_WIDGET,hide_flag,readonly_flag,title,query_id,query_column,wrap_flag,min_length,textreport_id,annotation,regex,regexText,default_value) select tab_id,tabitem_id, ctrl_type, max_length, width,  row_index,'"+object_id+"',LINK_WIDGET,hide_flag,readonly_flag,title,query_id,query_column,wrap_flag,min_length,textreport_id,annotation,regex,regexText,default_value from  $[plat].ctrl_input where object_id=?",new String[] {objectId});
+				break;
+			case 22:
+				//程序导航, 不可移植
+			case 24:
+				//批量更新
+				conPlat.exec("insert into $[plat].ctrl_input (tab_id,tabitem_id, ctrl_type, max_length, width,  row_index,object_id,LINK_WIDGET,hide_flag,readonly_flag,title,query_id,query_column,wrap_flag,min_length,textreport_id,annotation,regex,regexText,default_value) select tab_id,tabitem_id, ctrl_type, max_length, width,  row_index,'"+object_id+"',LINK_WIDGET,hide_flag,readonly_flag,title,query_id,query_column,wrap_flag,min_length,textreport_id,annotation,regex,regexText,default_value from  $[plat].ctrl_input where object_id=?",new String[] {objectId});
+				break;
+		}
+
+ 		conPlat.exec("insert into $[plat].ctrl_button (module_id,button_name,button_action,seq,button_class,button_img,target_type,target,target_task,target_id,page_type,task_type,workflow_id,targetText,button_class_text,button_js,CONSTRAINT_TYPE) select '"+object_id+"',button_name,button_action,seq,button_class,button_img,target_type,target,target_task,target_id,page_type,task_type,workflow_id,targetText,button_class_text,button_js,CONSTRAINT_TYPE  from $[plat].ctrl_button where module_id=?",new String[]{objectId});
+
+		conPlat.exec("insert into $[plat].prg_jsext(object_id,tab_id,field_name,event_name,event_body)  select '"+object_id+"',tab_id,field_name,event_name,event_body from $[plat].prg_jsext where object_id=?",new String[]{objectId});
+
+		conPlat.exec("insert into $[plat].prg_query(object_id,structure,sql) select '"+object_id+"',structure,sql from $[plat].prg_query where object_id=?",new String[]{objectId});
+
+		conPlat.commit();
+		jacper.print("{success:true,id:'"+object_id+"'}");
+	}catch(Exception e){
+		e.printStackTrace();
+		try {
+			conPlat.rollback();
+		}catch(Exception e1) {}
+		<?{success:false,message:"?>e.toString()<?"}?>;
+	}finally {
+		try {
+			conPlat.setAutoCommit(true);
+			conPlat.close();
+		}catch(Exception e2) {}
+	}
+}
+}

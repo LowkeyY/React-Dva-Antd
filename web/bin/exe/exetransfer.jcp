@@ -1,0 +1,111 @@
+
+import java.io.IOException;  
+
+
+import com.kinglib.*;
+import java.util.Hashtable;
+import sun.misc.*; 
+import com.kinglibx.query.*;
+import java.util.Map;
+import com.kinglib.util.*;
+
+@class{
+ public void doGet(Jacper jacper){
+
+	HttpSession hs = jacper.getSession();
+
+	Connection conPlat = jacper.getConnection("plat");
+	Connection conCert= jacper.getConnection("cert");
+	String parent_id=jacper.getStr("parent_id");
+	String data_id=jacper.getStr("data_id");
+	String imptab=jacper.getStr("export_tab");
+	String import_data=jacper.getStr("export_data");
+	String import_item=jacper.getStr("export_item");
+
+	String [][] prgBase=conPlat.get("select tab_id,query_id from $[plat].ctrl_tabquery  where object_id=?",new String[]{parent_id},0);
+	String queryId="";
+	if(prgBase!=null) queryId=prgBase[0][1];
+	int query_id=Integer.parseInt(queryId);
+
+	String[][] scolum=null;
+//	QuerySearch  sch=new QuerySearch(jacper,conPlat,conCert,scolum);
+//	String shtm=sch.getSearchHtm();	String errCheck=sch.getErrCheck();
+	
+	String shtm="";
+	shtm=shtm.replaceAll("</script>","</script><br>");
+	String errCheck="";
+
+	String param="";
+	for(int i=0;i<scolum.length;i++){
+		param+="::"+scolum[i][5];
+	}
+	param=param.substring(2).trim();
+
+<?
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>?>jacper.trans("参数提交")<?</title>
+<style type="text/css">
+td {	font-size: 9pt;}
+input {	border: 1px solid;}
+</style>
+</head>
+<body bgcolor="buttonface"  >
+<script>var frm = new ShowForm('listquery.jcp','Post');</script>
+<script>		
+   function listwidget(text,widget_id,hidname,type){
+			var sp=new listWidget(widget_id,type);
+			var return_value=sp.popup("mutiChoice:true;");
+			if (return_value== "" || typeof(return_value) == "undefined") return false;			
+			var temp = return_value.split(":");
+			text.value = temp[0];
+			eval("document.all."+hidname).value = temp[1];
+		}                                                                             
+	//树控件
+		function treewidget(text,widget_id,hidname){
+			var sp=new treeWidget(widget_id);
+			var return_value=sp.popup("mutiChoice:true;");
+			if (return_value== "" || typeof(return_value) == "undefined") return false;
+			var temp = return_value.split(":");
+			text.value = temp[0];
+			eval("document.all."+hidname).value = temp[temp.length-1];
+
+		}
+
+	function onSubmit(){
+		var fm=eval(frm.nam);
+		fm.action="exetransfer.jcp";
+		fm.submit();
+		window.close();
+	}
+	document.onkeydown = function(){
+		if(event.keyCode == 13)
+			onSubmit();
+	}
+</script>
+<table border="0" cellspacing="3" cellpadding="0" id="aa" align="center">
+  <tr> 
+    <td height="55" colspan="2" valign="bottom">
+      <div  align="center">?>shtm<?<button onClick="onSubmit()">?>jacper.trans("提交")<?</button>　
+	<button onClick="self.close()">?>jacper.trans("取消")<?</button></div></td>
+  </tr>
+</table>
+<script>
+	window.onload=function(){
+		window.dialogWidth=(aa.offsetWidth+50)+'px';
+		window.dialogHeight=(aa.offsetHeight+50)+'px';
+	}
+</script>
+	<input type="hidden" name="parent_id" value="?>parent_id<?">
+	<input type="hidden" name="data_id" value="?>data_id<?">
+	<input type=hidden name=export_item value="?>import_item<?">
+	<input type=hidden name=export_data value="?>import_data<?">
+	<input type=hidden name=export_tab value="?>imptab<?">
+	<input type=hidden name=param value="?>param<?">
+<script>frm.Close();</script>
+</body>
+</html>
+?>;
+ } 
+}

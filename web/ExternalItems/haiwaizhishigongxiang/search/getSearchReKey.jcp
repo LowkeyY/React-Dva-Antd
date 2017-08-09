@@ -1,0 +1,45 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.search.SearchUnits;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.hankcs.hanlp.HanLP;
+
+//public class getSearchReKey {
+@class{
+	public void doPost(Jacper jacper) {
+		
+		String content = jacper.getString("text", "");
+		StringBuilder datahtml = new StringBuilder();
+		StringBuilder prints = new StringBuilder();
+		long begin = System.currentTimeMillis();
+		if(content.length() > 0){
+			List<String> keywordList = HanLP.extractKeyword(content, 5);
+			Connection con =jacper.getConnection(HWUnits.HW_DBLINK);
+			StringBuilder addWhere = new StringBuilder(" m.search_text like ?");
+			ArrayList<String> values = new ArrayList<String>();
+			for(String keyword : keywordList){
+				addWhere.append(values.size() > 0 ? " or m.search_text like ?" : "");
+				values.add("%"+keyword.replaceAll("%", "")+"%");
+			}
+			StringBuilder sql = new StringBuilder("select m.search_text , count(*) from DIR_SEARCH_MYRECORD m where" + addWhere.toString() + " group by m.search_text order by count(*) desc ");
+			String[][] rows = con.get(sql.toString() , 
+					values.size() > 1 ? values.toArray(new String[values.size()]) : new String[]{"%"+content.replaceAll("%", "")+"%"} , 50);
+			prints.append("query use("+(System.currentTimeMillis() - begin)+"ms);");
+			long begin1 = System.currentTimeMillis();
+			rows = SearchUnits.getRelevantByText(content , rows , 5);
+			prints.append("calc use("+(System.currentTimeMillis() - begin1)+"ms);");
+			datahtml.append("<h3>相关搜索 : </h3><ul>");
+			for(int i = 0 ; i < rows.length ; i++)
+				datahtml.append("<li><a href=\"javascript:void(0);\">" + rows[i][0] + "</a></li>");
+			datahtml.append("</ul>");
+		}
+		prints.insert(0, "getSearchReKey.jcp - ").append("tatal use("+(System.currentTimeMillis() - begin)+"ms).");
+		System.out.println(prints);
+		jacper.print("{'success':true,'datahtml':'"+datahtml+"'}");
+	}
+}

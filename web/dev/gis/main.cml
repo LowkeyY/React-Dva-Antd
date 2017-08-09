@@ -1,0 +1,1477 @@
+<root><class name="dev.gis.main"><main><![CDATA[/* Change Tree Collapse and Expand Icons */
+.db-folders-tree .x-tree-elbow-plus,
+.db-folders-tree .x-tree-elbow-end-plus {
+    background-image: url( /themes/images/desktop/tree_expand.gif ) !important;
+}
+.db-folders-tree .x-tree-elbow-minus,
+.db-folders-tree .x-tree-elbow-end-minus { 
+    background-image: url( /themes/images/desktop/tree_collapse.gif ) !important;
+}
+
+/* Upload Dialog Style */
+.x-dlg-upload
+{
+}
+
+.x-dlg-upload div.hlp
+{
+    padding: 0 0 10px 20px;
+    height: 16px;
+    background: url(/themes/icons/xp/info.gif) no-repeat left top;
+}
+.x-dlg-upload div.swc
+{
+    padding: 0 0 5px 20px;
+    height: 16px;
+    background: url(/themes/icons/xp/switcher.png) no-repeat left 0;
+}
+
+.x-dlg-upload div.prg
+{
+    padding-top: 5px;
+}
+
+.x-dlg-upload div.prg span
+{
+    color: #aaa;
+    font: bold 12px Arial;
+}
+
+.x-dlg-upload div.prg table
+{
+    margin-top: 15px;    
+}
+
+.x-dlg-upload div.prg td
+{
+    padding: 4px 0;
+}
+
+.x-dlg-upload-progress
+{
+    margin-bottom: 5px;
+    height: 24px;
+    border: 1px solid gray;
+    background-color: #fff;
+}
+
+.x-dlg-upload-progress-bar
+{
+    height: 100%;
+    background-color: Red;
+    background: url(/themes/images/desktop/progress.gif) repeat-x;
+}
+.x-dlg-upload-status
+{
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.x-dlg-upload div.suc
+{
+    padding: 5px 0 3px 23px;
+    overflow: hidden;
+    background: url(/themes/icons/xp/check.gif) no-repeat 2px 5px;
+}
+
+/* property panel */
+.db-property-panel .x-panel-body
+{
+    border-top: solid 1px #d0d0d0;
+    overflow: hidden;
+    background: #eee url(/themes/images/desktop/property.png) repeat-x top;
+}
+.db-property-panel td
+{
+    padding: 3px 4px;
+	font-size: 0.8 em;
+}
+.db-property-panel td.ppLabel
+{
+    text-align: right;
+    color: #aaa;
+	font-size: 0.8 em;
+    font-weight: bold;
+}
+.db-property-panel td.ppTitle
+{
+    padding-left: 7px;
+    color: #215DC6;
+    font-weight: bold;
+	font-size: 0.8 em;
+}
+
+/* progress bar */
+.db-progress-bar
+{
+    padding: 5px;
+}
+.db-progress-bar p
+{
+    margin: 5px 0 5px 0;
+    text-align: center;
+    padding: 0;
+}
+.db-progress-bar div
+{
+    display: block;
+    background: url(/themes/images/shared/progress-bar.gif) no-repeat;
+    height: 20px;
+}
+.db-progress-bar div span
+{
+    display: none;
+}
+
+/* Toolbars */
+.db-menubar
+{
+    padding: 0px 3px;
+}
+.db-addressbar
+{
+    padding: 1px 0 0 3px;
+}
+
+.db-toolbar
+{
+    padding: 5px 3px;
+}
+
+
+
+.x-form-field-wrap .x-form-address-trigger {
+    background-image: url(/themes/images/desktop/address-trigger.gif);
+}
+
+
+/* Files Grid Related Style */
+.db-ellipsis
+{
+	overflow:hidden;
+	-o-text-overflow: ellipsis;
+	text-overflow: ellipsis;
+    white-space: nowrap;      
+}
+
+.file-grid .x-grid3-row {
+    border: none;
+}
+
+.db-fg-item 
+{
+    float: left;  
+    width:auto !important;   
+    margin: 5px 5px 10px 5px;  
+
+}
+
+/* Icons View */
+.db-fg-iconView
+{
+    width: 62px;
+    height: 52px;
+    padding: 4px;
+    overflow: hidden;
+}
+.db-fg-iconView .db-icn
+{    
+    height: 32px;
+    background-repeat: no-repeat;
+    background-position: center center;
+}
+.db-fg-iconView .db-txt
+{
+    text-align:center;
+    height: 15px;
+    margin-top: 5px;
+}
+
+.file-grid .x-grid3-row-over .db-fg-iconView
+{
+    background: #fff url(/themes/images/desktop/vw-icn.png) no-repeat left top;
+}
+
+.file-grid .x-grid3-row-selected .db-fg-iconView
+{
+    background: #fff url(/themes/images/desktop/vw-icn.png) no-repeat left bottom;
+}
+
+/* Details View */
+.db-fg-detailView 
+{
+}
+
+.db-fg-detailView .db-icn
+{
+    float: left;
+    height: 16px;
+    width: 16px;
+}
+
+.db-fg-detailView .db-txt 
+{
+    padding: 1px 0 0 2px;
+}
+
+.file-grid .x-grid3-cell-inner
+{
+    padding: 2px 4px 3px 4px;
+}
+
+/* Thumbnail View */
+.db-fg-thumbView
+{
+    width: 82px;
+    height: 82px;
+    padding: 4px;
+    overflow: hidden;
+}
+.db-fg-thumbView .db-icn
+{
+    height: 60px;
+    border: solid 1px #E0E0E0;
+    width: 80px;
+    overflow: hidden;
+    background-color: #fff;
+    background-position: center center;
+    background-repeat: no-repeat;
+}
+.db-fg-thumbView .db-icn table 
+{
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+}
+.db-fg-thumbView .db-icn table td
+{
+    vertical-align:middle;
+    text-align: center;
+}
+.db-fg-thumbView .db-txt
+{
+    text-align:center;
+    height: 14px;
+    padding-top: 3px;
+    margin-top: 3px;
+}
+.file-grid .x-grid3-row-over .db-fg-thumbView
+{
+    background: #fff url(/themes/images/desktop/vw-tmb.png) no-repeat left top;
+}
+.file-grid .x-grid3-row-selected .db-fg-thumbView
+{
+    background: #fff url(/themes/images/desktop/vw-tmb.png) no-repeat left bottom;
+}
+.file-grid .x-grid3-row-selected .db-fg-thumbView .db-icn
+{
+    border-color: #AACCF6;
+}
+
+/* Tiles View */
+.db-fg-tileView
+{
+    width: 170px;
+    height: 48px;
+    padding: 4px;
+    overflow: hidden;
+}
+.db-fg-tileView .db-icn
+{    
+    float: left;
+    padding-right: 5px;
+    width: 48px;
+    height: 48px;
+    background-repeat: no-repeat;
+}
+.db-fg-tileView .db-icn img
+{
+    width: 48px;
+    height: 48px;
+}
+.db-fg-tileView .db-txt {
+    padding-top: 3px;
+}
+
+.db-fg-tileView .db-txt span
+{
+    display: block;    
+    color: #666;
+    font-size: 0.9em;
+    line-height: 14px;
+}
+.db-fg-tileView .db-txt span.nm
+{
+    color: #000;
+    font-size: 1em;
+}
+.file-grid .x-grid3-row-over .db-fg-tileView
+{
+    background: #fff url(/themes/images/desktop/vw-til.png) no-repeat left top;
+}
+
+.file-grid .x-grid3-row-selected .db-fg-tileView
+{
+    background: #fff url(/themes/images/desktop/vw-til.png) no-repeat left bottom;
+}
+
+/* Upload From Url Style */
+.db-ufu-win .x-panel-header
+{
+    background-image: none;
+    border-bottom-style: none;
+}
+.db-ufu-win p.hlp
+{
+    padding: 8px 0 3px 25px;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    background-position:  7px 7px;
+    font-weight: bold;
+}
+.db-ufu-win p.info
+{
+    padding: 10px 0 3px 30px;
+    overflow: hidden;
+    background: url(/themes/images/shared/arrow-right.gif) no-repeat 20px 14px;
+}
+.db-ufu-win div.prg p.hlp
+{
+    background-image: url(/themes/icons/xp/info.gif);
+}
+.db-ufu-win div.prg p.bar
+{
+    display: block;
+    background: url(/themes/images/shared/progress-bar.gif) no-repeat center bottom;
+    height: 20px;
+}
+.db-ufu-win div.prg p.bar span
+{
+    display: none;
+}
+.db-ufu-win div.prg p.center
+{
+    text-align: center;
+}
+
+.db-ufu-win div.suc p.hlp
+{
+    background-image: url(/themes/icons/xp/check.gif);
+}
+.db-ufu-win div.err p.hlp
+{
+    background-image: url(/themes/icons/xp/exclamation.gif);
+}
+/* Icon Sizes */
+.db-ft-small {
+    width: 16px;
+    height: 16px;
+    background-repeat: no-repeat;
+    background-position: center center;
+}
+.db-ft-medium {
+    width: 32px;
+    height: 32px;
+    background-repeat: no-repeat;
+    background-position: center center;
+}
+.db-ft-large {
+    width: 48px;
+    height: 48px;
+    background-repeat: no-repeat;
+    background-position: center center;
+}
+
+/* Small Icons */
+.db-ft-root-small {
+    background-image: url(/themes/icon/all/computer.gif) !important;
+}
+.db-ft-resource-small {
+    background-image: url(/themes/icon/all/resource.gif) !important;
+}
+.db-ft-resource_added-small {
+    background-image: url(/themes/icon/all/resource_added.gif) !important;
+}
+.db-ft-resource_changed-small {
+    background-image: url(/themes/icon/all/resource_changed.gif) !important;
+}
+.db-ft-resource_removed-small {
+    background-image: url(/themes/icon/all/resource_removed.gif) !important;
+}
+.db-ft-file_added-small {
+    background-image: url(/themes/icon/all/resource_added.gif) !important;
+}
+.db-ft-file_changed-small {
+    background-image: url(/themes/icon/all/resource_changed.gif) !important;
+}
+.db-ft-file_removed-small {
+    background-image: url(/themes/icon/all/resource_removed.gif) !important;
+}
+
+.db-ft-download-small {
+    background-image: url(/themes/icon/all/download.gif) !important;
+}
+.db-ft-head-small {
+    background-image: url(/themes/icon/all/head.gif) !important;
+}
+.db-ft-show_affected_path-small {
+    background-image: url(/themes/icon/all/show_affected_path.gif) !important;
+}
+.db-ft-file-small {
+    background-image: url(/themes/icon/all/file.gif) !important;
+}
+.db-ft-revlist-small {
+    background-image: url(/themes/icon/all/revlist.gif) !important;
+}
+.db-ft-pixel-small {
+    background-image: url(/themes/icon/all/pixel.gif) !important;
+}
+.db-ft-folder-small {
+    background-image: url(/themes/icon/all/folder.gif) !important;
+}
+.db-ft-folder-shared-small {
+    background-image: url( /themes/types/small/folder_shared.gif) !important;
+}
+.db-ft-gallery-small {
+    background-image: url( /themes/types/small/gallery.gif) !important;
+}
+.db-ft-album-small {
+    background-image: url( /themes/types/small/album.gif) !important;
+}
+.db-ft-album-shared-small {
+    background-image: url( /themes/types/small/album_shared.gif) !important;
+}
+.db-ft-published-small {
+    background-image: url( /themes/types/small/published.gif) !important;
+}
+.db-ft-published-files-small {
+    background-image: url( /themes/types/small/published_files.gif) !important;
+}
+.db-ft-published-folders-small {
+    background-image: url( /themes/types/small/published_folders.gif) !important;
+}
+.db-ft-network-small {
+    background-image: url( /themes/types/small/network.gif) !important;
+}
+.db-ft-network-user-small {
+    background-image: url( /themes/types/small/network_user.gif) !important;
+}
+.db-ft-shared-albums-small {
+    background-image: url( /themes/types/small/shared_albums.gif) !important;
+}
+.db-ft-shared-docs-small {
+    background-image: url( /themes/types/small/shared_docs.gif) !important;
+}
+.db-ft-recyclebin-small {
+    background-image: url( /themes/types/small/recycle.gif) !important;
+}
+
+.db-ft-3gp-small {
+    background-image: url( /themes/types/small/3gp.gif) !important;
+}
+.db-ft-avi-small {
+    background-image: url( /themes/types/small/avi.gif) !important;
+}
+.db-ft-bmp-small {
+    background-image: url( /themes/types/small/bmp.gif) !important;
+}
+.db-ft-chm-small {
+    background-image: url( /themes/types/small/chm.gif) !important;
+}
+.db-ft-dll-small {
+    background-image: url( /themes/types/small/dll.gif) !important;
+}
+.db-ft-doc-small {
+    background-image: url( /themes/types/small/doc.gif) !important;
+}
+.db-ft-dwf-small {
+    background-image: url( /themes/types/small/dwf.gif) !important;
+}
+.db-ft-exe-small {
+    background-image: url( /themes/types/small/exe.gif) !important;
+}
+.db-ft-gif-small {
+    background-image: url( /themes/types/small/gif.gif) !important;
+}
+.db-ft-htm-small {
+    background-image: url( /themes/types/small/htm.gif) !important;
+}
+.db-ft-ico-small {
+    background-image: url( /themes/types/small/gif.gif) !important;
+}
+.db-ft-jpg-small {
+    background-image: url( /themes/types/small/jpg.gif) !important;
+}
+.db-ft-mdb-small {
+    background-image: url( /themes/types/small/mdb.gif) !important;
+}
+.db-ft-mov-small {
+    background-image: url( /themes/types/small/mov.gif) !important;
+}
+.db-ft-mp3-small {
+    background-image: url( /themes/types/small/mp3.gif) !important;
+}
+.db-ft-mpg-small {
+    background-image: url( /themes/types/small/mpg.gif) !important;
+}
+.db-ft-pdf-small {
+    background-image: url( /themes/types/small/pdf.gif) !important;
+}
+.db-ft-pps-small {
+    background-image: url( /themes/types/small/pps.gif) !important;
+}
+.db-ft-ppt-small {
+    background-image: url( /themes/types/small/ppt.gif) !important;
+}
+.db-ft-rar-small {
+    background-image: url( /themes/types/small/rar.gif) !important;
+}
+.db-ft-rtf-small {
+    background-image: url( /themes/types/small/rtf.gif) !important;
+}
+.db-ft-txt-small {
+    background-image: url( /themes/types/small/txt.gif) !important;
+}
+.db-ft-unknown-small {
+    background-image: url( /themes/types/small/unknown.gif) !important;
+}
+.db-ft-wav-small {
+    background-image: url( /themes/types/small/wav.gif) !important;
+}
+.db-ft-wma-small {
+    background-image: url( /themes/types/small/wma.gif) !important;
+}
+.db-ft-wmv-small {
+    background-image: url( /themes/types/small/wmv.gif) !important;
+}
+.db-ft-xls-small {
+    background-image: url( /themes/types/small/xls.gif) !important;
+}
+.db-ft-xml-small {
+    background-image: url( /themes/types/small/xml.gif) !important;
+}
+.db-ft-zip-small {
+    background-image: url( /themes/types/small/zip.gif) !important;
+}
+.db-ft-jcp-small {
+    background-image: url( /dev/script/icon/small/file_jcp.png) !important;
+}
+.db-ft-js-small {
+    background-image: url(/dev/script/icon/small/file_js.png) !important;
+}
+.db-ft-jss-small {
+    background-image: url( /dev/script/icon/small/file_jss.png) !important;
+}
+.db-ft-css-small {
+    background-image: url( /dev/script/icon/small/file_css.png) !important;
+}
+
+
+
+/* Medium Icons */
+.db-ft-root-medium {
+    background-image: url( /themes/types/medium/root.gif) !important;
+}
+.db-ft-folder-medium {
+    background-image: url( /themes/types/medium/folder.gif) !important;
+}
+.db-ft-folder-shared-medium {
+    background-image: url( /themes/types/medium/folder_shared.gif) !important;
+}
+.db-ft-gallery-medium {
+    background-image: url( /themes/types/medium/gallery.gif) !important;
+}
+.db-ft-album-medium {
+    background-image: url( /themes/types/medium/album.gif) !important;
+}
+.db-ft-album-shared-medium {
+    background-image: url( /themes/types/medium/album_shared.gif) !important;
+}
+.db-ft-published-medium {
+    background-image: url( /themes/types/medium/published.gif) !important;
+}
+.db-ft-published-files-medium {
+    background-image: url( /themes/types/medium/published_files.gif) !important;
+}
+.db-ft-published-folders-medium {
+    background-image: url( /themes/types/medium/published_folders.gif) !important;
+}
+.db-ft-network-medium {
+    background-image: url( /themes/types/medium/network.gif) !important;
+}
+.db-ft-network-user-medium {
+    background-image: url( /themes/types/medium/network_user.gif) !important;
+}
+.db-ft-shared-albums-medium {
+    background-image: url( /themes/types/medium/shared_albums.gif) !important;
+}
+.db-ft-shared-docs-medium {
+    background-image: url( /themes/types/medium/shared_docs.gif) !important;
+}
+.db-ft-recyclebin-medium {
+    background-image: url( /themes/types/medium/recycle.gif) !important;
+}
+
+.db-ft-3gp-medium {
+    background-image: url( /themes/types/medium/3gp.gif) !important;
+}
+.db-ft-avi-medium {
+    background-image: url( /themes/types/medium/avi.gif) !important;
+}
+.db-ft-bmp-medium {
+    background-image: url( /themes/types/medium/bmp.gif) !important;
+}
+.db-ft-chm-medium {
+    background-image: url( /themes/types/medium/chm.gif) !important;
+}
+.db-ft-dll-medium {
+    background-image: url( /themes/types/medium/dll.gif) !important;
+}
+.db-ft-doc-medium {
+    background-image: url( /themes/types/medium/doc.gif) !important;
+}
+.db-ft-dwf-medium {
+    background-image: url( /themes/types/medium/dwf.gif) !important;
+}
+.db-ft-exe-medium {
+    background-image: url( /themes/types/medium/exe.gif) !important;
+}
+.db-ft-gif-medium {
+    background-image: url( /themes/types/medium/gif.gif) !important;
+}
+.db-ft-htm-medium {
+    background-image: url( /themes/types/medium/htm.gif) !important;
+}
+.db-ft-ico-medium {
+    background-image: url( /themes/types/medium/gif.gif) !important;
+}
+.db-ft-jpg-medium {
+    background-image: url( /themes/types/medium/jpg.gif) !important;
+}
+.db-ft-mdb-medium {
+    background-image: url( /themes/types/medium/mdb.gif) !important;
+}
+.db-ft-mov-medium {
+    background-image: url( /themes/types/medium/mov.gif) !important;
+}
+.db-ft-mp3-medium {
+    background-image: url( /themes/types/medium/mp3.gif) !important;
+}
+.db-ft-mpg-medium {
+    background-image: url( /themes/types/medium/mpg.gif) !important;
+}
+.db-ft-pdf-medium {
+    background-image: url( /themes/types/medium/pdf.gif) !important;
+}
+.db-ft-pps-medium {
+    background-image: url( /themes/types/medium/pps.gif) !important;
+}
+.db-ft-ppt-medium {
+    background-image: url( /themes/types/medium/ppt.gif) !important;
+}
+.db-ft-rar-medium {
+    background-image: url( /themes/types/medium/rar.gif) !important;
+}
+.db-ft-rtf-medium {
+    background-image: url( /themes/types/medium/rtf.gif) !important;
+}
+.db-ft-txt-medium {
+    background-image: url( /themes/types/medium/txt.gif) !important;
+}
+.db-ft-unknown-medium {
+    background-image: url( /themes/types/medium/unknown.gif) !important;
+}
+.db-ft-wav-medium {
+    background-image: url( /themes/types/medium/wav.gif) !important;
+}
+.db-ft-wma-medium {
+    background-image: url( /themes/types/medium/wma.gif) !important;
+}
+.db-ft-wmv-medium {
+    background-image: url( /themes/types/medium/wmv.gif) !important;
+}
+.db-ft-xls-medium {
+    background-image: url( /themes/types/medium/xls.gif) !important;
+}
+.db-ft-xml-medium {
+    background-image: url( /themes/types/medium/xml.gif) !important;
+}
+.db-ft-zip-medium {
+    background-image: url( /themes/types/medium/zip.gif) !important;
+}
+.db-ft-jcp-medium {
+    background-image: url( /dev/script/icon/medium/file_jcp.png) !important;
+}
+.db-ft-js-medium {
+    background-image: url(/dev/script/icon/medium/file_js.png) !important;
+}
+.db-ft-jss-medium {
+    background-image: url( /dev/script/icon/medium/file_jss.png) !important;
+}
+.db-ft-css-medium {
+    background-image: url( /dev/script/icon/medium/file_css.png) !important;
+}
+
+/* Large Icons */
+.db-ft-root-large {
+    background-image: url( /themes/types/large/root.gif) !important;
+}
+.db-ft-folder-large {
+    background-image: url( /themes/types/large/folder.gif) !important;
+}
+.db-ft-folder-shared-large {
+    background-image: url( /themes/types/large/folder_shared.gif) !important;
+}
+.db-ft-gallery-large {
+    background-image: url( /themes/types/large/gallery.gif) !important;
+}
+.db-ft-album-large {
+    background-image: url( /themes/types/large/album.gif) !important;
+}
+.db-ft-album-shared-large {
+    background-image: url( /themes/types/large/album_shared.gif) !important;
+}
+.db-ft-published-large {
+    background-image: url( /themes/types/large/published.gif) !important;
+}
+.db-ft-published-files-large {
+    background-image: url( /themes/types/large/published_files.gif) !important;
+}
+.db-ft-published-folders-large {
+    background-image: url( /themes/types/large/published_folders.gif) !important;
+}
+.db-ft-network-large {
+    background-image: url( /themes/types/large/network.gif) !important;
+}
+.db-ft-network-user-large {
+    background-image: url( /themes/types/large/network_user.gif) !important;
+}
+.db-ft-shared-albums-large {
+    background-image: url( /themes/types/large/shared_albums.gif) !important;
+}
+.db-ft-shared-docs-large {
+    background-image: url( /themes/types/large/shared_docs.gif) !important;
+}
+.db-ft-recyclebin-large {
+    background-image: url( /themes/types/large/recycle.gif) !important;
+}
+
+.db-ft-3gp-large {
+    background-image: url( /themes/types/large/3gp.gif) !important;
+}
+.db-ft-avi-large {
+    background-image: url( /themes/types/large/avi.gif) !important;
+}
+.db-ft-bmp-large {
+    background-image: url( /themes/types/large/bmp.gif) !important;
+}
+.db-ft-chm-large {
+    background-image: url( /themes/types/large/chm.gif) !important;
+}
+.db-ft-dll-large {
+    background-image: url( /themes/types/large/dll.gif) !important;
+}
+.db-ft-doc-large {
+    background-image: url( /themes/types/large/doc.gif) !important;
+}
+.db-ft-dwf-large {
+    background-image: url( /themes/types/large/dwf.gif) !important;
+}
+.db-ft-exe-large {
+    background-image: url( /themes/types/large/exe.gif) !important;
+}
+.db-ft-gif-large {
+    background-image: url( /themes/types/large/gif.gif) !important;
+}
+.db-ft-htm-large {
+    background-image: url( /themes/types/large/htm.gif) !important;
+}
+.db-ft-ico-large {
+    background-image: url( /themes/types/large/gif.gif) !important;
+}
+.db-ft-jpg-large {
+    background-image: url( /themes/types/large/jpg.gif) !important;
+}
+.db-ft-mdb-large {
+    background-image: url( /themes/types/large/mdb.gif) !important;
+}
+.db-ft-mov-large {
+    background-image: url( /themes/types/large/mov.gif) !important;
+}
+.db-ft-mp3-large {
+    background-image: url( /themes/types/large/mp3.gif) !important;
+}
+.db-ft-mpg-large {
+    background-image: url( /themes/types/large/mpg.gif) !important;
+}
+.db-ft-pdf-large {
+    background-image: url( /themes/types/large/pdf.gif) !important;
+}
+.db-ft-pps-large {
+    background-image: url( /themes/types/large/pps.gif) !important;
+}
+.db-ft-ppt-large {
+    background-image: url( /themes/types/large/ppt.gif) !important;
+}
+.db-ft-rar-large {
+    background-image: url( /themes/types/large/rar.gif) !important;
+}
+.db-ft-rtf-large {
+    background-image: url( /themes/types/large/rtf.gif) !important;
+}
+.db-ft-txt-large {
+    background-image: url( /themes/types/large/txt.gif) !important;
+}
+.db-ft-unknown-large {
+    background-image: url( /themes/types/large/unknown.gif) !important;
+}
+.db-ft-wav-large {
+    background-image: url( /themes/types/large/wav.gif) !important;
+}
+.db-ft-wma-large {
+    background-image: url( /themes/types/large/wma.gif) !important;
+}
+.db-ft-wmv-large {
+    background-image: url( /themes/types/large/wmv.gif) !important;
+}
+.db-ft-xls-large {
+    background-image: url( /themes/types/large/xls.gif) !important;
+}
+.db-ft-xml-large {
+    background-image: url( /themes/types/large/xml.gif) !important;
+}
+.db-ft-zip-large {
+    background-image: url( /themes/types/large/zip.gif) !important;
+}
+
+#myGallery
+{
+    background-color: #000;
+    overflow: auto;
+    position: relative;
+    font-family: Arial;
+}
+
+#myGallery, #myGallery input
+{
+    font: 11px Tahoma;
+}
+
+/*   Gallery Style
+---------------------------------------*/
+div.albumContainert
+{
+    text-align: center;
+    float: left;
+    margin: 10px 0px 5px 15px;
+    cursor: pointer;
+    background: url(/themes/images/shared/album.gif) no-repeat left top;
+    overflow: hidden;
+    padding: 10px 20px 0 10px;
+}
+
+div.albumThumbnail
+{
+}
+
+div.albumDescription
+{
+    padding-top: 14px;
+    color: #fff;
+}
+
+div.albumDescription strong
+{
+    display: block;
+    height: 15px;
+    overflow: hidden;    
+}
+
+div.albumDescription span
+{
+    display: block;
+    height: 10px;
+    color: #aaa;
+    font-size: 9px;
+}
+
+/*   Album Style
+----------------------------------------*/
+#thumbnailsContainer
+{
+    overflow: hidden;
+    position: relative;
+    background-color: #222;
+    border-bottom: #999;
+    margin: 0 12px;padding: 5px 0;
+}
+
+#thumbnailsHolder
+{
+    position: relative;
+    left: 0;
+    
+}
+
+#thumbnailsHolder div
+{
+    border: solid 1px #3B3A37;
+    margin: 0 5px;
+}
+
+#thumbnailsHolder td.selected div
+{
+    border: solid 1px #fff;
+}
+
+#previewContainer
+{
+    text-align: center;
+    background-color: #000;
+}
+
+#navContainer
+{
+    border: solid 1px #666;
+    background-color: #222;
+    padding-top: 5px;
+    text-align: center;
+    height: 25px;
+}
+
+#navContainer input
+{
+    border: solid 1px #666;
+    background-color: #444;
+    color: #fff;
+    height: 20px;
+    margin: 0 2px;
+    cursor: pointer;
+}
+
+#navContainer input:hover
+{
+    background-color: #555;
+}
+
+#navContainer input.scrollLeft, #navContainer input.scrollRight
+{
+    position: absolute;
+    top: 0;
+    width: 10px;
+    height: 70px;
+    overflow: hidden;
+    padding: 0;    
+    margin: 1px;
+}
+
+input.scrollLeft
+{
+    left: 0;
+}
+
+input.scrollRight
+{
+    right: 0;
+}
+
+/* Slide Show Style
+-------------------------------------------*/
+div.ssMask
+{
+    background-color: #000;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 12002;
+}
+
+div.ssNav
+{
+    background-color: #0A1621;
+    border: solid 1px #464646;
+    border-bottom-width: 0;
+    width: 390px;
+    margin: 0 auto;
+    padding: 10px;
+    color: #fff;
+}
+
+div.ssNav, div.ssNav input
+{
+    font: 11px Tahoma;
+}
+
+div.ssPreview
+{
+    padding: 15px 20px 5px 20px;
+    text-align: center;
+    overflow: hidden;
+}
+
+div.ssComment
+{
+    height: 10px;
+    padding: 2px 10px 10px 10px;
+    text-align: center;
+    overflow: hidden;
+    color: #aaa;
+    margin: 5px auto;
+}
+
+div.ssNav a
+{
+    color: #fff;
+    text-decoration: underline;
+}
+
+div.ssNav a:hover
+{
+    text-decoration: none;
+}
+
+div.ssNav input
+{
+    margin: 0 3px;
+    padding: 0;
+    color: #fcfcfc;
+    border: solid 1px #647687;
+    background-color: #1C3D59;
+    font: bold 11px Arial;
+    cursor: pointer;
+}
+
+div.ssNav input:hover
+{
+    background-color: #255277;
+}
+
+div.ssNav input.ply
+{
+    width: 50px;
+}
+
+div.ssNav input.inc
+{
+    margin-right: 15px;
+}
+
+div.ssNav input.dec
+{
+    margin-left: 15px;
+}
+
+div.ssNav input.cls
+{
+    margin-left: 17px;
+}
+
+.db-icn-back {
+    background-image: url(/themes/icon/xp/back.gif) !important;
+}
+.db-icn-forward {
+    background-image: url(/themes/icon/xp/forward.gif) !important;
+}
+.db-icn-up {
+    background-image: url(/themes/icon/xp/up.gif) !important;
+}
+.db-icn-refresh {
+    background-image: url(/themes/icon/xp/refresh.gif) !important;
+}
+.db-icn-delete {
+    background-image: url(/themes/icon/xp/delete.gif) !important;
+}
+.db-icn-cut {
+    background-image: url(/themes/icon/xp/cut.gif) !important;
+}
+.db-icn-copy {
+    background-image: url(/themes/icon/xp/copy.gif) !important;
+}
+.db-icn-paste {
+    background-image: url(/themes/icon/xp/paste.gif) !important;
+}
+.db-icn-rename {
+    background-image: url(/themes/icon/xp/rename.gif) !important;
+}
+.db-icn-upload {
+    background-image: url(/themes/icon/xp/upload.gif) !important;
+}
+.db-icn-upload-local {
+    background-image: url(/themes/icon/xp/upload_local.png) !important;
+}
+.db-icn-upload-url {
+    background-image: url(/themes/icon/xp/upload_url.png) !important;
+}
+.db-icn-download {
+    background-image: url(/themes/icon/xp/download.gif) !important;
+}
+.db-icn-email {
+    background-image: url(/themes/icon/xp/email.gif) !important;
+}
+.db-icn-email-attach {
+    background-image: url(/themes/icon/xp/email_attach.gif) !important;
+}
+.db-icn-views {
+    background-image: url(/themes/icon/xp/views.gif) !important;
+}
+.db-icn-views-album {
+    background-image: url(/themes/icon/xp/views_album.gif) !important;
+}
+.db-icn-views-thumb {
+    background-image: url(/themes/icon/xp/views_thumb.gif) !important;
+}
+.db-icn-views-tile {
+    background-image: url(/themes/icon/xp/views_tile.gif) !important;
+}
+.db-icn-views-icon {
+    background-image: url(/themes/icon/xp/views_icon.gif) !important;
+}
+.db-icn-views-detail {
+    background-image: url(/themes/icon/xp/views_detail.gif) !important;
+}
+.db-icn-star {
+    background-image: url(/themes/icon/xp/star.png) !important;
+}
+.db-icn-folder {
+    background-image: url(/themes/icon/xp/folder.gif) !important;
+}
+.db-icn-folder-new {
+    background-image: url(/themes/icon/xp/folder_new.gif) !important;
+}
+.db-icn-folder-open {
+    background-image: url(/themes/icon/xp/folder_open.gif) !important;
+}
+.db-icn-folder-zip {
+    background-image: url(/themes/icon/xp/folder_zip.gif) !important;
+}
+.db-icn-folder-share {
+    background-image: url(/themes/icon/xp/folder_share.gif) !important;
+}
+.db-icn-album-new {
+    background-image: url(/themes/icon/xp/album_new.gif) !important;
+}
+.db-icn-album-edit {
+    background-image: url(/themes/icon/xp/album_edit.gif) !important;
+}
+.db-icn-album-share {
+    background-image: url(/themes/icon/xp/album_share.gif) !important;
+}
+.db-icn-bin-empty {
+    background-image: url(/themes/icon/xp/bin_empty.gif) !important;
+}
+.db-icn-publish {
+    background-image: url(/themes/icon/xp/publish.gif) !important;
+}
+.db-icn-publish-remove {
+    background-image: url(/themes/icon/xp/publish_remove.gif) !important;
+}
+.db-icn-tag {
+    background-image: url(/themes/icon/xp/tag.gif) !important;
+}
+.db-icn-tag-edit {
+    background-image: url(/themes/icon/xp/tag_edit.gif) !important;
+}
+.db-icn-properties {
+    background-image: url(/themes/icon/xp/properties.gif) !important;
+}
+.db-icn-edit {
+    background-image: url(/themes/icon/xp/edit.gif) !important;
+}
+.db-icn-view {
+    background-image: url(/themes/icon/xp/view.gif) !important;
+}
+.db-icn-sort-asc {
+    background-image: url(/themes/icon/xp/sort_asc.gif) !important;
+}
+.db-icn-sort-desc {
+    background-image: url(/themes/icon/xp/sort_desc.gif) !important;
+}
+.db-icn-file-new {
+    background-image: url(/themes/icon/xp/file_new.gif) !important;
+}
+.db-icn-search {
+    background-image: url(/themes/icon/xp/search.gif) !important;
+}
+.db-icn-computer {
+    background-image:url(/themes/icons/xp/computer.png) !important;
+}
+.db-icn-help {
+    background-image:url(/themes/icons/xp/help.png) !important;
+}
+.db-icn-user {
+    background-image:url(/themes/icons/xp/user.png) !important;
+}
+.db-icn-group {
+    background-image:url(/themes/icons/xp/group.png) !important;
+}
+.db-icn-key {
+    background-image:url(/themes/icons/xp/key.png) !important;
+}
+.db-icn-zoho {
+    background-image:url(/themes/icons/xp/zoho.png) !important;
+}
+.db-icn-play {
+    background-image:url(/themes/icons/xp/play.png) !important;
+}
+.db-icn-info {
+    background-image:url(/themes/icons/xp/information.png) !important;
+}
+.db-icn-compress {
+    background-image:url(/themes/icons/xp/compress.png) !important;
+}
+.db-icn-wrench {
+    background-image:url(/themes/icons/xp/wrench.png) !important;
+}
+.db-icn-image {
+    background-image:url(/themes/icons/xp/image.png) !important;
+}
+.db-icn-world {
+    background-image:url(/themes/icons/xp/world.png) !important;
+}
+.db-icn-music {
+    background-image:url(/themes/icons/xp/music.png) !important;
+}
+.db-icn-adobe {
+    background-image:url(/themes/icons/xp/adobe.png) !important;
+}
+.db-icn-autodesk {
+    background-image:url(/themes/icons/xp/autodesk.png) !important;
+}
+.db-icn-picnik {
+    background-image:url(/themes/icons/xp/picnik.png) !important;
+}
+.db-icn-snipshot {
+    background-image:url(/themes/icons/xp/snipshot.png) !important;
+}
+
+.db-icn-add
+{
+    background-image: url(/themes/icons/xp/add.png) !important;
+}
+.db-icn-stop
+{
+    background-image: url(/themes/icons/xp/stop.png) !important;
+}
+.db-icn-cancel
+{
+    background-image: url(/themes/icons/xp/cancel.png) !important;
+}
+.db-icn-cross
+{
+    background-image: url(/themes/icons/xp/cross.png) !important;
+}
+.db-icn-clear
+{
+    background-image: url(/themes/icons/xp/bin_empty.png) !important;
+}
+
+/*---------------------文件上传CSS--------------------------------*/
+
+.db-file-progress-wrap
+{
+    position: relative;
+    border-bottom: solid 1px #e4e4e4;
+    clear: both;
+}
+.db-file-progress-wbar
+{
+    height: 20px;
+}
+.db-file-progress-bar
+{
+    background: #6DE581 url(/themes/images/desktop/upload_progress.png) repeat-x top;
+    visibility: hidden;
+}
+.db-file-progress-text
+{
+    height: 22px;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+.db-file-progress-text div.name, .db-file-progress-text div.size, .db-file-progress-text div.stat
+{
+    display:table-cell;   
+    float: left;
+    line-height:20px;
+    white-space:nowrap;
+    overflow: hidden;
+}
+.db-file-progress-text div.name
+{
+    width: 314px;
+    padding-left: 10px;
+}
+.db-file-progress-text div.size
+{
+    width: 70px;
+    text-align: right;
+    padding-right: 20px;
+}
+.db-file-progress-text div.stat
+{
+    width: 16px;
+    padding-left: 10px;
+    background-position: 10px 2px;
+    background-repeat: no-repeat;
+}
+
+.db-file-progress-text div.stat span.cancel
+{
+    width: 16px;
+    height: 16px;
+    display: block;
+    background: url( /themes/icons/xp/delete.png) no-repeat left top;
+    cursor: pointer;
+    margin-top: 2px;
+}
+
+.db-file-progress-cancel
+{
+    color: #aaa;
+}
+.db-file-progress-cancel span.cancel, 
+.db-file-progress-complete span.cancel, 
+.db-file-progress-error span.cancel
+{
+    visibility: hidden;
+}
+.db-file-progress-cancel div.stat
+{
+    background-image: url( /themes/icons/xp/bin.png)
+}
+
+.db-file-progress-complete
+{
+    color: #080;
+}
+.db-file-progress-complete div.stat
+{
+    background-image: url( /themes/icons/xp/check.gif)
+}
+
+.db-file-progress-error
+{
+    color: #dc143c;
+}
+.db-file-progress-error div.stat
+{
+    background-image: url( /themes/icons/xp/error.png)
+}
+
+
+/* Upload List Header Style */
+.db-upload-files .x-panel-header
+{
+    background: #F9F9F9 url(/themes/images/desktop/upload_list_head.png) repeat-x top;
+    height: 22px;
+    border-bottom: solid 1px #D0D0D0;
+    border-top: solid 1px #e6e6e6;
+    padding: 1px 0 0 0;
+    color: #666;
+}
+.db-upload-files .x-panel-header div.name, 
+.db-upload-files .x-panel-header div.size, 
+.db-upload-files .x-panel-header div.stat 
+{
+    display:table-cell;   
+    float: left;
+    line-height:22px;
+    white-space:nowrap;
+    overflow: hidden;
+}
+.db-upload-files .x-panel-header div.name
+{
+    border-right: solid 1px #D0D0D0;
+    padding-left: 10px;
+    width: 314px;
+}
+.db-upload-files .x-panel-header div.size
+{
+    border-right: solid 1px #D0D0D0;
+    border-left: solid 1px #EEEEEE;
+    padding-left: 20px;
+    width: 68px;
+}
+
+.db-upload-progress-wrap
+{
+    background-color:#F8F8F8;
+    padding:10px 5px 0 5px;
+    border-bottom: solid 1px #e6e6e6;    
+}
+
+.db-upload-progress-table
+{
+    width: auto;
+    border-collapse: collapse;
+    margin-top: 7px;
+}
+.db-upload-progress-table .db-upload-progress-label
+{
+    width: 80px;
+    text-align: left;
+    padding: 2px 2px 2px 5px;
+}
+.db-upload-progress-table .db-upload-progress-value
+{
+    width:130px;
+}
+
+.db-upload-error-wrap
+{
+    background-color: #ffffe1;
+    border-bottom: solid 1px #e4e4e4;
+    clear: both;    
+    height: 20px;
+}
+.db-upload-error-text div.name, .db-upload-error-text div.cancel
+{
+    display:table-cell;   
+    float: left;
+    line-height:20px;
+    white-space:nowrap;
+    overflow: hidden;
+}
+.db-upload-error-text div.name
+{
+    padding-left: 25px;    
+    width: 395px;
+    background: url( /themes/icons/xp/error.png) no-repeat 5px 2px;
+}
+.db-upload-error-text div.cancel
+{
+    padding-left: 8px;    
+    width: 10px;
+}
+.db-upload-error-text div.cancel span.close
+{
+    width: 8px;
+    height: 8px;
+    display: block;
+    background: url(/themes/images/desktop/close.gif) no-repeat left top;
+    cursor: pointer;
+    margin-top: 6px;    
+}
+
+
+.db-upload-header .x-panel-body
+{
+    padding: 10px 0 0 25px;
+    color: #333;
+    background: Transparent url( /themes/icons/xp/info.gif) no-repeat 5px 10px;
+}
+.db-upload-footer .x-panel-body
+{
+    padding: 5px 0 0 25px;
+    color: #333;
+    background: Transparent url( /themes/icons/xp/switcher.png) no-repeat 5px 5px;
+}
+.db-upload-footer .x-panel-body span 
+{
+    text-decoration: underline;
+    cursor: pointer;
+    color: #40608C;
+}
+]]></main></class></root>

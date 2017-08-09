@@ -1,0 +1,126 @@
+.icon_file_xlsx{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -166px!important
+}
+.icon_file_pdf{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -182px!important
+}
+.icon_file_html{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -198px!important
+}
+.icon_clear_all{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -214px!important
+}
+.icon_clear_formats{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -230px!important
+}
+.icon_clear_content{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -246px!important
+}
+.icon_del_row{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -262px!important
+}
+.icon_del_col{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -278px!important
+}
+.icon_ins_row{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -294px!important
+}
+.icon_ins_col{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -310px!important
+}
+.icon_ins_sheet{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -326px!important
+}
+.icon_ins_func{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -342px!important
+}
+.icon_name_mgr{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -358px!important
+}
+.icon_ins_picture{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -374px!important
+}
+.icon_insert_hyperlink{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -390px!important
+}
+.icon_edit{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -406px!important
+}
+.icon_row_height{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -422px!important
+}
+.icon_col_width{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -438px!important
+}
+.icon_conditional_fmt{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -454px!important
+}
+.icon_cnd_new{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -470px!important
+}
+.icon_cnd_manage{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -486px!important
+}
+.icon_cnd_clear{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -502px!important
+}
+.icon_palo_pasteview{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -518px!important
+}
+.icon_palo_pasteelements{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -534px!important
+}
+.icon_palo_pastesubset{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -550px!important
+}
+.icon_palo_pastedatafn{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -566px!important
+}
+.icon_palo_modeller{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -582px!important
+}
+.icon_palo_dataimport{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -598px!important
+}
+.icon_palo_saveassnap{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -614px!important
+}
+.icon_palo_wiki{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -630px!important
+}
+.icon_form_elems{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -646px!important
+}
+.icon_form_combo{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -662px!important
+}
+.icon_form_checkbox{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -678px!important
+}
+.icon_form_button{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -693px!important
+}
+.icon_macro{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -708px!important
+}
+.icon_del_macro{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -724px!important
+}
+.icon_macro_editor{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -740px!important
+}
+.icon_dynaranges{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -756px!important
+}
+.icon_goto{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -772px!important
+}
+.icon_widget{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -788px!important
+}
+.icon_widget_custom{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -804px!important
+}
+.icon_variables{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -820px!important
+}

@@ -1,0 +1,112 @@
+
+import com.kinglib.database.*;
+import java.util.UUID;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.quality.*;
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String id = jacper.getString("instanceId","0");
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+			JSONObject instanceJSON = new JSONObject("{}");
+			String[] rs = conPlat.getRow("select OBJECT_ID,INSTANCE_ID,INSTANCE_NAME,DB_LINK,CONDITION_TYPE,CONDITION_COLUMN,CONDITION_QUERY,CONDITION_TABLE,NOTE,ENTRY_NAME,$date_str(ENTRY_DATE,111),STATUS FROM $[plat].QUALITY_INSTANCE WHERE INSTANCE_ID=?",new String[]{""+id});  
+			
+			if(rs!=null){
+				instanceJSON.put("object_id",rs[0]);
+				instanceJSON.put("instance_id",rs[1]);
+				instanceJSON.put("instance_name",rs[2]);
+				instanceJSON.put("db_link",rs[3]);
+				instanceJSON.put("condition_type",rs[4]);
+				instanceJSON.put("condition_column",rs[5]);
+				instanceJSON.put("condition_query",rs[6]);
+				instanceJSON.put("condition_table",rs[7]);
+				instanceJSON.put("note",rs[8]);
+				instanceJSON.put("entry_name",rs[9]);
+				instanceJSON.put("entry_date",rs[10]);
+				instanceJSON.put("status",rs[11]);
+				if(!rs[7].equals("")){
+					MetaTable mt = MetaFactory.getObject(rs[7]);
+					instanceJSON.put("condition_table_name",mt.getLname());
+				}
+			}
+		  <?{success:true,data:?>instanceJSON.toString()<?}?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+
+		String objectId=jacper.getStr("parent_id");
+		String instanceName=jacper.getStr("instance_name");
+		String dbLink=jacper.getStr("db_link");
+		String conditionType=jacper.getStr("condition_type");
+		String conditionColumn=jacper.getStr("condition_column");
+		String conditionQuery=jacper.getStr("condition_query");
+		String conditionTable=jacper.getStr("condition_table");
+		String note=jacper.getStr("note");
+		String status=jacper.getStr("status");
+		String remind=jacper.getStr("remind");
+
+		String type=jacper.getStr("type");		
+		QualityFactory  QF=QualityFactory.getInstance();
+		if(type.equals("save")){
+			String instanceId  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				instanceId = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				instanceId =UUID.randomUUID().toString();
+			}
+			try{	
+				QF.remove(objectId);
+				conPlat.exec("insert into $[plat].QUALITY_INSTANCE (object_id,instance_id,instance_name,DB_LINK,CONDITION_TYPE,CONDITION_COLUMN,CONDITION_QUERY,CONDITION_TABLE,NOTE,STATUS,entry_name,entry_date) values (?,?,?,?,?,?,?,?,?,?,?,$getdate())",new String[]{objectId,instanceId+"",instanceName,dbLink,conditionType,conditionColumn,conditionQuery,conditionTable,note,status,user_id+""});
+				<?{success:true,instanceId:'?>instanceId<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(type.equals("updatesave")){
+			try{	
+			    String instanceId=jacper.getStr("instanceId");
+				QF.remove(objectId);
+				conPlat.exec("update $[plat].QUALITY_INSTANCE set instance_name=?,DB_LINK=?,CONDITION_TYPE=?,CONDITION_COLUMN=?,CONDITION_QUERY=?,CONDITION_TABLE=?,NOTE=?,STATUS=? where instance_id=?",new String[]{instanceName,dbLink,conditionType,conditionColumn,conditionQuery,conditionTable,note,status,instanceId+""});
+				<?{success:true,instanceId:'?>instanceId<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(type.equals("delete")){
+			try{	
+				String instanceId=jacper.getStr("instanceId");
+				QF.remove(objectId);
+				conPlat.exec("delete from $[plat].QUALITY_INSTANCE where instance_id=?",new String[]{instanceId+""});
+				conPlat.exec("delete from $[plat].quality_auth where instance_id=?",new String[]{instanceId+""});
+				<?{success:true,instanceId:'?>instanceId<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}
+	}
+}

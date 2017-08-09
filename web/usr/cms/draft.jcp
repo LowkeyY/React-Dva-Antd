@@ -1,0 +1,91 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.*;
+
+import com.susing.core.KingleSystem;
+@class{
+
+
+	public void doPost(Jacper jacper) {
+		String id = jacper.getString("id");
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		GaoJian gj=service.getGaoJian(id);
+		if(gj!=null){
+			if(gj.getGuidang().equals("true")){
+				jacper.print("{success:false,message:'只能选择已发布的稿件。'}");
+			}else{
+				if(service.isPageNeedCompile())
+					jacper.print("{success:true,url:'/aten/root/"+gj.getZhanDian().yingwenmingcheng+gj.getUrl()+"'}");
+				else
+					jacper.print("{success:true,url:'http://"+gj.getZhanDian().getYuming()+gj.getUrl()+"'}");
+			}
+		}else{
+			jacper.print("{success:false}");
+		} 
+	}
+	
+	
+	public void doGet(Jacper jacper) {
+
+		String id = jacper.getString("id");
+		String action = jacper.getString("action");
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		String sql="";
+
+		Connection con = jacper.getConnection(service.getDbLink());
+		String[] r = con.getRow(
+				"select zhuangtai,lanmuid,leixing from " + service.getTableName("CMS_archives") + " where id=?",
+				new String[] { id });
+		String zhuangtai = r[0];
+		LanMu lm = service.getLanMu(r[1]);
+		String leixing = r[2];
+
+		if (action.equals("songshen")) {// 送审
+			action="送审";
+			if (zhuangtai.equals("退回") || zhuangtai.equals("草稿")) {
+				zhuangtai = "审批中";
+				/*//TODO 临时把主站的 要闻、教育实践、校园文化
+				String lmid=lm.getId();
+				String mid=lm.getFulanmuid();
+				System.out.println(lmid+"==="+mid);
+				if(lmid.equals("9c3117ef-97a4-415b-9944-0fafe9312615") ||  mid.equals("f272274d-ca87-4d2c-a724-4a72e29b9855") ||mid.equals("f26ed7f4-511b-4fd3-bce6-df7061ea2084")){
+					sql=",auditor='112'";
+				}else{
+					sql=",auditor='"+lm.getGuanliyuan()+"'";
+				}*/
+				sql=",auditor='"+lm.getGuanliyuan()+"'";
+			} else {
+				jacper.print("{success:false,message:'只有草稿和退回的稿件才能"+action+"'}");
+				return;
+			}
+		} else if (action.equals("chehui")) {// 撤回
+			action="撤回";
+			if (zhuangtai.equals("审批中") || zhuangtai.equals("推荐至目标栏目,审批中")) {
+				zhuangtai = "草稿";
+				sql=",auditor=''";
+			} else {
+				jacper.print("{success:false,message:'只有审批中的稿件才能"+action+"'}");
+				return;
+			}
+		} else if (action.equals("tuihui")) {// 退回
+			action="退回";
+			if (zhuangtai.equals("审批中") || zhuangtai.equals("推荐至目标栏目,审批中")) {
+				zhuangtai = "退回";
+			} else {
+				jacper.print("{success:false,message:'只有审批中的稿件才能"+action+"'}");
+				return;
+			}
+			con.exec("update " + service.getTableName("CMS_archives") + " set zhuangtai=?,shenpi=? where id=?", new String[] {
+					zhuangtai ,jacper.getStr("reason"), id});
+			zhuangtai=null;
+		}
+		if (zhuangtai != null) {
+			con.exec("update " + service.getTableName("CMS_archives") + " set zhuangtai=? "+sql+" where id=?", new String[] {
+					zhuangtai, id });
+		}
+
+		jacper.print("{success:true,message:'" + action + "成功'}");
+	}
+}
+

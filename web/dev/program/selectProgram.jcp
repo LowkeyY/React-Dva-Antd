@@ -1,0 +1,144 @@
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.workbench.application.*;
+import com.kinglib.util.json.*;
+import java.util.*;
+import java.text.Collator;
+
+@class{
+	public void doPost(Jacper jacper){
+		String id=jacper.getStr("node");
+		boolean allowSelect=true;
+		String icon="";
+		ArrayList<String[]> al=new ArrayList<String[]>(5);
+		if(id.indexOf(":")==-1){
+			allowSelect=false;
+			ObjectNode pnode=ObjectManager.getObject(id);
+			if(pnode==null) return;
+			ApplicationFactory appFactory=ApplicationFactory.getInstance();
+			Application app=null;
+			Connection conPlat=jacper.getConnection("plat");
+			icon="/themes/icon/xp/spzl.gif";
+			for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.APPLICATION)){
+				app=appFactory.getApplication(conPlat,String.valueOf(node.getId()));
+                String appName=app.getLogicName();
+				al.add(new String[]{node.getId()+":Application",appName,"false"});
+			}
+			conPlat.close();		
+		}else{
+			String[] ids=id.split(":");
+			String ObjType=ids[1];
+			if(ObjType.equals("Application")){
+				ObjectNode pnode=ObjectManager.getObject(ids[0]);
+				for(ObjectNode node:pnode.getChilds(ObjectType.MODULE)){
+					al.add(new String[]{String.valueOf(node.getId())+":Module",node.getName(),"false"}); 
+				}
+				allowSelect=false;
+				icon="/themes/icon/xp/report.gif";
+			}else if(ObjType.equals("Module")){
+				ObjectNode pnode=ObjectManager.getObject(ids[0]);
+				for(ObjectNode node:pnode.getChilds()){
+					al.add(new String[]{String.valueOf(node.getId())+":Frame",node.getName(),"false"}); 
+				}
+				allowSelect=false;
+				icon="/themes/icon/xp/frame.gif";
+			}else if(ObjType.equals("Frame")){
+					ObjectNode pnode=ObjectManager.getObject(ids[0]);
+					for(ObjectNode node:pnode.getChilds()){
+						Connection conPlat=jacper.getConnection("plat");
+						Program prg=ProgramFactory.getInstance().getProgram(conPlat,node.getId());
+						int prgType=prg.getType();
+						if(prgType==ProgramType.INPUT.getValue()){
+							icon="/themes/icon/xp/form.gif";
+						}else if(prgType==ProgramType.LIST.getValue()){
+							icon="/themes/icon/xp/list.gif";
+						}else if(prgType==ProgramType.LISTINPUT.getValue()){
+							icon="/themes/icon/xp/listinput.gif";
+						}else if(prgType==ProgramType.NAVIGATOR.getValue()){
+							icon="/themes/icon/xp/tree.gif";
+						}else if(prgType==ProgramType.CHART.getValue()){
+							icon="/themes/icon/xp/chart.gif";
+						}else if(prgType==ProgramType.LINKINPUT.getValue()){
+							icon="/themes/icon/xp/linkinput.gif";
+						}else if(prgType==ProgramType.FRAME.getValue()){
+							icon="/themes/icon/xp/import.gif";
+						}else if(prgType==ProgramType.LOGIC.getValue()){
+							icon="/themes/icon/xp/newk.gif";
+						}else if(prgType==ProgramType.SIMPLEQUERY.getValue()){
+							icon="/themes/icon/xp/detail.gif";
+						}else if(prgType==ProgramType.LISTQUERY.getValue()){
+							icon="/themes/icon/xp/submit1.gif";
+						}else if(prgType==ProgramType.EMBED.getValue()){;
+							icon="/themes/icon/xp/wbq.gif";
+						}else if(prgType==ProgramType.SELECTINPUT.getValue()){
+							icon="/themes/icon/database/average_row.gif";
+						}else if(prgType==ProgramType.CROSSINPUT.getValue()){
+							icon="/themes/icon/database/schema.gif";
+						}else if(prgType==ProgramType.REPORT.getValue()){
+							icon="/themes/icon/xp/report1.gif";
+						}else if(prgType==ProgramType.MAP.getValue()){
+							icon="/themes/icon/all/map.gif";
+						}else if(prgType==ProgramType.PORTAL.getValue()){
+							icon="/themes/icon/xp/dataLoad.gif";
+						}else if(prgType==ProgramType.INTEGRATE.getValue()){
+							icon="/themes/icon/all/arrow_in.gif";
+						}else if(prgType==ProgramType.TEXTREPORT.getValue()){
+							icon="/themes/icon/all/layout_content.gif";
+						}else if(prgType==ProgramType.INDEXSEARCH.getValue()){
+							icon="/themes/icon/all/magnifier_zoom_in.gif";
+						}else if(prgType==ProgramType.LINK.getValue()){
+							icon="/themes/icon/all/link_go.gif";
+						}else if(prgType==ProgramType.COMBINEDINPUT.getValue()){
+							icon="/themes/icon/all/application_form_add.gif";
+						}else if(prgType==ProgramType.DOWNLOAD.getValue()){
+							icon="/themes/icon/xp/download.gif";
+						}
+						al.add(new String[]{String.valueOf(node.getId()),node.getName(),"true"}); 
+					}
+			}
+		}
+		try{
+			JSONArray treeJSONArray=new JSONArray();
+			String cname="";
+			for(String[] r:order(al)){
+				JSONObject resultJSON = new JSONObject();
+				resultJSON.put("text",r[1]);
+				resultJSON.put("allowSelect",allowSelect);
+				resultJSON.put("leaf",allowSelect);
+				resultJSON.put("id",r[0]);
+				resultJSON.put("icon",icon);
+				treeJSONArray.put(resultJSON);
+			}			
+			jacper.print(treeJSONArray.toString());
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+
+	//性能很差，以后有时间工具类里重写
+	public ArrayList<String[]> order(ArrayList<String[]> al) {
+		Comparator cmp = Collator.getInstance(java.util.Locale.CHINA);
+		String cur, t;
+		int pos = 0;
+		String[] tmp = null;
+		for (int i = 0; i < al.size() - 1; i++) {
+			cur = al.get(i)[1];
+			pos = i;
+			for (int j = i + 1; j < al.size(); j++) {
+				t = al.get(j)[1];
+				if (cmp.compare(t,cur)<0) {
+					cur = t;
+					pos = j;
+				}
+			}
+			if (pos != i) {
+				tmp = al.get(i);
+				al.set(i, al.get(pos));
+				al.set(pos, tmp);
+			}
+		}
+		return al;
+	}
+}

@@ -1,0 +1,118 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.workbench.*;
+
+@class{
+
+	public void doGet(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+
+		String forder = jacper.getStr("forder_id");
+		String forder_id = "";
+
+		if(!forder.equals(""))
+			forder_id = forder.substring(1);
+
+		String top_id = jacper.getStr("top_id");
+		String method= jacper.getStr("method");
+		String parent_id = jacper.getStr("parent_id");
+
+		String event="";
+		String[][] data=new String[0][];
+		String[][] query=new String[0][];
+		String[][] report = new String[0][];
+
+		ObjectManager OM=ObjectManager.getInstance();
+
+		if(forder_id.equals("")){
+		   if(parent_id.equals("")){
+				if(method.equals("report")){
+					forder_id="30001";
+					data=new String[][]{{"30001",jacper.trans("扩展报表目录"),"1"}};
+				}else{
+					forder_id="30000";
+					data=new String[][]{{"30000",jacper.trans("扩展查询目录"),"1"}};
+				}
+				forder="root";
+				event ="event=\"eventForder\"";		
+		   }else{
+				forder="root";
+				if(top_id.equals("200")){
+					data=new String[][]{{"200",jacper.trans("查询根目录"),"1"}};
+				}else if(top_id.equals("300")){
+					data=new String[][]{{"300",jacper.trans("报表根目录"),"1"}};
+				}
+				event = "_parent=\"yacus\" event=\"eventForder\"";
+		   }
+		}else{					
+			event ="event=\"eventForder\"";		
+			if(method.equals("report")){
+					if(parent_id.equals("")){
+						data = conPlat.get("select max(c.forder_id),max(c.forder_title),count(a.forder_id)+count(b.report_id) from $[plat].sys__forder c left outer join $[plat].sys__forder a on c.forder_id=a.parent_id left outer join $[plat].app_query_report b on c.forder_id=b.forder_id  where c.parent_id=?  group  by c.forder_id",new String[]{forder_id});	
+				   }else{
+						 ObjectNode systemNode=OM.getObject(parent_id).upTo(ObjectType.SYSTEM);;
+						 String systemId=systemNode.getId();
+				   		if(forder_id.equals("300")){
+							String[] childsNum = conPlat.getRow("select count(a.forder_id) from $[plat].sys__forder a where a.parent_id='30000'",new String[]{});
+							String[] childsNum1 = conPlat.getRow("select count(a.report_id) from $[plat].app_query_report a where a.forder_id='30000'",new String[]{});
+							String childNumber=(Integer.parseInt(childsNum[0])+Integer.parseInt(childsNum1[0]))+"";
+							 data=new String[][]{{"30000",jacper.trans("扩展报表目录"),childNumber}};
+						 }else{
+							 data = conPlat.get("select max(c.forder_id),max(c.forder_title),count(a.forder_id)+count(b.report_id) from $[plat].sys__forder c left outer join $[plat].sys__forder a on c.forder_id=a.parent_id left outer join $[plat].app_query_report b on c.forder_id=b.forder_id  where c.parent_id=? and c.object_id=? group by c.forder_id",new String[]{forder_id,systemId+""});	
+						 }
+				   }		
+						 report = conPlat.get("select report_name,report_id from $[plat].app_query_report where forder_id=?",new String[]{forder_id});
+			}else{
+					if(parent_id.equals("")){
+						data = conPlat.get("select max(c.forder_id),max(c.forder_title),count(a.forder_id)+count(b.query_id) from $[plat].sys__forder c left outer join $[plat].sys__forder a on c.forder_id=a.parent_id left outer join $[plat].app_query b on c.forder_id=b.forder_id  where c.parent_id=? group by c.forder_id",new String[]{forder_id});	
+						query = conPlat.get("select query_name,query_id from $[plat].app_query where forder_id=? and type=2",new String[]{forder_id});
+				   }else{
+						 ObjectNode systemNode=OM.getObject(parent_id).upTo(ObjectType.SYSTEM);;
+						 String systemId=systemNode.getId();
+						 if(forder_id.equals("200")){
+						 	String[] childsNum = conPlat.getRow("select count(a.forder_id)+count(b.query_id) from $[plat].sys__forder a,$[plat].app_query b where a.parent_id='10000' or  b.forder_id='10000'",new String[]{});
+							String[] childsNum1 = conPlat.getRow("select count(a.forder_id)+count(b.query_id) from $[plat].sys__forder a,$[plat].app_query b where a.parent_id='20000' or b.forder_id='20000'",new String[]{});
+
+							 data=new String[][]{{"10000",jacper.trans("表映射查询目录"),childsNum[0]},{"20000",jacper.trans("系统查询目录"),childsNum[0]}};
+						 }else{
+						 	 data = conPlat.get("select max(c.forder_id),max(c.forder_title),count(a.forder_id)+count(b.query_id) from $[plat].sys__forder c left outer join $[plat].sys__forder a on c.forder_id=a.parent_id left outer join $[plat].app_query b on c.forder_id=b.forder_id  where c.parent_id=? and  c.object_id=? group by c.forder_id",new String[]{forder_id,systemId+""});	
+						 }
+						 query = conPlat.get("select query_name,query_id from $[plat].app_query where forder_id=?",new String[]{forder_id});
+				   }			
+			}
+		}
+	conPlat.close();
+
+	jacper.getResponse().setContentType("text/xml;charset=UTF-8");
+
+	<?<root _id="?>forder<?">?>;
+		
+	for(int i=0;i<data.length;i++){
+	String childNumber="0";
+	if(Integer.parseInt(data[i][2])>0)
+		childNumber="1";
+	<?<forder  ?>event<? _hasChild="?>childNumber<?">?>;
+		<?<e _id="F?>data[i][0]<?"  forder_id="F?>data[i][0]<?" _parent="?>forder<?" title="?>data[i][1]<?"/>
+	</forder>?>;
+	}
+	<?
+	<forder icon0="menutree/query"  event="query_tab" part="1">?>;
+	for(int i=0;i<query.length;i++){
+		String query_name = query[i][0];
+		String query_id = query[i][1];
+		<?<e _id="?>query_id<?" _parent="?>forder<?" title="?>query_name<?"/>?>;
+	}
+	<?</forder>
+	<forder icon0="menutree/report" event="report_tab" part="1">?>;
+	for(int i=0;i<report.length;i++){
+		String report_name = report[i][0];
+		String report_id = report[i][1];
+		<?<e _id="?>report_id<?" _parent="?>forder<?" title="?>report_name<?"/>?>;
+	}
+	<?</forder>
+</root>?>;
+	}
+}

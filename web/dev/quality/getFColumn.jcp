@@ -1,0 +1,46 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.database.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.bi.*;
+import java.util.ArrayList;
+import com.kinglib.workbench.quality.*;
+@class{
+	public void doPost(Jacper jacper){
+		
+		Connection conPlat = jacper.getConnection("plat");
+		String id = jacper.getString("parent_id","0");
+		//String type = jacper.getStr("method");
+
+		QualityFactory  QF=QualityFactory.getInstance();
+		Quality quality=QF.getQuality(conPlat,id);
+		MetaTable mt = MetaFactory.getObject(quality.getTabId());
+
+		jacper.getResponse().setContentType("application/x-json");
+		try{
+			JSONObject colJSON = new JSONObject("{}");
+			JSONArray jarr=new JSONArray();
+			ArrayList<MetaColumn> colArr=new ArrayList<MetaColumn>();
+			for(MetaColumn mc:mt.getColumns()){
+				if(mc.hasForeignKey()){
+					JSONObject js = new JSONObject();
+					js.put("colid",mc.getId());
+					js.put("lname",mc.getLname()); 
+					jarr.put(js);
+				}
+			}
+			colJSON.put("dataItem",jarr);
+			colJSON.put("success","true");
+			jacper.print(colJSON.toString());
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+	public void doGet(Jacper jacper){
+		doPost(jacper);
+	}
+}

@@ -1,0 +1,139 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.space.HWSpaceFactory;
+import gpra.filesystem.space.HWSpaceNode;
+import gpra.filesystem.space.HWSpaceFactory.HWSessions;
+
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+//public class FilePushOrMoveConfirm { 
+@class{
+	public void doPost(Jacper jacper) {
+		
+		HttpSession hs = jacper.getSession();
+		Connection con = jacper.getConnection(HWUnits.HW_DBLINK);
+		boolean isMove = "0".equals(jacper.getString("types", ""));
+		String targetSpaceId = jacper.getString("targetSpaceId", "");
+		String targetNodeId = jacper.getString("targetNodeId", "");
+		String newFilePath = jacper.getString("newFilePath","");
+		String exportData = jacper.getString("exportData","");
+		String currentSpaceId = hs.get(HWSessions.HW_BASE_SPACEID.name()) != null ?  String.valueOf(hs.get(HWSessions.HW_BASE_SPACEID.name())) : "";
+		String[] pmks = jacper.getString("pmks", "").split(",");
+		if (newFilePath.length() == 0 || exportData.length() == 0
+				|| (pmks.length == 1 && "".equals(pmks[0]))
+				|| (isMove && targetNodeId.length() == 0)
+				|| (!isMove && (targetNodeId.length() == 0 || targetSpaceId.length() == 0))) {
+			jacper.print("{success:true,type:'warn',message:'参数错误 , 无法移动。'}");
+			return;
+		}
+		
+		exportData = exportData.split("::")[0];
+		ArrayList<String[]> moveParams = new ArrayList<String[]>();
+		for(String pmk : pmks)
+			moveParams.add(new String[]{currentSpaceId + "/" + newFilePath , targetNodeId , pmk});
+		
+		if (isMove) {
+			HWSpaceNode baseSpace = HWSpaceFactory.getBaseSpace();
+			if(baseSpace != null && currentSpaceId.equals(baseSpace.getSpaceId())){
+				String rows[][] = con.get("select file_id , space_id from dir_file_base where file_id in ("+HWUnits.getWildcardByArray(pmks.length)+")" , pmks);
+				if(rows != null && rows.length > 0){
+					ArrayList<String[]> baseUpdate = new ArrayList<String[]>() , otherUpdate = new ArrayList<String[]>();
+					for (String[] row : rows) {
+						if(currentSpaceId.equals(row[1])){
+							baseUpdate.add(new String[]{currentSpaceId + "/" + newFilePath , targetNodeId , targetNodeId , row[0]});
+						} else {
+							otherUpdate.add(new String[]{targetNodeId , row[0]});
+						}
+					}
+					if(baseUpdate.size() > 0)
+						con.exec("update dir_file_base set file_dir = ? , node_id = ? , country_id = ? where file_id = ?" , baseUpdate.toArray(new String[baseUpdate.size()][]));
+					if(otherUpdate.size() > 0)
+						con.exec("update dir_file_base set country_id = ? where file_id = ?" , otherUpdate.toArray(new String[otherUpdate.size()][]));
+				}
+			}else{
+				StringBuilder sql = new StringBuilder("update dir_file_base b set b.file_dir = ? , b.node_id = ? where b.file_id = ?");
+				con.exec(sql.toString(), moveParams.toArray(new String[moveParams.size()][]));
+			}
+			jacper.print("{success:true,type:'info',message:'移动成功。'}");
+		} else {
+			MetaTable mt = MetaFactory.getObject(HWUnits.HW_DBLINK, "dir_file_base");
+			if(mt != null){
+				HashMap<String , String> replaceMap = new HashMap<String , String>();
+				replaceMap.put("file_id", "?");
+				replaceMap.put("space_id" , "'"+targetSpaceId+"'");
+				replaceMap.put("node_id" , "'"+targetNodeId+"'");
+				replaceMap.put("file_dir" , "'"+(targetSpaceId + "/" + newFilePath)+"'");
+				Iterable<MetaColumn> mcs = mt.getColumns();
+				try {
+					con.setAutoCommit(false);
+					HWSpaceNode currentSpace = getCurrentSpaceNode(hs , exportData , con);
+					if(currentSpace != null)
+						replaceMap.put("file_remarks", "b.file_remarks || '(来自\""+currentSpace.getSpaceName()+"\"空间的推送)'");
+					String[][] dir_push_move_values = new String[pmks.length][8] , dir_datum_file_reviewed_values = new String[pmks.length][6] , dir_space_base_values = new String[pmks.length][2];
+					long begin = HWUnits.getFileId(con, pmks.length + 1);
+					for(int i = 0 ; i < pmks.length ; i++){
+						String fileId = String.valueOf(begin++);
+						dir_space_base_values[i] = new String[]{fileId , pmks[i]};
+						dir_datum_file_reviewed_values[i] = new String[]{fileId,"","0","","",""};
+						dir_push_move_values[i] = new String[] { "1", targetSpaceId, targetNodeId, (targetSpaceId + "/" + newFilePath), fileId, currentSpace == null ? "" : currentSpace.getSpaceId() , exportData , String.valueOf(hs.uid)};
+					}
+					String sql = getInsertSql(mcs , replaceMap);
+					if(sql.length() > 0){
+						con.exec(sql , dir_space_base_values);
+						con.exec("insert into DIR_DATUM_FILE_REVIEWED values(?,?,?,?,?,?)" , dir_datum_file_reviewed_values);
+						con.exec("insert into DIR_PUSH_MOVE(target_position, select_space, select_node, new_file_path, file_id, file_from_space, file_from_node , push_userer) values(?,?,?,?,?,?,?,?)" 
+								,dir_push_move_values);
+						jacper.print("{success:true,type:'infos',message:'文件推送成功。'}");
+					} else{
+						jacper.print("{success:false,type:'warn',message:'文件推送失败，请重试。'}");
+					}
+					con.commit();
+				} catch (Exception e) {
+					try {
+						con.rollback();
+					} catch (SQLException e1) {
+						e1.printStackTrace();
+					}
+					e.printStackTrace();
+					jacper.print("{success:false,type:'warn',message:'文件推送失败，请重试。'}");
+				}
+			}
+		}
+	}
+	
+	public HWSpaceNode getCurrentSpaceNode(HttpSession hs , String dirId , Connection con){
+		HWSpaceNode node = null;
+		if(hs.get(HWSessions.HW_BASE_DIRID.name()) != null){
+			node = HWSpaceFactory.getSpaceById(String.valueOf(hs.get(HWSessions.HW_BASE_DIRID.name())));
+		};
+		if(node == null){
+			String[] row = con.getRow("select s.space_id from DIR_SPACE_BASE s where s.default_dir_id in " +
+					"(select distinct i.dir_id from DIR_NODE_INFO i left outer  join DIR_NODE_BASE b on i.dir_id = b.dir_id where i.node_id = ? or b.dir_id= ?)" , new String[]{dirId , dirId});
+			if(row != null && row.length > 0)
+				node = HWSpaceFactory.getSpaceById(row[0]);
+		}
+		return node;
+	}
+	
+	public String getInsertSql(Iterable<MetaColumn> mcs , HashMap<String , String> replaceMap){
+		StringBuilder values = new StringBuilder();
+		StringBuilder selects = new StringBuilder();
+		for (MetaColumn mc : mcs){
+			String key = mc.getPname().toLowerCase();
+			values.append((values.length() > 0 ? "," : "") + "a." + key);
+			selects.append((selects.length() > 0 ? "," : "") + (replaceMap.containsKey(key) ? replaceMap.get(key) : "b." + key));
+		}
+		return "insert into dir_file_base a (" + values.toString() + ") select " + selects.toString() + " from dir_file_base b where b.file_id = ?";
+	}
+	public void doGet(Jacper jacper) {
+		doPost(jacper);
+	}
+}

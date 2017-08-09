@@ -1,0 +1,207 @@
+
+import java.util.HashMap;
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.program.ProgramFactory;
+import com.kinglib.ui.core.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.unit.*;
+import com.social.api.core.model.*;
+import com.kinglib.bi.QueryExtend;
+import com.kinglib.bi.QueryExtendFactory;
+import com.kinglib.util.UserData;
+@class{
+
+	public void doGet(Jacper jacper) {
+
+		String object_id = jacper.getStr("object_id");
+		Connection conPlat = jacper.getConnection("plat");
+		String[][] rss = null;
+
+		if (jacper.getStr("type").equals("reset")) {
+			conPlat.exec("delete from $[plat].ctrl_query where object_id=?",
+					new String[] { object_id });
+		} else {
+			rss = conPlat
+					.get(
+							"select  item,QUERY_ID,item,target_type,target,target_id,target_task,SORTABLE,SORT_TYPE,ALIGN,width,unit,target_unit,hidden,is_export,export_name,export_seq,header_group from $[plat].ctrl_query where object_id=? order by seq",
+							new String[] { object_id }, 0);
+		}
+
+		JSONArray jarr = new JSONArray(),mjarr=null;
+		boolean haveData = (rss != null && rss.length > 0);
+
+		String queryId = ProgramFactory.getInstance().getProgram(conPlat,object_id).getQueryId();
+		QueryExtendFactory queryEF = QueryExtendFactory.getInstance();
+		QueryExtend qe = queryEF.getQueryExtend(conPlat, queryId);
+
+
+		if (qe != null) {
+
+			HashMap<String, String> colMap = new HashMap<String, String>();
+			for (String col : qe.getQuery().getCells()) {
+				colMap.put(col, col);
+			}
+			UnitFactory uf=UnitFactory.getInstance();
+			try {
+				if (haveData) {
+					for (int i = 0; i < rss.length; i++) {
+						JSONObject js = new JSONObject();
+						js.put("queryId",queryId);
+						js.put("id", rss[i][0]);
+						js.put("header", rss[i][2]);
+						if (!rss[i][3].equals("")) {
+							JSONArray ja = new JSONArray();
+							ja.put(rss[i][3]);
+							ja.put(rss[i][4]);
+							ja.put(rss[i][5]);
+							ja.put("");
+							ja.put("");
+							ja.put("");
+							ja.put(rss[i][6]);
+							ja.put("");
+							ja.put("");
+							ja.put("");
+							js.put("extra", ja);
+						}
+						js.put("sortable", rss[i][7].equals("true"));
+						if (!rss[i][8].equals(""))
+							js.put("sortType", rss[i][8]);
+						if (!rss[i][9].equals(""))
+							js.put("align", rss[i][9]);
+						if (!rss[i][10].equals(""))
+							js.put("width", Integer.parseInt(rss[i][10]));
+							
+						if (!rss[i][11].equals("")){
+							Unit u=uf.getUnit(conPlat,rss[i][11]);
+							if(u!=null)
+								js.put("unit",new JSONValue(CoreUtils.createTextValueJSON(u.getName(), u.getId())));
+						}
+						
+						if (!rss[i][12].equals("")){
+							Unit u=uf.getUnit(conPlat,rss[i][12]);
+							if(u!=null)
+								js.put("targetUnit",new JSONValue(CoreUtils.createTextValueJSON(u.getName(), u.getId())));
+						}
+						js.put("hidden", rss[i][13].equals("true"));
+						boolean isExport=rss[i][14].equals("true");
+						js.put("isExport", isExport);
+						if(isExport){
+							js.put("exportSequence", rss[i][16]);
+							js.put("exportName", rss[i][15]);
+						}
+						String col = colMap.get(rss[i][0]);
+						if(col==null){
+							continue;//列已被删除
+						}
+						colMap.remove(rss[i][0]);
+						js.put("dataIndex",rss[i][0]);
+						js.put("headerGroup", rss[i][17]);
+						jarr.put(js);
+					}
+				}
+				for (String col : qe.getQuery().getCells()) {
+					if(!colMap.containsKey(col))
+						continue;
+					JSONObject js = new JSONObject();
+					js.put("queryId", queryId);
+					js.put("id", col);
+					js.put("header", col);
+					js.put("hidden", haveData);
+					js.put("dataIndex", col);
+
+					jarr.put(js);
+				}
+				jacper.print("{success:true,data:" + jarr + "}");
+			} catch (Exception e) {
+				jacper
+						.print("{success:false,message:'" + e.getMessage()
+								+ "'}");
+				e.printStackTrace();
+			}
+
+		} else {
+			jacper.print("{success:false,message:'"+jacper.trans("无法取得关联表")+"'}");
+		}
+
+		conPlat.close();
+	}
+
+
+	public void doPost(Jacper jacper){
+		String content=jacper.getStr("cols");
+		if(content.equals("")) return;
+		String object_id=jacper.getStr("object_id");
+		Connection conPlat =null;
+
+		try{
+			conPlat = jacper.getConnection("plat");
+			conPlat.setAutoCommit(false);	
+			conPlat.exec("delete from  $[plat].ctrl_query where object_id=?",new String[]{object_id});
+			UserData.deleteKey("ProgramListQuery",object_id);
+			JSONArray cols=new JSONArray(content);
+			int seq=0;
+
+			for(int i=0;i<cols.length();i++){
+				JSONObject js=cols.getJSONObject(i);
+				String hidden=js.has("hidden")?js.getString("hidden"):"false";
+				String[] target={"","","","","","",""};
+				if(!js.isNull("extra")){
+					JSONArray ja=js.getJSONArray("extra");
+					target[0]=ja.optString(0,target[0]);
+					target[1]=ja.optString(1,target[1]);
+					target[2]=ja.optString(2,target[2]);
+					target[3]=ja.optString(6,target[3]);
+				}
+				String unit="";
+				if(js.has("unit")){
+					String us=js.getJSONObject("unit").getString("value");
+					Unit u=UnitFactory.getInstance().getUnit(conPlat,us);
+					if(u!=null){
+						unit=u.getId();
+					}
+				}
+				String unitTarget="";
+				if(js.has("targetUnit")){
+					String us=js.getJSONObject("targetUnit").getString("value");
+					Unit u=UnitFactory.getInstance().getUnit(conPlat,us);
+					if(u!=null){
+						unitTarget=u.getId();
+					}
+				}
+				String isExport=js.has("isExport")?js.getString("isExport"):"false";
+				String exportSequence="";
+				String exportName="";
+				if(isExport.toLowerCase().equals("true")){
+					exportSequence=js.optString("exportSequence");
+					exportName=js.optString("exportName");
+				}
+				String headerGroup="";
+				if(js.has("headerGroup")){
+					headerGroup=js.getString("headerGroup");
+				}
+				conPlat.exec("insert into $[plat].ctrl_query (object_id,query_id,item,target_type,target,target_id,target_task,task_type,seq,SORTABLE,SORT_TYPE,ALIGN,width,unit,target_unit,is_export,hidden,export_seq,export_name,header_group) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",new String[]{object_id,js.getString("queryId"),js.optString("id"),target[0],target[1],target[2],target[3],target[2],String.valueOf(seq++),js.getString("sortable"),js.optString("sortType",""),js.optString("align",""),js.optString("width","-1"),unit,unitTarget,isExport,hidden,exportSequence,exportName,headerGroup});
+			}
+			conPlat.commit();	
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+				e.printStackTrace();
+			}catch(Exception e1) {}			
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);	
+				conPlat.close();
+				ProgramFactory.getInstance().remove(object_id);
+
+				CustomizeFactory.remove(object_id);
+
+			}catch(Exception e2) {}
+		}
+		jacper.print("{success:true,message:'"+jacper.trans("保存成功")+"'}");
+	}
+}

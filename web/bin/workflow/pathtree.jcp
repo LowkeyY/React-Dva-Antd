@@ -1,0 +1,147 @@
+            
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.social.api.core.model.User;
+import com.social.api.core.model.User;
+import com.social.api.core.model.UserType;
+
+import java.util.*;
+import com.kinglib.workbench.application.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.program.*;
+
+               
+@class{
+	public void doGet(Jacper jacper){  
+
+		Connection conPlat = jacper.getConnection("plat");  
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String userId = hs.uid+"";
+		String deptId=hs.getString("dept_id");
+		User u = User.getUser(userId+"");
+		UserType userType=u.getUserType();
+
+		String forder_id = jacper.getString("_id");
+		String level_num= jacper.getStr("level_num");
+
+		String[][] arrtree=null;
+		String hasChild ="0";   
+		
+		HashSet<String> appSet=new HashSet<String>();
+		if (userType.getValue()!=1&&userType.getValue()!=0){
+			String[][] rs=conPlat.get("select id from $[plat].system_auth where roleid=?",new String[]{userId+""},0);
+			for(int i=0;i<rs.length;i++){
+				appSet.add(rs[i][0]);
+			}
+		}
+		<?<root _id="top">?>;	
+		<?<forder _parent="?>forder_id<?" event="event1">?>;
+		if (level_num.equals("")) {
+				String sql="";
+				String[] params=new String[]{};
+				if (userType.getValue()==1||userType.getValue()==0){
+					sql="select a.system_id,a.system_name from $[plat].system_base a ";
+				}else{
+					params=new String[]{deptId,userId};
+					sql="select a.system_id,a.system_name from $[plat].system_base a,$[plat].system_auth b where a.system_id=b.id and b.deptid=? and b.roleid=?";
+				}
+				String[][] rs = conPlat.get(sql,params,0);
+				
+				if(rs.length!=0){				
+					for(int i=0;i<rs.length;i++){	
+						ObjectNode systemNode=ObjectManager.getObject(rs[i][0]);
+						ObjectNode[] appNodes=systemNode.findAllChildsByType(ObjectType.APPLICATION);	
+						hasChild = "0";	
+						int appCount=0;
+						for(int k=0;k<appNodes.length;k++){
+							if (userType.getValue()==1||userType.getValue()==0){
+									 appCount++;
+							}else{
+								if(appSet.contains(appNodes[k].getId()+""))
+									 appCount++;
+							}
+						}
+						if (appCount>0){
+							hasChild = "1";
+							<?<e _id="?>rs[i][0]<?" _parent="top" title="?>rs[i][1]<?" _hasChild ="?>hasChild<?" icon0="/themes/icon/xp/axx.gif" icon1="/themes/icon/xp/axx.gif"  url="/bin/workflow/pathtree.jcp?level_num=1&amp;_id=?>rs[i][0]<?&amp;parent_app=?>rs[i][0]<?&amp;"/>?>;
+						}
+					}
+				}
+			}else if (level_num.equals("1")) {
+				String starticon="/themes/icon/xp/spzl.gif";
+				String endicon="/themes/icon/xp/spzl.gif";
+				String sql="";
+				String[] params=new String[]{forder_id+""};
+				if (userType.getValue()==1||userType.getValue()==0){
+					sql="SELECT a.object_id,a.applogic_name FROM $[plat].application_base a ,$[plat].application_group b where a.system_id=b.group_id and  b.system_id=? order by object_id asc ";
+				}else{
+					params=new String[]{forder_id+"",deptId,userId};
+					sql="SELECT a.object_id,a.applogic_name FROM $[plat].application_base a ,$[plat].application_group b,$[plat].system_auth c where a.system_id=b.group_id and  b.system_id=? and a.object_id=c.id and c.deptid=? and c.roleid=? order by object_id asc";
+				}
+				String[][] selBuf = conPlat.get(sql,params,0);
+				if (selBuf != null ) {
+					for ( int i=0; i<selBuf.length; i++ ){
+						hasChild = "0";
+						ObjectNode appNode=ObjectManager.getObject(selBuf[i][0]);
+						ObjectNode[] flowGroupNodes=appNode.findAllChildsByType(ObjectType.WORKFLOWGROUP);
+						if (flowGroupNodes.length>0){
+							hasChild = "1";
+							<?<e _id="?>selBuf[i][0]<?" _parent="?>forder_id<?" _hasChild="?>hasChild<?"  icon0="?>starticon<?" icon1="?>endicon<?"  title="?>selBuf[i][1]<?"  url="/bin/workflow/pathtree.jcp?_id=?>selBuf[i][0]<?&amp;level_num=2&amp;"/>?>;
+						}
+					}
+				}
+			}else if (level_num.equals("2")) {
+				ObjectNode appNode=ObjectManager.getObject(forder_id);
+				ObjectNode[] flowTypeArray=appNode.findAllChildsByType(ObjectType.WORKFLOWGROUP);
+				for (int i=0;i<flowTypeArray.length;i++){
+					String nodeId=flowTypeArray[i].getId()+"";
+					String nodeName=flowTypeArray[i].getName();
+					ObjectNode[] flowArray=flowTypeArray[i].getChilds(ObjectType.WORKFLOW);
+					if (flowArray.length>=1)	hasChild="1";
+					<?
+					<e _id="?>nodeId<?" _hasChild="?>hasChild<?" _parent="?>forder_id<?" framenum="1"   url="/bin/workflow/pathtree.jcp?_id=?>nodeId<?&amp;level_num=3" title="?>nodeName<?" />?>;
+				}
+			}else  if (level_num.equals("3") ){
+
+					String[][] buf1 = conPlat.get("select max(b.object_id),max(b.workflowlogic_name),count(a.instance_id) from $[plat].workflow_base b left outer join $[plat].workflow_instance a on b.object_id=a.workflowid,$[plat].object_base c where  b.object_id=c.object_id and c.parent_id=? group by b.object_id",new String[]{forder_id},0);
+
+					String starticon="/themes/icon/common/workflow1.gif";
+					String endicon="/themes/icon/common/workflow1.gif";
+
+					if ( buf1.length!=0) {
+						for ( int i=0; i<buf1.length; i++ ) {	
+							hasChild = "0";
+							if (Integer.parseInt(buf1[i][2])>=1)	hasChild="1";
+
+							<?
+							<e _id="?>buf1[i][0]<?" _parent="?>forder_id<?" title="?>buf1[i][1]<?" icon0="?>starticon<?"   program="path"  icon1="?>endicon<?" framenum="1" params="parent_id=?>buf1[i][0]<?&amp;type=create"  url="/bin/workflow/pathtree.jcp?_id=?>buf1[i][0]<?&amp;level_num=4"   _hasChild="?>hasChild<?"/>
+							?>;
+						}
+					}
+			}else  if ( level_num.equals("4") ){
+
+					String[][] buf1 = conPlat.get("select a.instance_name,a.instance_id,status from $[plat].workflow_instance a where a.workflowid=?",new String[]{forder_id},0);
+
+					String starticon="/themes/icon/common/cog.gif";
+					String endicon="/themes/icon/common/cog.gif";
+
+
+					if ( buf1 != null ) {
+						 hasChild = "0";
+						for ( int i=0; i<buf1.length; i++ ) {
+							if(buf1[i][2].equals("false")) {
+								starticon="/themes/icon/common/cog_error.gif";
+								endicon="/themes/icon/common/cog_error.gif";
+							}
+							<?
+							<e _id="?>buf1[i][1]<?" _parent="?>forder_id<?" title="?>buf1[i][0]<?" icon0="?>starticon<?"   program="path"  status="?>buf1[i][2]<?"  icon1="?>endicon<?"  framenum="1" params="parent_id=?>forder_id<?&amp;instanceId=?>buf1[i][1]<?&amp;type=edit"  _hasChild="0"/>
+							?>;
+						}
+					}
+			}
+			<?</forder></root>?>;
+			conPlat.close();
+	}
+}

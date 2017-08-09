@@ -1,0 +1,156 @@
+import gpra.filesystem.space.HWSpaceFactory;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import gpra.filesystem.HWUnits;
+import com.kinglib.*;
+
+	//public class pluginsSpaceFoldersAndFileSize{
+@class{
+	public void doPost(Jacper jacper) {
+		HttpSession hs = jacper.getSession();
+		Connection con=jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			String spaceId=(String) hs.get("HW_BASE_SPACEID");
+			
+			if(HWSpaceFactory.getSpaceById(spaceId) == null){
+				jacper.print("{success:true,data:''}");
+				return;
+			}
+			
+			HashMap<String , String> map = new HashMap<String , String>();
+			map.put("项目背景", "项目信息");
+			map.put("商务资料", "项目信息");
+			map.put("勘探", "综合报告");
+			map.put("开发", "综合报告");
+			map.put("新项目评价", "综合报告");	
+			
+			String[][] rows = con.get("select i.node_value, sum(f.file_size), i.sort_seq from DIR_FILE_BASE f " +
+					"left outer join DIR_NODE_INFO i on substr(f.file_dir , 112 ,36) = i.node_id where f.space_id = ? " +
+					"group by i.node_value , i.sort_seq order by i.sort_seq" , new String[]{spaceId});
+			
+			if(rows == null || rows.length == 0){
+				jacper.print("{success:true,data:''}");
+				return;				
+			}
+			
+			Pattern patt = Pattern.compile("^([\\d\\.]+)");
+			ArrayList<String> result = new ArrayList<String>();
+			HashMap<String , Double> resultMap = new HashMap<String , Double>();
+			
+			for(String row[] : rows){
+				String name = row[0];
+				Matcher mat = patt.matcher(name);
+				if(mat.find()){
+					int pos = mat.group(1).length();
+					name = pos != -1 ? name.substring(pos).trim() : name;
+				}
+				
+				String key = map.containsKey(name) ? map.get(name) : name;
+				if(!result.contains(key))
+					result.add(key);
+				
+				Double size = Double.parseDouble(row[1]);
+				size = resultMap.containsKey(key) ? resultMap.get(key) + size : size;
+				resultMap.put(key, size);
+			}
+		
+			StringBuilder xData = new StringBuilder();
+			
+			for(String name : result){
+				xData.append("<point name='"+name+"' y='"+resultMap.get(name) / (1024 * 1024 * 1024)+"'/>");
+			}
+			
+			StringBuilder results = new StringBuilder(
+						"<anychart>"
+						+"  <settings>"
+						+"    <animation enabled='True'/>"
+						+"  </settings>"
+						+"  <margin all='0'/>"
+						+"  <charts>"
+						+"    <chart name='chart69135' plot_type='CategorizedVertical' leftLen='104' rightLen='0'>"
+						+"      <data_plot_settings/>"
+						+"      <chart_settings>"
+						+"        <title>"
+						+"          <text>本空间目录下文件大小</text>"
+						+"        </title>"
+						+"        <chart_background>"
+						+"          <fill enabled='true' type='Solid' color='#FFFFFF'/>"
+						+"          <border enabled='False'/>"
+						+"          <inside_margin all='8'/>"
+						+"        </chart_background>"
+						+"        <legend enabled='True' position='Top' align='Far' inside_dataplot='false' align_by='Chart' Columns='1'>"
+						+"          <title enabled='false'/>"
+						+"        </legend>"
+						+"        <data_plot_background>"
+						+"          <border enabled='False'/>"
+						+"          <fill type='Solid' color='#FFFFFF'/>"
+						+"        </data_plot_background>"
+						+"        <axes>"
+						+"          <x_axis>"
+						+"            <zero_line enabled='False'/>"
+						+"            <labels rotation='0'>"
+						+"              <format>{%Value}{numDecimals:0,thousandsSeparator:}</format>"
+						+"            </labels>"
+						+"            <title>"
+						+"              <text>目录名称</text>"
+						+"            </title>"
+						+"            <scale minimum='DefaultValue'/>"
+						+"            <major_grid>"
+						+"              <line color='#C0C0C0'/>"
+						+"            </major_grid>"
+						+"            <minor_grid>"
+						+"              <line color='#C0C0C0' opacity='0.5'/>"
+						+"            </minor_grid>"
+						+"          </x_axis>"
+						+"          <y_axis name='yaxis69135-0' position='Normal'>"
+						+"            <zero_line enabled='False'/>"
+						+"            <title>"
+						+"              <font bold='True'/>"
+						+"              <text>文件大小</text>"
+						+"            </title>"
+						+"            <labels>"
+						+"              <format>{%Value}{numDecimals:2,thousandsSeparator:}</format>"
+						+"            </labels>"
+						+"            <scale type='Linear' minimum='0'/>"
+						+"            <major_grid>"
+						+"              <line color='#C0C0C0'/>"
+						+"            </major_grid>"
+						+"            <minor_grid>"
+						+"              <line color='#C0C0C0' opacity='0.5'/>"
+						+"            </minor_grid>"
+						+"          </y_axis>"
+						+"        </axes>"
+						+"      </chart_settings>"
+						+"      <styles>"
+						+"        <bar_style name='lineColor0'>"
+						+"          <fill color='#33CCCC' opacity='0.8' type='Solid'/>"
+						+"          <line color='#33CCCC'/>"
+						+"        </bar_style>"
+						+"      </styles>"
+						+"      <data>"
+						+"        <series name='文件大小' id='s0' color='#33CCCC' shape_type='Cylinder' type='Bar' y_axis='yaxis69135-0' style='lineColor0'>"
+						+"          <tooltip enabled='True'>"
+						+"            <format>{%Name}{numDecimals:0,thousandsSeparator:} {%SeriesName}:{%YValue}{numDecimals:2,thousandsSeparator:}GB</format>"
+						+"          </tooltip>"
+						+			xData.toString()
+						+"        </series>"
+						+"        <series name='文件大小' id='s0' color='#8f92af' type='Marker' y_axis='yaxis69135-0' style='lineColor0'>"
+						+"          <tooltip enabled='True'>"
+						+"            <format>{%Name}{numDecimals:0,thousandsSeparator:} {%SeriesName}:{%YValue}{numDecimals:2,thousandsSeparator:}GB</format>"
+						+"          </tooltip>"
+						+			xData.toString()
+						+"        </series>"
+						+"      </data>"
+						+"    </chart>"
+						+"  </charts>"
+						+"</anychart>"
+						);		
+			jacper.print("{success:true,data:\""+results.toString()+"\"}");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

@@ -1,0 +1,101 @@
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.*;
+import com.kinglib.util.json.*;
+import java.sql.Types;
+import java.util.*;
+import com.kinglib.gis.*;
+
+
+@class{
+public void doGet(Jacper jacper){
+
+		Connection conPlat=jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String type = jacper.getStr("type");
+		String object_id = jacper.getStr("object_id");
+		String[][] rss=null;		
+		jacper.getResponse().setContentType("application/x-json");
+		try{
+			JSONArray jarr=new JSONArray();
+			rss = conPlat.get("select seq,value,baseColor,strockcolor,icon, weight,opacity,label_font,font_size,fontColor,object_id,height,icontype, forcolor, filltype, fillimage,startvalue,endvalue from $[plat].map_style where object_id=? order by seq ",new String[]{object_id});
+			for(int z=0;z<rss.length;z++){
+				JSONObject styleJSON = new JSONObject("{}");
+				styleJSON.put("seq",rss[z][0]);
+				styleJSON.put("value",rss[z][1]);
+				styleJSON.put("baseColor",rss[z][2]);
+				styleJSON.put("strockColor",rss[z][3]);
+				styleJSON.put("icon",rss[z][4]);	
+				styleJSON.put("weight",rss[z][5]);
+				styleJSON.put("height",rss[z][11]);
+				styleJSON.put("opacity",rss[z][6]);
+				styleJSON.put("label_font",rss[z][7]);
+				styleJSON.put("font_size",rss[z][8]);
+				styleJSON.put("fontColor",rss[z][9]);
+				styleJSON.put("object_id",object_id);
+				styleJSON.put("marker_type",rss[z][12]);
+				styleJSON.put("foreColor",rss[z][13]);
+				styleJSON.put("fill_type",rss[z][14]);
+				styleJSON.put("fill_image",rss[z][15]);
+				styleJSON.put("startValue",rss[z][14]);
+				styleJSON.put("endValue",rss[z][15]);
+				jarr.put(styleJSON);
+		}
+		jacper.print("{success:true,dataItem:"+jarr+"}");
+
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+	public void doPost(Jacper jacper){
+			
+		Connection conPlat=jacper.getConnection("plat");		
+		
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+
+		if(jacper.checkError()) return;
+		String type = jacper.getStr("type");
+		String object_id = jacper.getString("object_id","111");
+		int seq = jacper.getInt("seq",1);
+		String fields=jacper.getStr("fields");
+
+		ObjectManager OM=ObjectManager.getInstance();
+
+		try{
+			conPlat.setAutoCommit(false);		
+			ObjectNode mapPOINode=OM.getObject(object_id);
+			ObjectNode mapNode=mapPOINode.upTo(ObjectType.MAP);
+			String mapId=mapNode.getId();
+			WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+			JSONArray jarr=new JSONArray(fields);
+			conPlat.exec("delete from $[plat].map_style where object_id =?",new String[]{object_id+""});
+			for( int i = 0; i < jarr.length() ; i++ ){
+				JSONObject js=jarr.getJSONObject(i);
+					conPlat.exec("insert into $[plat].map_style (object_id, seq,value,baseColor,strockColor,icon, weight,opacity,label_font,font_size,fontColor,height,icontype, forcolor, filltype, fillimage,startvalue,endvalue) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)" ,new String[]{object_id+"",seq+"",js.getString("value"),js.getString("baseColor"),js.getString("strockColor"),js.getString("icon"),js.getString("weight"),js.getString("opacity"),js.getString("label_font"),js.getString("font_size"),js.getString("fontColor"),js.getString("height"),js.getString("marker_type"),js.getString("foreColor"),js.getString("fill_type"),js.getString("fill_image"),js.getString("startValue"),js.getString("endValue")});
+					seq++;
+			}
+			conPlat.commit();
+			webMap.reloadEditLayer(conPlat);
+			webMap.reloadPOILayer(conPlat);
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+}	
+	 
+}

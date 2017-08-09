@@ -1,0 +1,481 @@
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import com.kinglib.HttpSession;
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.SQLUtils;
+import com.kinglib.database.Attribute;
+import com.kinglib.database.AttributeDict;
+import com.kinglib.database.Constraint;
+import com.kinglib.database.ConstraintType;
+import com.kinglib.database.DataType;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.database.MetaTableDesigner;
+import com.kinglib.database.SpecialSet;
+import com.kinglib.database.util.BaseException;
+import com.kinglib.ui.core.utils.CoreUtils;
+import com.kinglib.ui.core.CustomizeFactory;
+import com.kinglib.ui.tree.TreeFactory;
+import com.kinglib.unit.Unit;
+import com.kinglib.unit.UnitFactory;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.util.json.JSONValue;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.i18n.*;                                
+@class{
+
+	public void doGet(Jacper jacper) {
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid; 
+		String object_id = jacper.getString("object_id", "-1");
+		String submitType = jacper.getStr("submitType");
+		if (submitType.equals("form")) {
+			if (object_id.equals("-1"))
+				return;
+			MetaTable mt = MetaFactory.getObject(object_id);			
+			if (mt == null) {
+				jacper.print("{success:false,message:'"+jacper.trans("系统中没有注册此表.'")+"}");
+				return;
+			}
+			JSONObject form = null;
+			try {
+				JSONObject data = new JSONObject();
+				data.put("lname", mt.getLname());
+				data.put("pname", mt.getPname());
+				data.put("dblink", mt.getDblink());
+				data.put("have_auth", mt.isAuth());
+				ObjectNode node = ObjectManager.getObject(object_id);
+				if (node != null) {
+					data.put("lastModifyTime", node.getLastModifyTime());
+					data.put("lastModifyName", node.getLastModifyName());
+				}
+				form = new JSONObject("{success:true}");
+				form.put("data", data);
+
+				jacper.print(form.toString());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else if (submitType.equals("columns")) {
+			if (object_id.equals("-1"))
+				return;
+			MetaTable mt = MetaFactory.getObject(object_id);
+			if (mt == null) {
+				jacper.print("{success:false,message:'"+jacper.trans("系统中没有注册此表.")+"'}");
+				return;
+			}
+			JSONObject form = null;
+
+			try {
+				form = new JSONObject("{success:true}");
+				JSONArray jarr = new JSONArray();
+				JSONObject cfg = null, js = null;
+				String colId = "", tempText = null;
+				Constraint[] fks = mt.getForeignKeyAndReference();
+				boolean notNull = jacper.getStr("notNull").equals("true");
+				boolean pmk = jacper.getStr("pmk").equals("true");
+				for (MetaColumn col : mt.getColumns()) {
+					if (notNull && !col.isNotNull()) {
+						continue;
+					}
+					if (pmk && !col.isPrimaryKey()) {
+						continue;
+					}
+					js = new JSONObject();
+					js.put("object_id", object_id);
+					js.put("id", col.getId());
+					js.put("lname", col.getLname());
+					js.put("pname", col.getPname());
+					js.put("data_type", col.getDataType().toString());
+					js.put("length", col.getLength());
+					js.put("not_null", col.isNotNull());
+					js.put("pmk", col.isPrimaryKey());
+					js.put("default_value", col.getDefaultValue());
+					js.put("special_set", col.getSpecialSet().getValue());
+					Translator t=I18n.getLocal(user_id+"").getTranslator(SpecialSet.class);
+					tempText = col.getSpecialSet().toString(t);
+					if (col.getSpecialSet() == SpecialSet.Dict) {
+						AttributeDict ad = ((AttributeDict) col.getAttribute("option_id"));
+						if (ad != null) {
+							Connection conPlat = jacper.getConnection("plat");
+							try {
+								tempText = jacper.trans("字典(") + ad.getDict(conPlat).getName() + ")";
+							} catch (Exception e) {
+								e.printStackTrace();
+							} finally {
+								conPlat.close();
+							}
+						}
+					}
+					if (col.hasForeignKey()) {
+						for (int k = 0; k < fks.length; k++) {
+							if (fks[k].getColumnId() == col.getId()) {
+								if (tempText.equals(jacper.trans("无")) || tempText.equals(""))
+									tempText = "";
+								else
+									tempText += ",";
+								if (fks[k].getConstraintType() == ConstraintType.ForeignKey) {
+									tempText += jacper.trans("外键");
+								} else {
+									tempText += jacper.trans("引用");
+								}
+								MetaTable lmt = MetaFactory.getObject(fks[k].getLinkTable());
+								if (lmt != null) {
+									tempText += "(" + lmt.getLname();
+									MetaColumn lmc = lmt.getColumn(fks[k].getLinkColumn());
+									if (lmc != null) {
+										tempText += "：" + lmc.getLname();
+									}
+									tempText += ")";
+								}
+							}
+						}
+					}
+					js.put("special_set_text", tempText);
+					js.put("unit", col.getUnit());
+					js.put("decimal_digits", col.getDecimalDigits());
+					js.put("serial", col.getColumnIndex());
+					colId = String.valueOf(col.getId());
+					for (Attribute att : mt.getAttributes()) {
+						if (att.getColumnId().equals(colId)) {
+							if (cfg == null)
+								cfg = new JSONObject();
+							cfg.put(att.getName(), att.getValue());
+						}
+					}
+					if (cfg != null) {
+						js.put("cfg", cfg);
+						cfg = null;
+					}
+					jarr.put(js);
+				}
+
+				form.put("dataItem", jarr);
+				form.put("totalCount", jarr.length());
+				jacper.print(form.toString());
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else if (submitType.equals("column")) {
+			if (object_id.equals("-1"))
+				return;
+			MetaTable mt = MetaFactory.getObject(object_id);
+			if (mt == null) {
+				jacper.print("{success:false,message:'"+jacper.trans("系统中没有注册此表.")+"'}");
+				return;
+			}
+			String id = jacper.getStr("itemid");
+			String colId = "", unitId = "";
+			JSONValue unit = null;
+			JSONObject cfg = null;
+			MetaColumn col = mt.getColumn(id);
+			Connection conPlat = jacper.getConnection("plat");
+			try {
+				JSONObject js = new JSONObject();
+				js.put("object_id", object_id);
+				js.put("id", col.getId());
+				js.put("in_lname", col.getLname());
+				js.put("in_pname", col.getPname());
+				js.put("in_data_type", col.getDataType().toString());
+				js.put("in_length", col.getLength());
+				js.put("in_not_null", col.isNotNull());
+				js.put("in_pmk", col.isPrimaryKey());
+				js.put("in_default_value", col.getDefaultValue());
+				js.put("in_special_set", col.getSpecialSet().getValue());
+				unitId = col.getUnit();
+				if (!unitId.equals("") && UnitFactory.isNumeric(unitId)) {
+					Unit u = UnitFactory.getInstance().getUnit(conPlat, unitId);
+					if(u!=null)
+						unit = new JSONValue(CoreUtils.createTextValueJSON(u.getName(), u.getId()));
+					else
+						unit=new JSONValue("{text:'',value:''}");
+				}else{
+					unit=new JSONValue("{text:'',value:''}");
+				}
+				js.put("in_unit",unit);
+				js.put("in_decimal_digits", col.getDecimalDigits());
+				js.put("in_serial", col.getColumnIndex());
+				colId = String.valueOf(col.getId());
+				for (Attribute att : mt.getAttributes()) {
+					if (att.getColumnId().equals(colId)) {
+						if (cfg == null)
+							cfg = new JSONObject();
+						cfg.put(att.getName(), att.getValue());
+					}
+				}
+				if (cfg != null) {
+					js.put("cfg", cfg);
+					cfg = null;
+				}
+				JSONObject oprJSON = new JSONObject("{success:true}");
+				oprJSON.put("data", js);
+				jacper.print(oprJSON.toString());
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				conPlat.close();
+			}
+		} else if (submitType.equals("delete")) {
+			String id = jacper.getStr("id");
+			if (!object_id.equals("-1")&& !id.equals("")) {
+				try {
+					Connection conPlat = jacper.getConnection("plat");
+					boolean metaOnly=jacper.getStr("metaOnly").equals("true");
+					MetaFactory.getObjectDesigner(object_id).dropColumn(conPlat, id,metaOnly);
+					conPlat.close();
+				} catch (BaseException e) {
+					jacper.print(e.toJSONString());
+					return;
+				}
+				jacper.print("{success:true}");
+			}
+		} else if (submitType.equals("move")) {
+			String id = jacper.getStr("id");
+			String off = jacper.getStr("off");
+			try {
+				int o = Integer.parseInt(off);
+				Connection conPlat = jacper.getConnection("plat");
+				MetaFactory.getObjectDesigner(object_id).moveColumn(conPlat, id, o);
+				conPlat.close();
+			} catch (Exception e) {
+				jacper.print("{success:false,message:'" + e.getMessage() + "'}");
+			}
+		} else if (submitType.equals("rawcolumns")) {
+			String pname = jacper.getStr("pname").toUpperCase();
+			String schema = jacper.getStr("schema");
+			String dbLink = jacper.getStr("dbLink");
+			Connection conLocal = jacper.getConnection(dbLink);
+			ResultSet rs = null, pkRSet = null;
+			try {
+
+				String sqlStr = "select * from " + schema + "." + pname + " where 1=0";
+				rs = conLocal.createStatement().executeQuery(sqlStr);
+				DatabaseMetaData dbMeta = conLocal.getMetaData();
+				ResultSetMetaData md = rs.getMetaData();
+
+				int dbType=conLocal.getType();
+				HashMap commentHash=new HashMap();
+				if(dbType==com.susing.EasyConnection.ORACLE){
+					String [][] comments=conLocal.get("select Column_Name,comments  from user_col_comments where Table_Name=?",new String[]{pname});
+					for(int i=0;i<comments.length;i++){
+						commentHash.put(comments[i][0],comments[i][1]);
+					}
+				}
+
+				try {
+					
+					JSONObject form = new JSONObject("{success:true}");
+					JSONObject cfg = new JSONObject();
+					
+					//主键
+					String pkString = ",";
+					pkRSet = dbMeta.getPrimaryKeys(null, null,pname);	
+					while (pkRSet.next()) {
+						if(pkString.length()==1){
+							cfg.put("primaryKeyName",(String) pkRSet.getObject(6));
+						}
+						pkString += (String) pkRSet.getObject(4) + ",";
+					}
+					
+					//本表连到主表的外键
+					pkRSet = dbMeta.getImportedKeys(null, null,pname);	
+					this.addSet(cfg,pkRSet,true);
+					
+					//其它表连到本表的外键
+					pkRSet = dbMeta.getExportedKeys(null, null,pname);	
+					this.addSet(cfg,pkRSet,false);
+
+					form.put("constraintConfig",cfg);
+					
+					JSONObject data = new JSONObject();
+					JSONArray jarr = new JSONArray();
+					JSONObject js = null;
+					int cols = md.getColumnCount() + 1;
+					for (int i = 1, type = 0,len=0,dec=0; i < cols; i++) {
+						len=md.getPrecision(i);
+						dec=md.getScale(i);
+						type = md.getColumnType(i);
+						if (type == Types.CHAR)
+							type = Types.VARCHAR;
+						else if (type == Types.STRUCT)
+							type = Types.OTHER;
+						else if(type==Types.NUMERIC){
+							if(len==0) len=38;
+							if(dec<0) dec=0;
+						}
+						if(len<1){
+							if(type==1111 || type==2004){
+								len=16;dec=0;
+							}else{
+								System.out.println(type);
+							}
+						}
+						String 	Lname=md.getColumnLabel(i);
+					
+						js = new JSONObject();
+						js.put("object_id", 0);
+						js.put("id", 0);
+						if(dbType==com.susing.EasyConnection.ORACLE){
+							js.put("lname", commentHash.get(md.getColumnName(i)));
+						}else{
+							js.put("lname", "");
+						}
+						js.put("pname", md.getColumnName(i));
+						js.put("data_type", DataType.parseDataType(type).toString());
+						js.put("length",len );
+						js.put("not_null", md.isNullable(i) != 1);
+						js.put("pmk", pkString.indexOf("," + md.getColumnName(i) + ",") != -1);
+						js.put("default_value", "");
+						js.put("special_set", 0);
+						js.put("special_set_text", jacper.trans("无"));
+						js.put("unit", "");
+						js.put("decimal_digits", dec);
+						js.put("serial", i);
+						jarr.put(js);
+					}	
+					data.put("dataItem", jarr);
+					data.put("totalCount", jarr.length());
+					form.put("data", data);
+					jacper.print(form.toString());
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			} catch (Exception ep) {
+				ep.printStackTrace();
+			} finally {
+				try {
+					rs.close();
+					pkRSet.close();
+					conLocal.close();
+				} catch (Exception e) {
+				}
+			}
+		}
+	}
+
+	public void doPost(Jacper jacper) {
+		if (!jacper.getStr("submitType").equals("")) {
+			doGet(jacper);
+			return;
+		}
+		boolean success = true;
+		String info = "";
+		boolean isNew = jacper.getStr("isNew").equals("true");
+		Connection conPlat = jacper.getConnection("plat");
+		String id = (isNew) ? SQLUtils.getNextVal(conPlat, "3") : jacper.getStr("id");
+		String object_id = jacper.getString("object_id","-1");
+		if (object_id.equals("-1"))
+			return;
+		String oid=object_id;
+		String serial = (isNew) ? String.valueOf(MetaFactory.getObject(object_id).getColumnCount()) : jacper.getStr("in_serial");
+		MetaTableDesigner md = MetaFactory.getObjectDesigner(object_id);
+		String notNull = jacper.getStr("in_not_null");
+		boolean nn = (notNull.equals("true") || notNull.equals("on"));
+		String[] col = { id, jacper.getStr("in_lname"), jacper.getStr("in_pname"), String.valueOf(DataType.parseByName(jacper.getStr("in_data_type")).getValue()), jacper.getStr("in_length"), String.valueOf(nn), jacper.getStr("in_default_value"), jacper.getStr("in_special_set"), jacper.getStr("in_unit"), jacper.getStr("in_decimal_digits"), serial
+
+		};
+		String[][] atts = null;
+		String cfg = jacper.getStr("cfg");
+
+		if (!cfg.equals("")) {
+			try {
+				ArrayList<String[]> al = new ArrayList<String[]>();
+				JSONObject data = new JSONObject(cfg);
+				Iterator its = data.keys();
+				String key = "";
+				while (its.hasNext()) {
+					key = (String) its.next();
+					if (col[3].equals("12") || col[3].equals("4") || key.equals("ANNOTATION")) {
+						if (key.equals("signflag")) {
+							if (!data.getString(key).equals("true")) {
+								continue;
+							}
+						}else if(key.equals("ANNOTATION") || key.equals("INTEGRATE_ID")){
+						} else {
+							if (col[3].equals("12") && !key.equals("option_id"))
+								continue;
+							if (col[3].equals("4") && !key.equals("sequence") && !key.equals("start") && !key.equals("step")&& !key.equals("option_id"))
+								continue;
+						}
+						al.add(new String[] {oid , id, key, String.valueOf(DataType.VARCHAR.getValue()), data.getString(key) });
+					}
+				}
+				if (al.size() > 0)
+					atts = al.toArray(new String[al.size()][]);
+			} catch (Exception e) {
+				e.printStackTrace();
+				success = false;
+				info = jacper.trans("字典未设");
+			}
+		}
+		try {
+			boolean metadataOnly=jacper.getStr("metadataOnly").equals("true");
+			if (isNew) {
+				md.addColumn(conPlat, col, atts,metadataOnly);
+			} else {
+				md.alterColumn(conPlat, id, col, atts,metadataOnly);
+			}
+			
+			//清空缓存--很多地方无法清空,比如录入界面，建议重定制--tz。
+			String[][] rs=conPlat.get("select object_id from $[plat].prg_base where tab_id=? or tab1_id=?",new String[]{oid,oid});
+			if(rs!=null && rs.length>0){
+				for(String[] r:rs){
+					CustomizeFactory.remove(r[0]);
+				}
+			}
+			rs=conPlat.get("select MODULE_ID from $[plat].ctrl_tree where tab_id=?",new String[]{oid});
+			if(rs!=null && rs.length>0){
+				TreeFactory tf=TreeFactory.getInstance();
+				for(String[] r:rs){
+					tf.remove(r[0]);
+				}
+			}	
+			
+			MetaFactory.notifyCache(MetaFactory.getMetaTable(object_id));
+		} catch (BaseException e) {
+			e.printStackTrace();
+			jacper.print(e.toJSONString());
+			return;
+		}
+		jacper.print("{success:" + success + ",message:'" + info + "'}");
+	}
+
+	public void addSet(JSONObject cfg,ResultSet rset,boolean isImport){
+		
+		try{
+			JSONObject impKey=new JSONObject();
+		
+			while (rset.next()) {
+				JSONObject fk=impKey.optJSONObject(rset.getString(12));
+				if(fk==null){
+					fk=new JSONObject();
+					fk.put("schema",rset.getString(isImport?2:6));
+					fk.put("table",rset.getString(isImport?3:7));
+					impKey.put(rset.getString(12),fk);
+				}
+				String column4=fk.optString("column4");
+				column4+=","+rset.getString(4);
+				fk.put("column4",column4);
+				String column8=fk.optString("column8");
+				column8+=","+rset.getString(8);
+				fk.put("column8",column8);
+			}
+			if(impKey.length()>0)
+				cfg.put(((isImport)?"im":"ex")+"portKeys",impKey);
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+
+
+}

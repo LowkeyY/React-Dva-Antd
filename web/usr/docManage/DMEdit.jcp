@@ -1,0 +1,462 @@
+
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.database.DataType;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.propertyset.PropertySet;
+import com.kinglib.util.Search;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.program.Program;
+import com.kinglib.workbench.workflow.WorkflowAct;
+import com.kinglib.workflow.InvalidActionException;
+import com.kinglib.workflow.InvalidEntryStateException;
+import com.kinglib.workflow.InvalidInputException;
+import com.kinglib.workflow.InvalidRoleException;
+import com.kinglib.workflow.Workflow;
+import com.kinglib.workflow.WorkflowException;
+import com.kinglib.workflow.basic.BasicWorkflow;
+import com.kinglib.workflow.config.DefaultConfiguration;
+import com.kinglib.workflow.loader.ActionDescriptor;
+import com.kinglib.workflow.loader.StepDescriptor;
+import com.kinglib.workflow.loader.WorkflowDescriptor;
+import com.kinglib.workflow.spi.Step;
+import com.kinglib.workflow.spi.WorkflowEntry;
+
+import java.sql.SQLException;
+import java.text.NumberFormat;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.GregorianCalendar;
+import java.util.HashMap;
+import java.util.Iterator;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+
+@class{
+	public void doGet(Jacper jacper){
+		
+		HttpSession hs = jacper.getSession();
+		String user_id = String.valueOf(hs.uid);
+		
+		String ids = jacper.getString("pmk", "");
+		JSONObject json = new JSONObject();
+		JSONObject wfc = new JSONObject();
+		
+		if(ids.length()>0){
+			
+			String realName = CertManager.getUser(String.valueOf(hs.uid)).getRealName();
+			int entryId = -1;
+			
+			Connection con = jacper.getConnection("education");
+			try{
+				json.put("realName", realName);
+				String[] rs = con.getRow("select " +
+						"lcbm,zydj,zdylcbt,zht,ngr,fqsj,sqly,fwzh,mj,bt,ztc,dqczz,xzgzl,gzlbsx from OA_OFFICIAL_DOCUMENT where gwxh=?",
+						new String[]{ids});
+				
+				if(rs!=null && rs.length>0){
+					JSONObject processInfo = new JSONObject();
+					processInfo.put("lcbm", rs[0]);
+					processInfo.put("zydj", rs[1]);
+					processInfo.put("zdylcbt", rs[2]);
+					processInfo.put("zht", rs[3]);
+					processInfo.put("ngr", CertManager.getUser(rs[4]).getRealName());
+					processInfo.put("ngrId", rs[4]);
+					processInfo.put("fqsj", rs[5].length()>= 19 ? rs[5].substring(0, 19) : rs[5]);
+					processInfo.put("sqly", rs[6]);
+					json.put("processInfo",processInfo);
+					JSONObject textInfo = new JSONObject();
+					textInfo.put("fwzh", rs[7]);
+					textInfo.put("mj", rs[8]);
+					textInfo.put("bt", rs[9]);
+					textInfo.put("ztc", rs[10]);
+					textInfo.put("ngr", CertManager.getUser(rs[4]).getRealName());
+					json.put("textInfo",textInfo);
+					
+					wfc.put("workflowId", "".equals(rs[12])?"":rs[12].substring(0,36));
+					wfc.put("instanceId", "".equals(rs[12])?"":rs[12].substring(36));
+					entryId = "".equals(rs[13])?-1:Integer.parseInt(rs[13]);
+					wfc.put("entryId", entryId);
+					
+					if(rs[3].equals("未提交审批")){
+						json.put("currentState", "new");
+						json.put("showBtnTexts", "返回,添加附件,转下一步");
+					}else if(rs[11].length()==0){
+						json.put("currentState", "end");
+						json.put("showBtnTexts", "返回,流程图,流程步骤");
+					}else if(rs[11].equals(String.valueOf(hs.uid))){
+						if(rs[4].equals(String.valueOf(hs.uid))){
+							json.put("currentState", "return2me");
+							json.put("showBtnTexts", "返回,添加附件,同意,流程图,流程步骤");
+						}else{
+							json.put("currentState", "edit");
+							json.put("showBtnTexts", "返回,同意,保留意见,不同意,退回,添加附件,流程图,流程步骤");
+						}
+					}else{
+						json.put("currentState", "view");
+						json.put("showBtnTexts", "返回,流程图,流程步骤");
+					}
+				}
+				String[][] rsA = con.get("select fjwjm,fjlx,fjdx,scrq,scz,fjxh from OA_OD_ATTACHMENT where gwxh=?", new String[]{ids});
+				if(rsA!=null){
+					if(rsA.length>0){
+						JSONArray attachsInfo = new JSONArray();
+						for(String[] arr:rsA){
+							JSONObject js = new JSONObject();
+							js.put("fjwjm", arr[0]);
+							js.put("fjlx", arr[1]);
+							js.put("fjdx", arr[2]);
+							js.put("scrq", arr[3].length()>= 19 ? arr[3].substring(0, 19) : arr[3]);
+							js.put("scz", CertManager.getUser(arr[4]).getRealName());
+							js.put("sczId", arr[4]);
+							js.put("fjxh", arr[5]);
+							js.put("hasBtn" , rs[11].equals(String.valueOf(hs.uid))
+								? new JSONArray("[{type:'delete',id : '"+arr[5]+"'},{type:'down',id:'"+arr[5]+"'}]"):
+								new JSONArray("[{type:'down',id:'"+arr[5]+"'}]"));
+							attachsInfo.put(js);
+						}
+						json.put("attachsInfo",attachsInfo);
+					}
+				}
+				JSONObject stepDatas = new JSONObject();
+				if(entryId!=-1 && wfc.getString("instanceId")!=null && !"".equals(wfc.getString("instanceId"))){
+					String instanceId = wfc.getString("instanceId");
+					Workflow wf = new BasicWorkflow(user_id);
+					DefaultConfiguration config = new DefaultConfiguration();
+					wf.setConfiguration(config);
+					WorkflowDescriptor wd =  wf.getWorkflowDescriptor(instanceId);
+					JSONArray historyArr = new JSONArray();
+					for (Object r : wf.getHistorySteps(entryId)) {
+						historyArr.put(stepToJson((Step) r, wd));
+					}
+					if(historyArr.length()>0){
+						int len = historyArr.length();
+						JSONArray desc = new JSONArray();
+						for (int i = 0; i < len; i++) {
+							if(historyArr.get(len - i - 1)!=null)
+								desc.put(i, historyArr.get(len - i - 1));
+						}
+						stepDatas.put("historyArr",desc);
+					}
+					JSONArray currentArr = new JSONArray();
+					for (Object r : wf.getCurrentSteps(entryId)) {
+						currentArr.put(stepToJson((Step) r, wd));
+					}
+					if(currentArr.length()>0){
+						stepDatas.put("currentArr",currentArr);
+					}else
+						json.put("currentState", "view");
+					
+				}
+				if(stepDatas.length()>0)
+					json.put("stepDatas", stepDatas);
+				jacper.print("{success:true,frmData:"+json+",wfconfig:"+wfc+"}");
+			}catch (Exception e) {
+				e.printStackTrace();
+				jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+			}finally{
+				con.close();
+			}			
+		}else{
+			jacper.print("{success:false,message:'页面未找到。'}");
+		}
+	}
+	
+	public void doPost(Jacper jacper){
+		
+		HttpSession hs = jacper.getSession();
+		
+		String exportData = jacper.getString("exportData", "");
+		String exportItem = jacper.getString("exportItem", "");
+		String exportTab = jacper.getString("exportTab", "");
+		String instanceId = jacper.getString("instanceId", "");
+		String workflowId = jacper.getString("workflowId", "");
+		String user_id = String.valueOf(hs.uid);
+		long entryId = jacper.getLong("entryId",-1);
+		int actionId = jacper.getInt("actionId",-1);
+		boolean isCreate = jacper.getString("isCreate", "").length()>0 && jacper.getString("isCreate", "").equals("true");
+		boolean isTheEnd = false;
+		String comment = jacper.getString("comment","");
+		
+		if(entryId==-1){
+			jacper.print("{success:false,message:'参数丢失。'}");
+			return;
+		}
+			
+		Workflow wf = new BasicWorkflow(user_id);
+		DefaultConfiguration config = new DefaultConfiguration();
+		wf.setConfiguration(config);
+		WorkflowDescriptor wd =  wf.getWorkflowDescriptor(instanceId);
+		PropertySet ps = wf.getPropertySet(entryId);
+		
+	    Collection currentSteps = wf.getCurrentSteps(entryId);
+
+	    int stepId = -1;
+		for (Iterator interator = currentSteps.iterator();interator.hasNext();) {
+			Step step = (Step) interator.next();
+			stepId = step.getStepId();
+		}
+		StringBuilder otherSql = new StringBuilder();
+		String nowObjectId = "",endStr = "";
+		if(stepId!=-1){
+			
+			StepDescriptor stp = wd.getStep(stepId);
+			if(stp.getMetaAttributes().containsKey("act_id")){
+				String act_id = stp.getMetaAttributes().get("act_id").toString();
+				Connection conPlat = jacper.getConnection("plat");
+				com.kinglib.workbench.workflow.WorkflowFactory WFF=com.kinglib.workbench.workflow.WorkflowFactory.getInstance();
+				com.kinglib.workbench.workflow.Workflow workflow= WFF.getWorkflow(conPlat,workflowId);
+				WorkflowAct workflowAct=workflow.getWorkflowAct(act_id);
+				if(workflowAct!=null){
+					Program[] mainPrograms=workflowAct.getMainProgram();
+					nowObjectId = mainPrograms[0].getId();
+					ObjectNode node = ObjectManager.getObject(nowObjectId);
+					
+					if(node != null){
+						//定制时注意，意见类字数较多的 用文本框。公文多以办理人、意见、时间为主填写，所以此处已前台展现形式判断数据改进入哪个字段。
+						//1 默认填写人 ，2 默认意见，24默认为当前时间。
+						String[][] cls = conPlat.get("select a.ctrl_type,a.title,b.pname from CTRL_INPUT a " +
+								"left outer join META_COLUMN b on a.tabitem_id=b.id where " +
+								"a.object_id=? and a.readonly_flag = 'false' order by a.ctrl_type",new String[]{nowObjectId});
+						if(cls!=null && cls.length>0){
+							MetaTable otherMt = MetaFactory.getObject(mainPrograms[0].getTabId());
+							if(otherMt!=null){
+								String omtPmk = otherMt.getPrimaryKeys()[0].getPname();
+								if(isCreate){
+									ps.setString("exportItem", omtPmk);
+									ps.setString("exportData", exportData);
+									ps.setString("dataId", exportData);
+									ps.setString("exportTab", otherMt.getId());
+									ps.setString("tab_id", otherMt.getId());
+								}
+								StringBuilder testS = new StringBuilder();
+								for(int i =0;i<cls.length;i++){
+									if(testS.length()>0)
+										testS.append(",");
+									if(isCreate){
+										testS.append(cls[i][2]);
+									}else{
+										testS.append(Integer.parseInt(cls[i][0])>2 ? cls[i][2]+" = sysdate" : cls[i][2]+" = ?");
+									}
+								}
+								if(testS.length()>0){
+									if(isCreate){
+										otherSql.append("insert into "+otherMt.getPname()+"("+testS.toString()+","+omtPmk+")");
+										otherSql.append(" values(?,?,sysdate,?)");
+									}else{
+										otherSql.append("update "+otherMt.getPname()+" set "+testS.toString());
+										otherSql.append(" where "+omtPmk+"=?");
+									}
+								}
+							}
+						}
+					}
+				}
+				
+			}
+			for (Iterator iterator = stp.getActions().iterator();iterator.hasNext();) {
+				ActionDescriptor action = (ActionDescriptor) iterator.next();
+				if(action.getId()==actionId){
+					actionId = action.getId();
+					if(action.getUnconditionalResult().getStep()==0){
+						isTheEnd = true;
+						endStr = action.getUnconditionalResult().getDisplayName();
+						/*List steps = wd.getSteps();
+						for (int i = 0; i < steps.size(); i++) {
+							StepDescriptor cstep = (StepDescriptor) steps.get(i);
+							if (cstep.getName().equals("结束")) {
+								actionId = cstep.getId();
+								isTheEnd = true;
+							}
+						}*/
+					}
+					break;
+				}
+			}
+		}
+
+		if(actionId==-1){
+			jacper.print("{success:false,message:'工作流未设置此步骤。'}");
+			return;
+		}
+
+		String datas = jacper.getString("exportDatas", "");
+		JSONObject obj = null;
+		try{
+			obj = new JSONObject(datas);
+			if(isTheEnd){
+				obj.put("ZHT", endStr.length()>0 && endStr.endsWith("不同意")?"审批未通过":"审批结束");
+				obj.put("DQCZZ", "");
+			};
+			if (obj.has("LCBM")) {
+				String LCBM = obj.getString("LCBM");
+				obj.remove("LCBM");
+				obj.put("LCBM", transformName(LCBM, new String[] {
+						obj.has("ZDYLCBT") ? obj.getString("ZDYLCBT") : "自定义流程", String.valueOf(entryId) }));
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+			jacper.print("{success:false,message:'参数格式错误。'}");
+			return;
+		}
+		
+		if(exportData.length()>0){
+			MetaTable mt = MetaFactory.getObject(exportTab);
+			if(mt == null){
+				jacper.print("{success:false,message:'选择表错误。'}");
+				return;
+			}
+			StringBuilder pa = new StringBuilder();
+			try {
+				for(MetaColumn mc : mt.getColumnArray()){
+					if(obj.has(mc.getPname())){
+						if(pa.length()>0)
+							pa.append(",");
+						pa.append(mc.getPname()).append(" = ");
+						pa.append(mc.getDataType()==DataType.INT ? obj.getInt(mc.getPname()):"'"+obj.getString(mc.getPname()).replaceAll("'", "''")+"'");
+					}
+				}
+				if (isCreate && isTheEnd)
+					pa.append(pa.length() > 0 ? "," : "").append("FQSJ = sysdate").append(",SYCZR = SYCZR||" + user_id + "||','");
+				else if (isCreate)
+					pa.append(pa.length() > 0 ? "," : "").append("FQSJ = sysdate");
+				else
+					pa.append(pa.length() > 0 ? "," : "").append("SYCZR = SYCZR||" + user_id + "||','");
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+			StringBuilder sql = new StringBuilder();
+
+			sql.append("update ").append(mt.getName()).append(" set ").append(pa.toString()+" where "+exportItem+" = ?");
+			Connection con = jacper.getConnection(mt.getDblink());
+
+			try{
+				if(isCreate){
+					wf.changeEntryState(entryId, WorkflowEntry.ACTIVATED);
+				}
+				if(comment.length()>0)
+					wf.doAction(entryId, actionId, null,comment);
+				else
+					wf.doAction(entryId, actionId, null);
+			}catch (InvalidActionException e){
+				jacper.print("{success:false,message:'"+e.toString()+"'}");
+				return;
+			}catch (InvalidRoleException e) {
+				jacper.print("{success:false,message:'"+e.toString()+"'}");
+				return;
+			}catch (InvalidInputException e) {
+				jacper.print("{success:false,message:'"+e.toString()+"'}");
+				return;
+			}catch (InvalidEntryStateException e) {
+				jacper.print("{success:false,message:'"+e.toString()+"'}");
+				return;
+			}catch (WorkflowException e) {
+				String msg = e.toString();
+				if(msg.indexOf("#0")==-1 && msg.toLowerCase().indexOf("does not exist")==-1){
+					jacper.print("{success:false,message:'"+e.toString()+"'}");
+					return;
+				}
+			}
+			
+			try {
+				con.setAutoCommit(false);
+				con.exec(sql.toString(), new String[]{exportData});
+				if(otherSql.length()>0){
+					con.exec(otherSql.toString(), new String[]{CertManager.getUser(user_id).getRealName(),comment,exportData});
+				}
+				con.commit();
+			} catch (SQLException e) {
+				e.printStackTrace();
+				jacper.print("{success:false,message:'保存时出错。'}");
+				try {
+					con.rollback();
+				}catch(Exception e1) {}
+				return;
+			}finally {
+				con.close();
+			}
+			jacper.print("{success:true,updateId:'"+exportData+"'}");
+		}else{
+			jacper.print("{success:false,message:'参数丢失。'}");
+		}
+	}
+	private JSONObject stepToJson(Step step, WorkflowDescriptor wd) throws JSONException {
+
+		JSONObject json = new JSONObject();
+
+		User u;
+		StepDescriptor sd;
+		String value = "";
+
+		if (step.getOwner().length() > 0) {
+			u = CertManager.getUser(step.getOwner());
+			if (u != null)
+				value = u.getRealName();
+		}
+		json.put("userName", value);
+
+		value = "";
+		sd = wd.getStep(step.getStepId());
+		if (sd != null) {
+			value = sd.getName();
+		}
+
+		json.put("stepName", value);
+
+		json.put("detail", step.getComment());
+
+		return json;
+	}
+	private String transformName(String name, String args[]) {
+		HashMap<String, Integer> hs = new HashMap<String, Integer>();
+		hs.put("F", 0);
+		hs.put("Y", 1);
+		hs.put("M", 2);
+		hs.put("D", 3);
+		hs.put("NNNN", 4);
+		StringBuilder sb = new StringBuilder();
+		String arrN[] = Search.splitKey(name, "{", "}");
+		for (int i = 0; i < arrN.length; i++) {
+			if (i % 2 != 0) {
+				if (hs.containsKey(arrN[i].toUpperCase())) {
+					switch (hs.get(arrN[i].toUpperCase())) {
+					case 0:
+						sb.append(args[0]);
+						break;
+					case 1:
+						sb.append(String.valueOf((new GregorianCalendar()).get(Calendar.YEAR)));
+						break;
+					case 2:
+						sb.append(setOffsetFill(((new GregorianCalendar()).get(Calendar.MONTH) + 1),2));
+						break;
+					case 3:
+						sb.append(setOffsetFill((new GregorianCalendar()).get(Calendar.DAY_OF_MONTH),2));
+						break;
+					case 4:
+						sb.append("-1".equals(args[1]) ? "0001" : setOffsetFill(Integer.parseInt(args[1]),4));
+						break;
+					}
+				} else {
+					sb.append(arrN[i]);
+				}
+			} else {
+				sb.append(arrN[i]);
+			}
+		}
+		return sb.toString();
+	}
+	private String setOffsetFill(int number,int counts){
+		NumberFormat formatter = NumberFormat.getNumberInstance();
+		formatter.setMinimumIntegerDigits(counts);   
+        formatter.setGroupingUsed(false);
+		return formatter.format(number);
+	}
+}

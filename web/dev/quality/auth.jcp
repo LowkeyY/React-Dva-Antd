@@ -1,0 +1,98 @@
+
+
+import com.kinglib.*;
+import com.social.api.core.model.*; 
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.integrate.*;
+
+@class{
+	public void doGet(Jacper jacper){
+		
+		Connection conPlat = jacper.getConnection("plat");
+
+		String instanceId=jacper.getStr("instanceId");
+		String authType=(String)com.susing.core.KingleSystem.getProperty("auth_type");
+		String[][] authArray=conPlat.get("select c.roleid,c.deptid from $[plat].quality_auth c   where c.instance_id=?",new String[]{instanceId});
+
+		jacper.getResponse().setContentType("application/x-json");		
+		try{
+				JSONObject authJSON = new JSONObject("{}");
+				JSONArray authJSONArray=new JSONArray();
+				String[] oneUser;
+				for(int i=0;i<authArray.length;i++){
+					JSONObject tempJSON = new JSONObject("{}");
+					String roleName="";
+					oneUser=authArray[i];
+
+					if(oneUser[0].equals("-9")){
+						roleName="当前部门所有人员";
+					}else if(oneUser[0].equals("-99")){
+						roleName="当前部门及所有子部门人员";
+					}else{
+						if(authType.equals("0")){			 
+							 roleName=CertManager.getUser(oneUser[0]).getRealName();
+						}else if(authType.equals("1")){
+							 roleName=CertManager.getRole(oneUser[0]).getRoleName();
+						}	
+					}
+					oneUser[0]=oneUser[1]+"_"+oneUser[0];
+					tempJSON.put("user_id",oneUser[0]);
+					tempJSON.put("user_name",roleName);
+					tempJSON.put("dept_name",CertManager.getDept(oneUser[1]).getShortName());
+					tempJSON.put("dept_id",oneUser[1]);
+					authJSONArray.put(tempJSON);
+				}
+				authJSON.put("authArray",authJSONArray);
+				jacper.print(authJSON.toString());
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+}
+public void doPost(Jacper jacper){	
+
+	Connection conPlat = jacper.getConnection("plat");
+	String[] ids = jacper.getArray("ids");
+	String instanceId=jacper.getStr("instanceId");
+//	String integrateId=jacper.getStr("integrateId");
+	String[][] values=new String[ids.length][3];
+	String[] temp=null;
+//	IntegrateFactory IFactory=IntegrateFactory.getInstance();
+//	Integrate integrate=IFactory.getIntegrate(conPlat,integrateId);
+
+	if(ids.length==1 && ids[0].equals("")){ 
+		conPlat.exec("delete from $[plat].quality_auth where instance_id=?",new String[]{instanceId});
+	//	integrate.instanceAuthClear(instanceId);
+		<?{success:true}?>;
+		return;
+	}
+	for(int i=0;i<ids.length;i++){
+		values[i][0]=instanceId;
+		temp=ids[i].split("_");
+		values[i][1]=temp[0];
+		values[i][2]=temp[1];
+	}
+	try{	
+		conPlat.setAutoCommit(false);
+		conPlat.exec("delete from $[plat].quality_auth where instance_id=?",new String[]{instanceId});
+		conPlat.exec("insert into $[plat].quality_auth(instance_id,deptid,roleid) values(?,?,?)",values);
+		//integrate.instanceAuthClear(instanceId);
+	//	integrate.instanceAuthInit(values);
+		conPlat.commit();
+		<?{success:true}?>;
+	}catch(Exception e){
+    	e.printStackTrace();
+		try {
+			conPlat.rollback();
+		}catch(Exception e1) {}
+		String msg=e.toString().replaceAll("\\'","\\\\'");
+		<?{success:false,message:"错误:?>msg<?"}?>;
+	}finally {
+		try {
+			conPlat.setAutoCommit(true);
+		}catch(Exception e2) {}
+		conPlat.close();
+	}
+}	
+}

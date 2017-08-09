@@ -1,0 +1,355 @@
+
+import java.io.*;
+
+
+
+import com.kinglib.*;
+import com.kinglib.bi.*;
+import com.kinglib.unit.*;
+import com.social.api.core.model.*;
+import com.kinglibx.query.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.grid.*;
+
+import com.kinglib.util.UserData;
+import java.util.*;
+import com.kinglib.util.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.ui.core.parser.UnitParser;
+import com.kinglib.Err;
+import com.kinglib.dictionary.SingleDict;
+import com.kinglib.database.*;
+import com.kinglib.ui.core.*;
+import com.kinglib.ui.core.utils.*;
+@class{
+
+	public void doGet(Jacper jacper){
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String userId=hs.uid+"";
+
+		Connection conPlat = jacper.getConnection("plat");
+		Connection conCert = jacper.getConnection("cert");
+		
+		String query_id = jacper.getString("query_id","-1");
+		String objectId="";
+
+		if(query_id.equals("-1")){
+			objectId=jacper.getStr("objectId");
+			query_id =ProgramFactory.getInstance().getProgram(conPlat,objectId).getQueryId();
+		}
+
+		String meta = jacper.getStr("meta");
+
+		//jacper.getResponse().setContentType("application/x-json"); //导致firebug无法显示
+
+		try{
+
+			QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+			QueryExtend QE=queryEF.getQueryExtend(conPlat,query_id);
+			Query query =QE.getQuery();
+			String[] titles = query.getCells();
+
+			JSONObject gridDataJSON=new JSONObject();
+			JSONObject gridMetaJSON=new JSONObject();
+
+			String orderColumn=null;
+			String orderType=null;
+			String tabId="";
+            String exportItemString="";
+
+			if(meta.equals("true")){	
+				gridMetaJSON.put("root","dataItem");
+				//gridMetaJSON.put("id",titles[0]);
+				gridMetaJSON.put("totalProperty","totalCount");
+				
+				if(!objectId.equals("")){
+					JSONValue jval = ButtonFactory.getJson(conPlat, objectId, userId);
+					if (jval != null) {
+						gridMetaJSON.put("buttonArray",jval);
+					}	
+				}
+
+				JSONArray fieldJSONArray=new JSONArray();
+				String[][] ctrlQuery=conPlat.get("select ITEM, TARGET, TARGET_TYPE, TARGET_ID, TARGET_TASK, TASK_TYPE, SORTABLE, SORT_TYPE, ALIGN, WIDTH,hidden,is_export,export_name,export_seq,header_group from $[plat].CTRL_QUERY where OBJECT_ID=? and QUERY_ID=? order by SEQ",new String[]{objectId,query_id+""});
+				HashMap<String,JSONObject> colMap=new HashMap<String,JSONObject>();
+				
+				//在多个导出参数时必须导出为同一个表，否则系统无法处理
+				if(ctrlQuery.length>0){
+					String finalColumn=QE.getFinalItem(conPlat,query_id,ctrlQuery[0][0]);
+					if(finalColumn.indexOf("::")!=-1){
+						String[] colArray=finalColumn.split("::");
+						String dbLink=colArray[0].substring((colArray[0].indexOf("[")+1),colArray[0].indexOf("]"));	
+						String physicalName=colArray[0].substring((colArray[0].indexOf(".")+1),colArray[0].lastIndexOf("."));
+						MetaTable MT=MetaFactory.getObject(dbLink,physicalName);
+						tabId=MT.getId()+"";
+					    for(int i=0;i<colArray.length;i++){		
+							String colName=physicalName=colArray[i].substring((colArray[i].lastIndexOf(".")+1),colArray[i].length());
+							exportItemString=exportItemString+","+colName;
+						}
+					}else{
+						String dbLink=finalColumn.substring((finalColumn.indexOf("[")+1),finalColumn.indexOf("]"));
+						String physicalName=finalColumn.substring((finalColumn.indexOf(".")+1),finalColumn.lastIndexOf("."));
+						MetaTable MT=MetaFactory.getObject(dbLink,physicalName);
+						tabId=MT.getId()+"";	
+						String colName=finalColumn.substring((finalColumn.lastIndexOf(".")+1),finalColumn.length());
+						exportItemString=exportItemString+","+colName;
+					}
+					if(tabId.length()>0){
+						JSONObject paramsJSON=new JSONObject("{}");
+						paramsJSON.put("exportTab",tabId);	
+						paramsJSON.put("exportItem",exportItemString.substring(1));	
+						gridMetaJSON.put("params",paramsJSON);	
+					}
+					String[] qtitles=new String[ctrlQuery.length];
+					for(int i=0;i<ctrlQuery.length;i++){
+						qtitles[i]=ctrlQuery[i][0];
+					}
+					MetaColumn[] mcsa = getMetaColumns(conPlat, query_id, qtitles);
+
+					for(int i=0;i<ctrlQuery.length;i++){
+						JSONObject gridFieldJSON=new JSONObject("{}");
+						gridFieldJSON.put("name",qtitles[i]);
+						String pti=ctrlQuery[i][0];
+						if(mcsa[i]!=null && mcsa[i].getUnit().length()>0){
+							Unit u=UnitFactory.getInstance().getUnit(conPlat, mcsa[i].getUnit());
+							if(u!=null){
+								pti+="("+u.getName()+")";
+							}
+						}
+						gridFieldJSON.put("header",pti);
+						gridFieldJSON.put("sortable",ctrlQuery[i][6].equals("true"));
+						if(!ctrlQuery[i][7].equals("")){
+							orderColumn=ctrlQuery[i][0];
+							orderType=ctrlQuery[i][7];
+							gridFieldJSON.put("sortType",ctrlQuery[i][7]);
+						}
+
+						if(!ctrlQuery[i][1].equals("")){
+							gridFieldJSON.put("target", CoreUtils.targetEncode(conPlat, ctrlQuery[i][2], ctrlQuery[i][3].split(","), ctrlQuery[i][1], ctrlQuery[i][4]));
+						}
+						if(!ctrlQuery[i][8].equals("")){
+							gridFieldJSON.put("align",ctrlQuery[i][8]);
+						}
+						gridFieldJSON.put("width",new JSONValue(ctrlQuery[i][9]));
+						gridFieldJSON.put("hidden",ctrlQuery[i][10].equals("true"));
+						boolean isExport=ctrlQuery[i][11].equals("true");
+						gridFieldJSON.put("isExport",isExport);
+						if(isExport){
+							gridFieldJSON.put("export_name",ctrlQuery[i][12]);
+							gridFieldJSON.put("export_seq",ctrlQuery[i][13]);
+						}
+						gridFieldJSON.put("headerGroup", ctrlQuery[i][14]);
+						colMap.put(ctrlQuery[i][0],gridFieldJSON);
+						fieldJSONArray.put(gridFieldJSON);
+					}				
+				}
+				
+				
+				
+				
+				
+				
+				if (UserData.has(userId, "ProgramListQuery", objectId)) {
+					try {
+						String data = UserData.get(userId, "ProgramListQuery", objectId);
+						JSONArray jarr = new JSONArray(data);
+						
+						for(int i=0;i<jarr.length();i++){
+							JSONObject jo = jarr.getJSONObject(i);
+							String header=jo.getString("header");
+							if(colMap.containsKey(header)){
+								JSONObject gridFieldJSON=colMap.get(header);
+								gridFieldJSON.put("name",header);
+								gridFieldJSON.put("header",header);
+								gridFieldJSON.put("width",Integer.parseInt(jo.getString("width")));
+								gridFieldJSON.put("hidden",jo.getString("hidden").equals("true"));
+								fieldJSONArray.put(gridFieldJSON);
+							}
+						}
+						
+					} catch (Exception e) {
+						UserData.delete(userId, "ProgramListQuery", objectId);
+					}
+				} else {
+					for(int i=0;i<titles.length;i++){
+						if(!colMap.containsKey(titles[i])){
+							JSONObject gridFieldJSON=new JSONObject("{}");
+							int width=titles[i].length()*13+15;
+							if(width>200) width=200;
+							gridFieldJSON.put("name",titles[i]);
+							gridFieldJSON.put("header",titles[i]);
+							gridFieldJSON.put("width",width);
+							gridFieldJSON.put("hidden",ctrlQuery.length>0);
+							colMap.put(titles[i],gridFieldJSON);
+							fieldJSONArray.put(gridFieldJSON);
+						}
+					}
+				}
+			
+
+				
+				gridMetaJSON.put("fields",fieldJSONArray);	
+
+
+				//增加事件支持
+				if(!objectId.equals("")){
+					Object[][] enventBody = null;
+					String objectIdString = String.valueOf(objectId);
+					if (JSExtend.getInstance().hasDefined(objectId)) {
+			
+						enventBody = conPlat.getLarges(
+								"select field_name,event_name,event_body,tab_id from $[plat].prg_jsext where object_id=?",
+								new String[] { objectId });
+						JSONObject formEvent = new JSONObject();
+						for (int i = 0; i < enventBody.length; i++) {
+							if (enventBody[i][0].toString().equals("0")) {
+								CtrlEvent.parseEventBody(enventBody[i], CtrlEvent.isUserDefine("FormPanel", (String) enventBody[i][1]),
+										CtrlEvent.getEvent("FormPanel", (String) enventBody[i][1]), formEvent);
+							}
+						}
+						gridMetaJSON.put("events",formEvent);
+					}
+				}
+				
+				
+				QuerySearch qs=null;
+				if(objectId.equals("")){
+					qs= QE.getFullQuerySearch(conPlat);
+				}else{
+					qs= QE.getQuerySearch(conPlat);
+				}
+				JSONObject searchEditor=qs.getSearchEditor(jacper,conPlat);
+				gridMetaJSON.put("searchEditor",searchEditor);	
+				String mainTab=QE.getMainTable(conPlat,query_id);
+				if(!mainTab.equals("")){
+					MetaTable mt=MetaFactory.getObjectWithFullName(mainTab);
+					if(mt!=null){
+						String pks="";
+						for(MetaColumn mc:mt.getPrimaryKeys()){
+							pks+="::"+mc.getLname();
+						}
+						gridMetaJSON.put("mainTab",mt.getObjectId());
+						gridMetaJSON.put("mainPk",(pks.length()>2)?pks.substring(2):pks);
+					}
+				}
+				gridDataJSON.put("metaData",gridMetaJSON);
+
+			}
+
+			String conString=QE.getConnectString();
+			Connection conTmp =null;
+			if(conString.length()!=0)
+				conTmp=jacper.getConnection(conString);
+			else
+				conTmp=conPlat;
+
+			Map p = Factory.newHashMap();
+			String retQuery=jacper.getStr("query");
+			if(retQuery.equals("")) 
+				retQuery="{}";
+			JSONObject searchJson=new JSONObject(retQuery);
+			
+			if(objectId.equals("")){
+				p=QE.getAllQuerySearchCondition(jacper,conPlat,query,p,searchJson);
+			}else{
+				p=QE.getQueryImportCondition(jacper,conPlat,query_id+"");
+				p=QE.getQuerySearchCondition(jacper,conPlat,query,p,searchJson);
+			}
+
+			String sql = query.parseSql(conPlat,titles,p);
+
+			String sort = (orderColumn==null)?jacper.getStr("sort"):orderColumn;
+			String dir = (orderType==null)?jacper.getStr("dir"):orderType;
+
+			int startRow = jacper.getInt("start",0);
+			int rowCount = jacper.getInt("limit",0);
+			String[] param=null;
+			Grid gd=new Grid(sql,titles[0],titles);
+			JSONObject gridData=gd.getJSON(conTmp,param,startRow,rowCount,dir,sort);
+			//gridData.remove("id");
+
+			MetaColumn[] mcs = getMetaColumns(conPlat, query_id, titles);
+			//字典转换--begin
+			for (int i = 0; i < mcs.length; i++) {
+				if (mcs[i] != null) {
+					if (mcs[i].getSpecialSet() == SpecialSet.Dict) {
+						AttributeDict at = (AttributeDict) mcs[i].getAttribute("option_id");
+						if (at != null) {
+							SingleDict dict = (SingleDict) at.getDict(conPlat);
+							if (dict != null) {
+								try {
+									JSONArray data = gridData.getJSONArray("dataItem");
+									JSONObject tempUnit = null;
+									for (int k = 0; k < data.length(); k++) {
+										tempUnit = data.getJSONObject(k);
+										tempUnit.put(titles[i], dict.getValue(tempUnit.getString(titles[i])));
+									}
+								} catch (JSONException e) {
+									e.printStackTrace();
+								}
+							}
+
+						}
+					}
+				}
+			}
+			//字典转换--end
+/*
+			//单位转换-begin
+			String[][] ctrlQuery=conPlat.get("select ITEM, UNIT, TARGET_UNIT from $[plat].CTRL_QUERY where OBJECT_ID=? and QUERY_ID=? and unit!=TARGET_UNIT and TARGET_UNIT is not null and unit is not null order by SEQ",new String[]{objectId,query_id+""});
+			if(ctrlQuery.length>0){
+				JSONArray data=gridData.getJSONArray("dataItem");
+				JSONObject tempUnit=null;
+				for(int i=0;i<titles.length;i++){
+					for(int j=0;j<ctrlQuery.length;j++){
+						if(ctrlQuery[j][0].equals(titles[i])){
+							for(int k=0;k<data.length();k++){
+								tempUnit=data.getJSONObject(k);
+								tempUnit.put(titles[i],UnitParser.parseValue(conPlat,ctrlQuery[j][1],ctrlQuery[j][2],tempUnit.getString(titles[i])));
+							}
+						}
+					}
+				}
+			}
+			//单位转换-end
+*/
+			conTmp.close();
+			if(meta.equals("true")){
+				<??>gridDataJSON.toString().substring(0,gridDataJSON.toString().length()-1)<?,?>gridData.toString().substring(1)<??>;
+			}else{
+				<??>gridData.toString()<??>;
+			}
+		}catch(Exception e){
+			jacper.print("{success:false,message:'"+jacper.trans("数据库中没有找到您要查询的数据")+"'}");
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+			conCert.close();
+		}
+	}
+
+	public MetaColumn[] getMetaColumns(Connection con,String query_id,String[] titles){
+		MetaColumn[] columns=new MetaColumn[titles.length];
+		for(int i=0;i<titles.length;i++){
+			try{
+				String colName=QueryExtend.getFinalItem(con,query_id,titles[i]);
+				if(colName!=null && colName.length()>0){
+					String[] np=colName.split("\\.");
+					MetaTable mt=MetaFactory.getObjectWithFullName(np[0]+"."+np[1]);
+					if(mt!=null){
+						for(MetaColumn mc:mt.getColumns()){
+							if(mc.getPname().toUpperCase().equals(np[2].toUpperCase())){
+								columns[i]=mc;
+							}
+						}
+					}
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+		return columns;
+	}
+}

@@ -1,0 +1,231 @@
+
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.SQLUtils;
+import com.kinglib.ui.core.utils.Param;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.task.HWTaskWork2PDF;
+import gpra.filesystem.upload.EctractZip;
+import gpra.filesystem.upload.HWUpExcealUnits;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.susing.EFile;
+import com.susing.upload.FileUpload;
+
+//public class up{
+@class{
+	public void doPost(Jacper jacper){
+		System.out.println("解压验证>>>");
+		Param param =new Param(jacper);
+		Connection conDocmgr= param.getConnection(HWUnits.HW_DBLINK);
+		Connection conPlatForm= param.getConnection("plat");
+		String userId=param.getStr("userId");
+		FileUpload upload = new FileUpload(Integer.parseInt(userId));
+		try {
+			upload.parseRequest(param.getRequest());
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		upload.appendParamToMap(param);
+		String key=param.getString("key");
+		
+		EFile eexcel=param.getEFile("EXCEL");
+		
+
+		String file_name=eexcel.getAttribute("file-name");
+		int lastgang=file_name.lastIndexOf("\\");
+		if(lastgang>0){
+			file_name=file_name.substring(lastgang+1);
+		}
+		file_name=file_name.substring(0,file_name.indexOf("."));
+		String type=eexcel.getAttribute("file-name");
+		type=type.substring(type.indexOf(".")+1);
+
+		if(!type.equals("zip") && !type.equals("ZIP")&& !type.equals("xlsm")){
+			jacper.print("{success:false,err:true,message:'请上传zip文件。'}");
+			System.out.println("请上传zip文件。");
+			return;
+		}
+		
+		
+		EctractZip z = new EctractZip();  
+		
+		
+		String targetPath= HWTaskWork2PDF.basePath+"batch\\"+key+"\\"; //解压文件路径
+        File targetFile=new File(targetPath);
+        if  (!targetFile .exists()  && !targetFile .isDirectory())      
+        {       
+        	targetFile .mkdir();    
+        }  
+		
+		insAllClass(conDocmgr);
+        z.unZipFiles(eexcel.getFile(), targetPath); //解压
+    	List<String> allFolder=new ArrayList<String>();//所有的目录
+    	
+    	Map<String, String> errmap=getAllFolder(allFolder,targetFile);
+    	boolean err=false;
+    	int allFileCount=Integer.parseInt(errmap.get("count"));
+    	String errString=errmap.get("err").trim();
+    	if (errString!=null && !errString.equals("")) {
+    		err=true;
+		}
+    	
+    	HWUpExcealUnits.insKey(key,allFileCount);
+    	
+    	
+    	if (err) {
+    		jacper.print("{success:true,err:true,fileCount:'"+allFileCount+"',message:'"+errString+"'}");
+		}else{
+			jacper.print("{success:true,err:false,fileCount:'"+allFileCount+"'}");
+		}
+		
+	}
+	
+	public void insAllClass(Connection con){
+		
+		String sql="select id,name from dir_file_classified";
+		String[][] rs=con.get(sql);
+		HWUpExcealUnits.insClass(rs);
+	}
+	
+	
+	public Map<String, String> getAllFolder(List<String> allFolder,File targetFile){
+		int count=0;
+		String err="";
+		Map<String, String> errmap=new HashMap<String, String>();
+        File[] files = targetFile.listFiles(); // 该文件目录下文件全部放入数组
+        if (files != null) {
+            for (int i = 0; i < files.length; i++) {
+            	File nowFile=files[i];
+            	if (nowFile.isDirectory()) {
+            		String file_name=nowFile.getName();
+            		String id=HWUpExcealUnits.getClass(nowFile.getName());
+        			if (id==null || id.equals("")) {
+        				err+="</br>"+file_name+",";
+        			}else{
+        				allFolder.add(file_name);
+                		Map<String, String> getmap=getAllFolder(allFolder,nowFile);
+                		String errs=getmap.get("err");
+                		err+=errs;
+                		count+=Integer.parseInt(getmap.get("count"));
+        			}
+				}else{
+					count++;
+				}
+            }
+        }
+        
+        errmap.put("count", String.valueOf(count));
+        errmap.put("err", err);
+		
+		return errmap;
+	}
+	
+
+
+	public int getIntegral(double size){
+		System.out.println(size);
+		int s=0;
+		if(size<=10){
+			s=1;
+		}
+		if(size>10&&size<=20){
+			s=2;
+		}
+		if(size>20&&size<=30){
+			s=3;
+		}
+		if(size>30&&size<=40){
+			s=4;
+		}
+		if(size>40&&size<=50){
+			s=5;
+		}
+		if(size>50&&size<=60){
+			s=6;
+		}
+		if(size>60&&size<=70){
+			s=7;
+		}
+		if(size>70&&size<=80){
+			s=8;
+		}
+		if(size>80&&size<=90){
+			s=9;
+		}
+		if((size>90&&size<=100)||size>100){
+			s=10;
+		}
+		return s;
+	}
+	private static void nioTransferCopy(File source, File target) {  
+		FileChannel in = null;  
+		FileChannel out = null;  
+		FileInputStream inStream = null;  
+		FileOutputStream outStream = null;  
+		try {  
+			inStream = new FileInputStream(source);  
+			outStream = new FileOutputStream(target);  
+			in = inStream.getChannel();  
+			out = outStream.getChannel();  
+			in.transferTo(0, in.size(), out);  
+		} catch (IOException e) {  
+			e.printStackTrace();  
+		} finally {  
+			try {
+				inStream.close();  
+				in.close();  
+				outStream.close();  
+				out.close();  
+			} catch (Exception e2) {
+				e2.printStackTrace();
+			}
+		}  
+	}  
+	public String toHexString(byte[] b)
+	{
+		StringBuffer buffer = new StringBuffer();
+		for (int i = 0; i < b.length; ++i)
+		{
+			buffer.append("0x");
+			buffer.append(toHexString(b[i]));
+			//buffer.append(" ");
+		}
+		return buffer.toString();
+	}
+
+	public String toHexString(byte b)
+	{
+		char[] buffer = new char[2];
+		buffer[0] = Character.forDigit((b >>> 4) & 0x0F, 16);
+		buffer[1] = Character.forDigit(b & 0x0F, 16);
+		return new String(buffer);
+	}
+	public Long getId(Connection conDocmgr){
+		Long num=null;
+		String[] rs=conDocmgr.getRow("select file_id_count from dir_file_bianma",new String[]{});
+		if(rs!=null){
+			num=Long.valueOf(rs[0]);
+			num=num+1;
+		}
+		return num;
+	}
+
+
+	public Long getSord(Connection conPlatForm,int count){
+		Long num=(long)SQLUtils.getNextVal(conPlatForm, 1216,count);
+		return num;
+	}
+}

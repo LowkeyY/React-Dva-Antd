@@ -1,0 +1,68 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+import com.kinglib.workbench.program.ProgramFactory;
+import com.kinglib.ui.core.*;
+import com.kinglib.util.json.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.database.ConstraintType;
+import com.kinglib.ui.core.list.TopSearchBar;
+@class{
+	public void doGet(Jacper jacper){
+		String object_id=jacper.getString("object_id","-1");
+		Connection conPlat = jacper.getConnection("plat");
+		try{
+			conPlat.setAutoCommit(false);
+			conPlat.exec("delete from  $[plat].ctrl_search where module_id=?",new String[]{object_id+""});
+			jacper.print("{success:true}");	
+			TopSearchBar.getInstance().rebuildMap(conPlat);
+		}catch(Exception e){
+				e.printStackTrace();
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);	
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+	public void doPost(Jacper jacper){
+		String object_id=jacper.getString("object_id","-1");
+		if(object_id.equals("-1")) return;
+
+		String fields=jacper.getStr("fields");
+		boolean success=true;
+		Connection conPlat=jacper.getConnection("plat");
+		String message="";
+
+		Program prg =ProgramFactory.getInstance().getProgram(conPlat,object_id);
+		String tab_id=prg.getTabId();
+
+		try{
+			conPlat.setAutoCommit(false);
+			conPlat.exec("delete from  $[plat].ctrl_search where module_id=?",new String[]{object_id+""});
+			JSONArray jarr=new JSONArray(fields);
+			int seq=0;
+			for(int i=0;i<jarr.length();i++){
+				JSONObject js=jarr.getJSONObject(i);
+				conPlat.exec("insert into $[plat].ctrl_search (module_id,search_item,tab_id,search_title,default_value,index_id,widget_id) values (?,?,?,?,?,?,?)",new String[]{object_id+"",js.getString("item_id"),tab_id+"",js.optString("search_title"),js.getString("default_value"),String.valueOf(seq++),js.optString("widget_id","")});
+			}
+			conPlat.commit();
+			jacper.print("{success:"+success+"}");	
+			TopSearchBar.getInstance().rebuildMap(conPlat);
+		}catch(Exception e){
+				success=false;
+				message=e.getCause().getMessage();
+				message=message.replaceAll("\n","");
+				jacper.print("{success:"+success+",message:'"+message+"'}");	
+				e.printStackTrace();
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);	
+				conPlat.close();
+				ProgramFactory.getInstance().remove(object_id);
+				CustomizeFactory.remove(object_id);
+			}catch(Exception e2) {}
+		}
+	}
+}

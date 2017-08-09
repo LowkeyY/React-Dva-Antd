@@ -1,0 +1,117 @@
+                                                                                   
+                                                                                                                    
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+import com.kinglib.util.json.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.program.*;
+import java.sql.Types;
+
+@class{
+
+	public void doPost(Jacper jacper){
+
+		HttpSession hs = jacper.getSession();
+ 		
+		long user_id=hs.uid;   
+
+		String imptab = jacper.getStr("exportTab");
+		String import_data = jacper.getStr("exportData");
+		String import_item = jacper.getStr("exportItem");
+		String data_id = jacper.getStr("dataId");
+
+
+		MetaTable mt = MetaFactory.getObject(imptab);
+		
+		String tabPname=mt.getPname();
+		String dbLink=mt.getDblink();
+		MetaColumn[] columns=mt.getColumnArray();
+
+		MetaColumn[] pmks=mt.getPrimaryKeys();
+		String[][] pmkArray=new String[pmks.length][4];
+		
+		for(int n=0;n<pmks.length;n++){
+			pmkArray[n][0]=pmks[n].getPname();
+			pmkArray[n][1]=String.valueOf(pmks[n].getDataType().getValue());
+			pmkArray[n][2]=String.valueOf(pmks[n].getSpecialSet().getValue());
+		}
+
+	    String spatialColumn="";
+		String longtitudeColumn="";
+		String latitudeColumn="";
+		for(int i=0;i<columns.length;i++){
+			if(columns[i].getDataType().getValue()==DataType.GEOMETRY.getValue()){
+				spatialColumn=columns[i].getPname();
+				break;
+			}
+		}
+		if(spatialColumn.equals("")){
+			for(int i=0;i<columns.length;i++){
+				if(columns[i].getSpecialSet().getValue()==SpecialSet.Longitude.getValue()){
+					longtitudeColumn=columns[i].getPname();
+				}
+				if(columns[i].getSpecialSet().getValue()==SpecialSet.Latitude.getValue()){
+					latitudeColumn=columns[i].getPname();
+				}
+			}
+		}
+
+		String  PkString="";
+		 String[] pkData=null;
+		 if (data_id.equals(""))
+			pkData=import_data.split(",");
+		 else  pkData=data_id.split("::");
+		if(pkData.length==pmkArray.length){		
+			for(int k=0;k<pmkArray.length;k++){	
+				if (Integer.parseInt(pmkArray[k][1])==Types.DATE){
+						if(pmkArray[k][2].equals("9")||pmkArray[k][2].equals("8")){
+							PkString+=" and $date_str("+pmkArray[k][0]+",120)='"+pkData[k]+"'";
+						}else {
+							PkString+=" and $date_str("+pmkArray[k][0]+",111)='"+pkData[k]+"'";
+						}
+				}else if (Integer.parseInt(pmkArray[k][1])==Types.SMALLINT){
+					PkString+=" and "+pmkArray[k][0]+"="+pkData[k]+"";
+				}else{
+					PkString+=" and "+pmkArray[k][0]+"='"+pkData[k]+"'";
+				}
+			}
+		}			
+		String	tempStr="";
+		if(!spatialColumn.equals("")){
+			tempStr="SELECT  t.id,t.X,t.Y FROM TABLE(select SDO_UTIL.GETVERTICES(SDO_AGGR_MBR(SDO_CS.TRANSFORM("+spatialColumn+",8307))) from $["+dbLink+"]."+tabPname+" where "+PkString.substring(4,PkString.length())+") t";
+			Connection conLocal=jacper.getConnection(dbLink);
+			String[][] gisData=conLocal.get(tempStr,null,0);
+			try{
+				JSONObject boundsJSON = new JSONObject("{}");
+				boundsJSON.put("west",gisData[0][1]);
+				boundsJSON.put("north",gisData[0][2]);
+				boundsJSON.put("east",gisData[1][1]);
+				boundsJSON.put("south",gisData[1][2]);
+				Double CenterX=(Double.parseDouble(gisData[0][1])+Double.parseDouble(gisData[1][1]))/2;
+				Double CenterY=(Double.parseDouble(gisData[0][2])+Double.parseDouble(gisData[1][2]))/2;
+				boundsJSON.put("centerX",CenterX);
+				boundsJSON.put("centerY",CenterY);
+				jacper.getResponse().setContentType("application/x-json");
+				<??>boundsJSON.toString()<??>;
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			conLocal.close();
+		}else{
+			tempStr="SELECT  "+longtitudeColumn+","+latitudeColumn+" from $["+dbLink+"]."+tabPname+" where "+PkString.substring(4,PkString.length());
+			Connection conLocal=jacper.getConnection(dbLink);
+			String[][] gisData=conLocal.get(tempStr,null,0);
+			try{
+				JSONObject boundsJSON = new JSONObject("{}");
+				boundsJSON.put("centerX",gisData[0][1]);
+				boundsJSON.put("centerY",gisData[0][0]);
+				jacper.getResponse().setContentType("application/x-json");
+				<??>boundsJSON.toString()<??>;
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			conLocal.close();
+		}
+	}
+}

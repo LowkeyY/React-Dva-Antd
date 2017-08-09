@@ -1,0 +1,52 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.space.HWSpaceFactory;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.Dept;
+
+//public class ZuiJinShangChuan{
+@class{
+	public void doPost(Jacper jacper) {
+		JSONObject jbout=new JSONObject();
+		JSONArray ja = new JSONArray();
+		Connection con=jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			String spaceid=(String) jacper.getSession().get("HW_BASE_SPACEID");
+			
+			String sql="";
+			
+			if(HWSpaceFactory.isBaseSpace(spaceid)){
+				sql="select file_info_name,$date_str(file_upload_date,111),file_dept,file_type,file_size,is_secrecy,file_id from dir_file_base where is_secrecy='0' and att_128='1' order by file_upload_date desc";
+			}else{
+				sql="select file_info_name,$date_str(file_upload_date,111),file_dept,file_type,file_size,is_secrecy,file_id from dir_file_base where space_id='"+spaceid+"' and att_128='1' order by file_upload_date desc";
+			}
+			String[][]rows=con.get(sql , null , 30);
+			if(rows != null && rows.length > 0)
+				for (int i = 0; i < rows.length; i++) {
+					Dept dept = CertManager.getDept(rows[i][2]);
+					JSONObject jb=new JSONObject();
+					jb.put("xh",i+1);
+					jb.put("name",rows[i][0]);
+					jb.put("date",rows[i][1]);
+					jb.put("dept",dept==null?rows[i][2]:dept.getName());
+					jb.put("file_type",rows[i][3]);
+					jb.put("file_size",rows[i][4]);
+					jb.put("IS_SECRECY",rows[i][5]);
+					jb.put("id",rows[i][6]);
+					ja.put(jb);
+				}
+			jbout.put("authArray",ja);
+			jacper.print(jbout);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	public void doGet(Jacper jacper){
+		doPost(jacper);
+	}
+}

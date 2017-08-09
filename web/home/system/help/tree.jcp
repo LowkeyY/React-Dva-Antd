@@ -1,0 +1,56 @@
+            
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+import com.social.api.core.model.*;
+
+
+               
+@class{
+
+	public void doGet(Jacper jacper){  
+	
+		Connection conPlat = jacper.getConnection("plat");  
+
+		boolean isLogin = jacper.setSession();
+		
+		HttpSession hs = jacper.getSession();
+		String userId=hs.uid+"";
+		CertManager catche=CertManager.getInstance();
+		User u=catche.getUser(userId);
+		long utpye=u.getUserType().getValue();
+		String typeU="";
+		
+		if(utpye>10){
+		typeU="0";
+		}else{
+		typeU="1";
+		};
+		
+		String parent_id = jacper.getString("parent_id");
+		String hasChild ="0";   
+		
+		try{       
+		<?
+		<root _id="1">
+			<forder _parent="1" event="event0">?>;
+				String[][] iu = conPlat.get("select category_id,parent_id,son,category_name from $[plat].help_category where parent_id=? order by category_id",new String[]{parent_id},0);
+				for(int i=0;i<iu.length;i++){
+					hasChild=Integer.parseInt(iu[i][2])>0?"1":"0";
+					<?
+					<e _id="?>iu[i][0]<?" _parent="?>iu[i][1]<?" _hasChild="?>hasChild<?" title="?>iu[i][3]<?" treeType='category' params="parent_id=?>iu[i][0]<?&amp;typeU=?>typeU<?" url="/home/system/help/tree.jcp?parent_id=?>iu[i][0]<?" icon1="/themes/icon/all/book.gif" icon0="/themes/icon/all/book.gif"/>
+					?>;
+				}
+				String[][] ci= conPlat.get("select help_id,category_id,help_name from $[plat].help_content where category_id=? order by category_id",new String[]{parent_id},0);
+				for(int i=0;i<ci.length;i++){
+					<?<e _id="?>ci[i][0]<?" _parent="?>ci[i][1]<?" _hasChild="1" title="?>ci[i][2]<?" treeType='detail' params="help_id=?>ci[i][0]<?&amp;parent_id=?>ci[i][1]<?"    url="/home/system/help/tree.jcp?parent_id=?>ci[i][0]<?" icon1="/themes/icon/common/title.gif" icon0="/themes/icon/common/title.gif"/>?>;
+				}
+			<?</forder>
+		</root>	?>;
+		}catch(Exception e){
+			e.printStackTrace();   
+		}finally{
+			conPlat.close();
+		}
+	}
+}  

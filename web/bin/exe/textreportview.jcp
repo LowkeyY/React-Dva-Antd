@@ -1,0 +1,55 @@
+
+
+import java.io.IOException;
+import com.kinglib.bi.*;
+import com.kinglib.*;
+import com.kinglibx.report.*;
+import com.kinglib.util.*;
+import com.kinglibx.query.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.util.json.*;
+
+@class{
+	public void doGet(Jacper jacper){
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		Connection conPlat = jacper.getConnection("plat");
+		String reportObject_id=jacper.getString("report_id","-1");
+		String data_id=jacper.getStr("dataId");
+		String type = jacper.getStr("type");
+		String meta=jacper.getStr("meta");
+		String objectId="";
+		if(reportObject_id.equals("-1")){
+			objectId=jacper.getStr("objectId");
+			Program prg =ProgramFactory.getInstance().getProgram(conPlat,objectId);
+			reportObject_id=prg.getTextReportId();
+		}
+		jacper.getResponse().setContentType("application/x-json");
+		TextReportFactory tf=TextReportFactory.getInstance();
+		TextReport rpt=tf.getTextReport(conPlat,reportObject_id);
+		rpt.init(jacper,conPlat);	
+		try{
+			JSONObject reportMetaJSON=new JSONObject("{}");	
+			JSONObject searchFieldJSON;
+			reportMetaJSON.put("success","true");
+			if (meta.equals("true")){
+				if(data_id.equals("")){
+					searchFieldJSON= rpt.getSearchEditor(jacper,conPlat,true);
+					reportMetaJSON.put("searchEditor",searchFieldJSON);	
+				}else{
+					searchFieldJSON=rpt.getSearchEditor(jacper,conPlat,false);
+					reportMetaJSON.put("searchEditor",searchFieldJSON);	
+				}
+				reportMetaJSON.put("content",rpt.getContent());
+			}else{
+				reportMetaJSON.put("content",rpt.getContent());
+			}
+			<??>reportMetaJSON.toString()<??>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+}
+}

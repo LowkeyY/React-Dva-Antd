@@ -1,0 +1,455 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.i18n.I18n;
+import com.kinglib.i18n.runtime.I18nUtils;
+import com.kinglib.i18n.runtime.dict.JsDictionary;
+import com.kinglib.i18n.runtime.dict.JcpDictionary;
+import com.kinglib.i18n.runtime.dict.JavaDictionary;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.util.json.JSONPart;
+import com.kinglib.workbench.ObjectIcon;
+import com.kinglib.workbench.ObjectType;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import java.util.ArrayList;
+import java.util.Locale;
+import java.util.HashMap;
+import java.io.File;
+
+
+@class{
+
+		public void doPost(Jacper jacper) {
+		boolean isRoot = jacper.getStr("id").equals("root");
+		Connection conPlat = jacper.getConnection("plat");
+		try {
+			if (isRoot) {
+				String[][] rs = conPlat.get("select locale from $[plat].i18n_language", null);
+				if (rs != null && rs.length > 0) {
+					jacper.print("[");
+					Locale dev = I18n.toLocale(I18n.getDevelopLanguage());
+					for (int count = 0; count < rs.length; count++) {
+
+						if (count > 0)
+							jacper.print(",");
+						String m = rs[count][0];
+						Locale loc = I18n.toLocale(m);
+						jacper.print("{text:'" + loc.getDisplayName(dev) + "',id:'" + m + "',layer:'1',locale:'" + m
+								+ "',icon:'/themes/icon/nationalflag/" + m.substring(3, 5) + ".jpg',children :[");
+						StringBuilder sb = new StringBuilder(1000);
+						sb.append("{text:'系统Javascript',icon:'/themes/icon/xp/information.png',leaf:true,id:'sys").append(m).append(
+								"',lang:'").append(m).append("',treetype:'sys',pid:'0',mtype:'10'}");
+						sb.append(",{text:'系统数据库对象',icon:'/themes/icon/xp/information.png',leaf:true,id:'sysdb").append(m).append(
+								"',lang:'").append(m).append("',treetype:'sysdb',pid:'sysdb',mtype:'12'}");
+						sb.append(",{text:'系统菜单',icon:'/themes/icon/xp/menu.gif',leaf:true,id:'tmenu").append(m).append(
+								"',lang:'").append(m).append("',treetype:'menu',pid:'sys',path:'top',mtype:'8'}");
+						sb.append(",{text:'JCP文件',icon:'/themes/icon/all/script_code.gif',leaf:true,mtype:5,pid:'sys',id:'properties")
+								.append(m).append("',lang:'").append(m).append(
+										"',treetype:'properties',path:'properties'}");
+						sb.append(",{text:'JS文件',id:'js").append(m).append("',lang:'").append(m).append(
+								"',treetype:'js',path:'js',icon:'/themes/icon/all/script_edit.gif'}");
+						
+						sb.append(",{text:'JAVA程序',icon:'/themes/icon/all/script_code.gif',id:'javaroot")
+								.append(m).append("',lang:'").append(m).append(
+										"',treetype:'java',pid:''}");
+						sb.append(",{text:'公共字典',icon:'/themes/icon/all/book_open.gif',id:'dict")
+											.append(m).append("',lang:'").append(m).append(
+													"',treetype:'dict',pid:'0',path:'top'}");
+						sb.append(",{text:'公共量纲',path:'4',icon:'/themes/icon/all/pilcrow.gif',id:'unit")
+											.append(m).append("',lang:'").append(m).append(
+													"',treetype:'unit',pid:'0',path:'top'}");
+
+						ObjectNode node = ObjectManager.getObject("0");
+						StringBuilder sb1=this.getChildNodes(conPlat,node, m, "mod","","","0");
+						sb.append(",").append(sb1);
+						sb.append("]}");
+						jacper.print(sb.toString());
+					}
+
+					jacper.print("]");
+				}
+			} else {
+				String treetype = jacper.getString("treetype");
+				String lang = jacper.getString("lang");
+				if("java".equals(treetype)){
+					String path = jacper.getStr("pid").replace('.',File.separatorChar);
+					File d=new File(JavaDictionary.path+File.separatorChar+path);
+					StringBuilder sb = new StringBuilder(200);
+					sb.append("[");
+					String patternName=I18n.getDevelopLanguage()+".properties";
+					for(File f:d.listFiles()){
+						String pt=f.getPath();
+						pt=pt.substring(JavaDictionary.path.length());
+						pt=pt.replace(File.separatorChar, '.');
+						JSONPart p = new JSONPart();
+						if(f.isDirectory()){
+							p.join("text", f.getName());
+							p.join("pid", pt);
+							p.join("leaf", false);
+						}else if(f.getName().equals(patternName)){
+							p.join("text", lang+".properties");
+							p.join("pid", pt.substring(1,pt.lastIndexOf(".lang.")));
+							p.join("leaf", true);
+							p.join("icon", "/themes/icon/common/redo1.gif");
+						}else{
+							continue;
+						}
+						p.join("treetype", "java");
+						p.join("mtype", 11);
+						p.join("lang", lang);
+						p.join("id", pt);
+						if (sb.length() > 1)
+							sb.append(",");
+						sb.append("{").append(p.getBuilder()).append("}");
+					}
+					sb.append("]");
+					jacper.print(sb);
+				}else if ("js".equals(treetype)) {
+					String filepath = "";
+					String nodeid = jacper.getString("path");
+					if ("js".equals(nodeid)) {
+						filepath = com.kinglib.i18n.runtime.dict.JcpDictionary.path;
+					}else {
+						filepath = nodeid;
+					}
+					if ("js".equals(treetype)) {
+						jacper.print(this.getChildElements(".jss", filepath, lang, treetype).toString());
+					}
+				} else {
+					String pid = jacper.getString("pid");
+					String path = jacper.getString("path");
+					ObjectNode node = ObjectManager.getObject(pid);
+					
+					if (treetype.indexOf("mod")!=-1) {
+						if (path.equals("0")) {
+								jacper.print("[");
+								StringBuilder sb = new StringBuilder(1000);
+								sb.append("{text:'公共信息',icon:'/themes/icon/xp/information.png',leaf:true,id:'sys_").append(lang).append(pid).append(
+										"',lang:'").append(lang).append("',treetype:'mod_sys',pid:'").append(node.getId()).append("',mtype:'0'}");
+								sb.append(",{text:'菜单',icon:'/themes/icon/xp/menu.gif',leaf:true,id:'tmenu").append(lang).append(pid).append(
+										"',lang:'").append(lang).append("',treetype:'mod_menu',pid:'").append(pid).append("',path:'top',mtype:'8'}");
+								sb.append(",{text:'JCP文件',icon:'/themes/icon/all/script_code.gif',leaf:true,id:'properties").append(lang).append(pid).append(
+										"',lang:'").append(lang).append("',treetype:'properties',path:'properties',").append("treetype:'properties',pid:'").append(node.getId()).append("',mtype:'5'}");
+								sb.append(",{text:'字典',icon:'/themes/icon/all/book_open.gif',id:'dict")
+										.append(lang).append(pid).append("',lang:'").append(lang).append("',treetype:'mod_dict',pid:'").append(pid).append("',path:'top'}");
+								sb.append(",{text:'量纲',icon:'/themes/icon/all/pilcrow.gif',id:'unit")
+										.append(lang).append(pid).append("',lang:'").append(lang).append("',treetype:'mod_unit',pid:'").append(pid).append("',path:'4'}");
+								sb.append(",{text:'控件',icon:'/themes/icon/xp/bat.gif',id:'mod_widget")
+										.append(lang).append(pid).append("',lang:'").append(lang).append("',treetype:'mod_widget',pid:'").append(pid).append("',path:'4'}");
+								sb.append(",{text:'模块',icon:'/themes/icon/xp/report.gif',id:'mod_module")
+										.append(lang).append(pid).append("',lang:'").append(lang).append("',treetype:'mod_module',pid:'").append(pid).append("',path:'4'}");
+								sb.append(",{text:'工作流',icon:'/themes/icon//common/workflow1.gif',id:'mod_workflow")
+										.append(lang).append(pid).append("',lang:'").append(lang).append("',treetype:'mod_workflow',pid:'").append(pid).append("',path:'4'}");
+								sb.append(",{text:'搜索引擎',icon:'/themes/icon/all/folder_explore.gif',id:'mod_search")
+										.append(lang).append(pid).append("',lang:'").append(lang).append("',treetype:'mod_search',pid:'").append(pid).append("',path:'4'}");
+								sb.append(",{text:'图表',icon:'/themes/icon/xp/chart.gif',id:'mod_chart")
+										.append(lang).append(pid).append("',lang:'").append(lang).append("',treetype:'mod_chart',pid:'").append(pid).append("',path:'4'}");
+								sb.append(",{text:'决策仪表盘',icon:'/themes/icon/all/layout_content.gif',id:'mod_panel")
+										.append(lang).append(pid).append("',lang:'").append(lang).append("',treetype:'mod_panel',pid:'").append(pid).append("',path:'4'}");								
+								sb.append(",{text:'地图',icon:'/themes/icon/all/map.gif',id:'mod_map")
+										.append(lang).append(pid).append("',lang:'").append(lang).append("',treetype:'mod_map',pid:'").append(pid).append("',path:'4'}");
+
+								jacper.print(sb.toString());
+								jacper.print("]");
+						}else{
+							if (treetype.equals("mod_dict")) {
+								jacper.print(this.getChildNodes(conPlat,node, lang, "dict","[","]","top"));
+							}else if (treetype.equals("mod_unit")) {
+								StringBuilder sb = new StringBuilder(200);
+								sb.append("[");
+									String[][] telBuf = conPlat.get(
+											"SELECT  id, name, DESCRIPCTION FROM $[plat].unit_group where system_id=?",
+											new String[] { pid }, 0);
+
+									for (String[] r : telBuf) {
+										if (sb.length() > 1)
+											sb.append(",");
+										JSONPart p = new JSONPart();
+										p.join("text", r[1]);
+										p.join("pid", r[0]);
+										p.join("treetype", treetype);
+										p.join("mtype", 6);
+										p.join("lang", lang);
+										p.join("id", treetype + lang + r[0]);
+										p.join("leaf", true);
+										p.join("icon", "/themes/icon/all/bricks.gif");
+										sb.append("{").append(p.getBuilder()).append("}");
+									}
+								sb.append("]");
+								jacper.print(sb.toString());
+							}else{
+								jacper.print(this.getChildNodes(conPlat,node, lang, treetype,"[","]","top"));
+							}
+						}
+					}else if(treetype.equals("unit")){
+						StringBuilder sb = new StringBuilder(200);
+						sb.append("[");
+						String[][] telBuf = conPlat.get(
+								"SELECT  id, name, DESCRIPCTION FROM $[plat].unit_group where system_id=?",
+								new String[] {pid}, 0);
+
+						for (String[] r : telBuf) {
+							if (sb.length() > 1)
+								sb.append(",");
+							JSONPart p = new JSONPart();
+							p.join("text", r[1]);
+							p.join("pid", r[0]);
+							p.join("treetype", treetype);
+							p.join("mtype", 6);
+							p.join("lang", lang);
+							p.join("id", treetype + lang + r[0]);
+							p.join("leaf", true);
+							p.join("icon", "/themes/icon/all/bricks.gif");
+							sb.append("{").append(p.getBuilder()).append("}");
+						}
+						sb.append("]");
+						jacper.print(sb.toString());
+					} else if(treetype.equals("dict")) {
+						StringBuilder sb = new StringBuilder(200);
+						sb.append("[");
+						if (path.equals("top")) {
+							String[][] telBuf = conPlat
+									.get(
+											"SELECT  kind_id, name, kind_desc FROM $[plat].dict_kind where application_obj_id=?",
+											new String[] { pid }, 0);
+
+							for (String[] r : telBuf) {
+								if (sb.length() > 1)
+									sb.append(",");
+								JSONPart p = new JSONPart();
+								p.join("text", r[1]);
+								p.join("pid", r[0]);
+								p.join("treetype", treetype);
+								p.join("lang", lang);
+								p.join("id", treetype + lang + r[0]);
+								p.join("leaf", false);
+								p.join("path", "kind");
+								p.join("icon", "/themes/icon/common/submit1.gif");
+								sb.append("{").append(p.getBuilder()).append("}");
+							}
+							sb.append("]");
+						} else {
+							String[][] telBuf = conPlat
+									.get(
+											"select option_id,option_name,kind_id from $[plat].first_dict where kind_id=? order by option_name",
+											new String[] { pid }, 0);
+							for (String[] r : telBuf) {
+								if (sb.length() > 1)
+									sb.append(",");
+								JSONPart p = new JSONPart();
+								p.join("text", r[1]);
+								p.join("pid", r[0]);
+								p.join("treetype", treetype);
+								p.join("mtype", 9);
+								p.join("lang", lang);
+								p.join("id", treetype + lang + r[0]);
+								p.join("leaf", true);
+								p.join("icon", "/themes/icon/common/redo1.gif");
+								sb.append("{").append(p.getBuilder()).append("}");
+							}
+							sb.append("]");
+						}
+						jacper.print(sb.toString());
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			conPlat.close();
+		}
+	}
+
+	private StringBuilder getChildNodes(Connection conPlat,ObjectNode node, String lang, String treetype,String prefix,String postfix, String path) {
+		StringBuilder sb = new StringBuilder(prefix);
+		if (node.haveChild()) {
+			int t = 0;
+			ArrayList<ObjectNode> al = new ArrayList<ObjectNode>();
+			if (node.getType() == ObjectType.SYSTEM) {
+				for (ObjectNode n : node.getChilds()) {
+					if (n.haveChild()) {
+						for (ObjectNode nn : n.getChilds()) {
+							al.add(nn);
+						}
+					}
+				}
+			}else {
+				for (ObjectNode n : node.getChilds()) {
+					al.add(n);
+				}
+			}
+			for (ObjectNode n : al) {
+				t = n.getType();
+				boolean filterType=false;
+				if(treetype.equals("mod")){
+					filterType=(t < 2);
+				}else if(treetype.equals("dict")){
+					boolean haveSon=true;
+					if(t==1){
+						haveSon=false;
+						String[] kindBuf = conPlat.getRow("SELECT  count(kind_id) FROM $[plat].dict_kind where application_obj_id=?",new String[] {n.getId()});
+						haveSon=Integer.parseInt(kindBuf[0])>0;
+					}
+					filterType=(t < 2);
+				}else if(treetype.equals("mod_widget")){
+					boolean haveSon=true;
+					if(t==1){
+						haveSon=false;
+						ObjectNode[] wNodes= n.findAllChildsByType(8);
+						haveSon=wNodes.length>0;
+					}
+					filterType=((t < 2 || t==8)&&haveSon);
+				}else if(treetype.equals("mod_module")){
+					boolean haveSon=true;
+					if(t==1){
+						haveSon=false;
+						ObjectNode[] wNodes= n.findAllChildsByType(5);
+						haveSon=wNodes.length>0;
+					}
+					filterType=(t < 2 || t==7  || t == 5 || (t > 22 && t < 28))&&haveSon;
+				}else if(treetype.equals("mod_workflow")){
+					boolean haveSon=true;
+					if(t==1){
+						haveSon=false;
+						ObjectNode[] wNodes= n.findAllChildsByType(32);
+						haveSon=wNodes.length>0;
+					}
+					filterType=(t < 2 || t==32|| t==16|| t==17|| t==7 || (t > 22 && t < 28))&&haveSon;
+				}else if(treetype.equals("mod_chart")){
+					boolean haveSon=true;
+					if(t==1){
+						haveSon=false;
+						ObjectNode[] wNodes= n.findAllChildsByType(9);
+						haveSon=wNodes.length>0;
+					}
+					filterType=(t < 2 || t==9)&&haveSon;
+				}else if(treetype.equals("mod_search")){
+					boolean haveSon=true;
+					if(t==1){
+						haveSon=false;
+						ObjectNode[] wNodes= n.findAllChildsByType(36);
+						haveSon=wNodes.length>0;
+					}
+					filterType=(t < 2 || t==36|| t==35|| t==7|| (t > 22 && t < 28))&&haveSon;
+				}else if(treetype.equals("mod_panel")){
+					boolean haveSon=true;
+					if(t==1){
+						haveSon=false;
+						ObjectNode[] wNodes= n.findAllChildsByType(28);
+						haveSon=wNodes.length>0;
+					}
+					filterType=(t < 2 || t==28|| t==7|| (t > 22 && t < 28))&&haveSon;
+				}else if(treetype.equals("mod_map")){
+					boolean haveSon=true;
+					if(t==1){
+						haveSon=false;
+						ObjectNode[] wNodes= n.findAllChildsByType(11);
+						haveSon=wNodes.length>0;
+					}
+					filterType=(t < 2 || (t > 10 && t < 16)|| t==7|| t==19|| (t > 22 && t < 28))&&haveSon;
+				}
+				int mType=7;
+				if(n.getType()==1) mType=1;
+				if (filterType) {
+					if (sb.length() > 1)
+						sb.append(",");
+					JSONPart p = new JSONPart();
+					p.join("text", n.getName());
+					p.join("pid", n.getId());
+					p.join("treetype", treetype);
+					p.join("mtype", mType);
+					p.join("lang", lang);
+					p.join("id", treetype + lang + n.getId());
+					p.join("leaf", !n.haveChild());
+					p.join("icon", ObjectIcon.getIcon(n));
+					p.join("type", n.getType());
+					p.join("path", path);
+					sb.append("{").append(p.getBuilder()).append("}");
+				}
+			}
+		}
+		return sb.append(postfix);
+	}
+
+	/**
+	 * 获得目录子目录JSON
+	 * 
+	 * @param filename
+	 *            查找的文件名
+	 * @param findpath
+	 *            需要查找的路径
+	 * @return array 返回此路径下的子目录或者文件的JSON
+	 */
+	private JSONArray getChildElements(String filename, String findpath, String lang, String treetype) {
+		JSONArray array = new JSONArray();
+		File file = new File(findpath);
+		if (file.exists() && file.isDirectory()) {
+			ArrayList<String> arraypaht = new ArrayList<String>();
+			arraypaht = I18nUtils.findFileEndWith(arraypaht, filename, findpath);
+			File[] filelist = file.listFiles();
+			if (filelist != null && filelist.length > 0) {
+				for (int i = 0, s = filelist.length; i < s; i++) {
+					File subfile = filelist[i];
+					HashMap<String, Object> map = new HashMap<String, Object>();
+					if (subfile.exists() && subfile.isDirectory()&&!subfile.getName().equals("login")&&!subfile.getName().equals("home")&&!subfile.getName().equals("common")&&!subfile.getName().equals("Ext")) {
+						for (String path : arraypaht) {
+							if (path.indexOf(subfile.getPath() + "\\") > -1||subfile.getPath().indexOf("lang") > -1) {
+								map.put("text", subfile.getName());
+								map.put("id", treetype + ":" + subfile.getPath());
+								map.put("cls", "task-folder");
+								map.put("leaf", false);
+								map.put("treetype", treetype);
+								map.put("mtype", 4);
+								map.put("path", subfile.getPath());
+								map.put("type", treetype);
+								map.put("lang", lang);
+								JSONObject o = new JSONObject(map);
+								array.put(o);
+								break;
+							}
+						}
+					} else {
+						if (findpath.indexOf("lang")>1&&subfile.getPath().indexOf(lang+filename)>1) {
+							String path=subfile.getPath();
+							path=path.substring(0,path.length()-subfile.getName().length()-6);
+							map.put("icon", "/themes/icon/all/script_code.gif");
+							path=path.substring(JcpDictionary.path.length()+1);
+							path=path.replace(File.separatorChar, '.');
+							map.put("text", lang+filename);
+							map.put("id",path );
+							map.put("cls", "task");
+							map.put("leaf", true);
+							map.put("mtype", 4);
+							map.put("treetype", treetype);
+							map.put("pid", path);
+							map.put("type", treetype);
+							map.put("lang", lang);
+							JSONObject o = new JSONObject(map);
+							array.put(o);
+						}
+					}
+				}
+			}else if(findpath.indexOf("lang")>1) {
+				HashMap<String, Object> map = new HashMap<String, Object>();
+				String path=file.getPath();
+				path=path.substring(0,path.length()-file.getName().length()-1);
+				map.put("icon", "/themes/icon/all/script_code.gif");
+				path=path.substring(JcpDictionary.path.length()+1);
+				path=path.replace(File.separatorChar, '.');
+				map.put("text", lang+filename);
+				map.put("id",path );
+				map.put("cls", "task");
+				map.put("leaf", true);
+				map.put("mtype", 4);
+				map.put("treetype", treetype);
+				map.put("pid", path);
+				map.put("type", treetype);
+				map.put("lang", lang);
+				JSONObject o = new JSONObject(map);
+				array.put(o);
+			}
+		}
+		return array;
+	}
+}

@@ -1,0 +1,114 @@
+.x-toolbar .x-btn-with-menu .x-btn-center em{
+    padding-right:10px
+}
+tr .x-btn-center em{
+    background:transparent none repeat scroll 0;padding-left:1px;padding-right:1px
+}
+.x-btn button,.x-btn-center em,.x-toolbar .x-btn-right,.x-toolbar .x-btn-center,.x-toolbar .x-btn-left,.x-btn-icon .x-btn-center .x-btn-text,.x-form-field-wrap .x-form-trigger,.x-combo-noedit{
+    cursor:default
+}
+.x-menu{
+    background:#f0f0f0 url(/ui/wss/res/img/menu/menu.png) repeat-y scroll 0 50%
+}
+.x-combo-list-item{
+    font-size:11px
+}
+.newtab{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -48px!important
+}
+.delete_sheet{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -62px!important
+}
+.shsel_first{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -78px!important
+}
+.shsel_next{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -88px!important
+}
+.shsel_last{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -98px!important
+}
+.shsel_prev{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -108px!important
+}
+.x-tab-strip .x-tab-with-icon span.x-tab-strip-text{
+    background-position:0 0
+}
+.x-tab-strip-bottom .x-tab-left{
+    padding:0 6px
+}
+.x-tab-strip span.x-tab-strip-text{
+    color:#15428b;cursor:default;font-family:tahoma,arial,helvetica;font-size:11px;font-size-adjust:none;font-stretch:normal;font-style:normal;font-variant:normal;font-weight:normal;line-height:normal;padding:1px 0;white-space:nowrap
+}
+.x-tab-strip-bottom .x-tab-strip-active .x-tab-right span.x-tab-strip-text{
+    padding-top:3px
+}
+.extsheetselector{
+    background:transparent none repeat scroll 0 50%!important;width:90px;height:17px!important;border-style:none;padding:0
+}
+.x-btn-noicon .x-btn-xsmall .x-btn-text{
+    height:10px
+}
+.x-btn-icon .x-btn-xsmall .x-btn-text{
+    height:10px;width:10px;line-height:0!important
+}
+.x-btn-text-icon .x-btn-icon-xsmall-left .x-btn-text{
+    background-position:0 center;background-repeat:no-repeat;padding-left:12px;height:10px;line-height:0!important
+}
+.x-btn-xsmall td.x-btn-mc{
+    line-height:0!important
+}
+.x-btn-text-icon .x-btn-icon-xsmall-top .x-btn-text{
+    background-position:center 0;background-repeat:no-repeat;padding-top:12px
+}
+.x-btn-text-icon .x-btn-icon-xsmall-right .x-btn-text{
+    background-position:right center;background-repeat:no-repeat;padding-right:12px;height:10px
+}
+.x-btn-text-icon .x-btn-icon-xsmall-bottom .x-btn-text{
+    background-position:center bottom;background-repeat:no-repeat;padding-bottom:12px
+}
+.x-toolbar-more .x-btn-xsmall .x-btn-text{
+    height:10px;width:12px
+}
+.x-tab-strip a{
+    cursor:default
+}
+.x-tab-strip-active span.x-tab-strip-text{
+    font-weight:bold
+}
+.extsheettabs .x-tab-scroller-right{
+    border-bottom:1px solid #8db2e3;cursor:default;height:15px!important;background:transparent url(/ui/wss/res/img/sheet_selector/scroll-right.png) no-repeat scroll 1px 18%
+}
+.extsheettabs .x-tab-scroller-left{
+    border-bottom:1px solid #8db2e3;cursor:default;height:15px!important;background:transparent url(/ui/wss/res/img/sheet_selector/scroll-left.png) no-repeat scroll 1pt 18%
+}
+.extsheettabs .x-tab-strip-bottom .x-tab-strip-active .x-tab-right{
+    margin-top:-2px
+}
+.x-tab-strip-bottom .x-tab-left{
+    padding:0 6px 1px
+}
+.extsheettabs .x-tab-strip li{
+    margin-left:1px;border-style:solid;border-width:1px 0 0
+}
+ul.x-tab-strip-bottom{
+    border-bottom:0 none;border-top:0 none;padding-bottom:0
+}
+.extsheettabs .x-tab-panel-footer{
+    padding-top:0
+}
+.extsheettabs ul.x-tab-strip li.x-tab-with-icon{
+    margin-left:1px;width:31px
+}
+.extsheettabs .x-tab-with-icon .x-tab-right{
+    padding-left:0
+}
+.statusBarStyle{
+    border-color:#99bbe8 #fff #fff #99bbe8;border-style:solid;border-width:1px;text-align:left
+}
+.wssStatusBar{
+    padding:0 2px 0!important;line-height:16px!important;display:block!important
+}
+div.x-toolbar.x-statusbar{
+    cursor:default;padding:1px
+}

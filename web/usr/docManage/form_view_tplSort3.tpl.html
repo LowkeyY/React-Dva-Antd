@@ -1,0 +1,84 @@
+<div class="wf_div_ct"> 
+  <div class="header">流程信息</div>
+  <div class="body" id="${data:id_flowPanel}"> 
+    <table width="100%" border="0" cellspacing="1" cellpadding="0" style="background-color:#CDCDCD">
+	  <tr>
+	    <td height="24" align="right" valign="middle" class="lable">流程编号:&nbsp;</td>
+	    <td valign="middle" class="field">${LCBM}</td>
+		<td height="24" align="right" valign="middle" class="lable">重要等级:&nbsp;</td>
+        <td valign="middle" class="field">${ZYDJ}</td>
+  	  </tr>
+	  <tr> 
+        <td width="15%" align="right" valign="middle" class="lable">自定义流程标题:&nbsp;</td>
+	    <td width="35%" valign="middle" class="field">${ZDYLCBT}</td>
+        <td width="15%" align="right" valign="middle" class="lable">流程状态:&nbsp;</td>
+        <td width="35%" valign="middle" class="field">${ZHT}</td>
+      </tr>
+      <tr>
+        <td height="24" align="right" valign="middle" class="lable">发起人:&nbsp;</td>
+        <td valign="middle" class="field">${NGR}</td>
+        <td align="right" valign="middle" class="lable">发起时间:&nbsp;</td>
+        <td valign="middle" class="field">${FQSJ}</td>
+      </tr>
+      <tr> 
+        <td height="60" align="right" valign="middle" class="lable">申请理由:&nbsp;</td>
+        <td height="60" valign="top" class="field" colspan="3">${SQLY}</td>
+      </tr>
+    </table>
+  </div>
+</div>
+<div class="wf_div_ct" style="margin-top:10px" id="wf_view_formct"> 
+  <div class="header" id="wf_form_newfree_tushi">表单信息<img id="wf_form_new_tushi" src="/usr/docManage/wf-tushi.gif" style="float:right;"></div>
+  <div class="body" style="background-color:#EDEDED;">
+  	<table class="wf_div_cttb" border="0" align="center" cellpadding="0" cellspacing="0">
+	  <tr>
+	    <td class="wf_bd wf_tl"></td>
+	    <td class="wf_bd wf_t"></td>
+	    <td class="wf_bd wf_tr"></td>
+	  </tr>
+	  <tr>
+	    <td class="wf_bd2 wf_l"></td>
+	    <td style="padding:50px;" id="${data:id_formPanel}" class="wf_c wf_form_content" signature_position="true"></td>
+	    <td class="wf_bd2 wf_r"></td>
+	  </tr>
+	  <tr>
+	    <td class="wf_bd wf_bl"></td>
+	    <td class="wf_bd wf_b"></td>
+	    <td class="wf_bd wf_br"></td>
+	  </tr>
+	</table>
+  </div>
+</div>
+<div class="wf_div_ct" style="margin-top:10px" id="wf_view_formct"> 
+  <div class="header" id="wf_form_newfree_tushi">正文内容</div>
+  <div class="body" style="background-color:#EDEDED;" id="wf_formct_body">
+
+  </div>
+</div>
+<div id='${data:id_displayAt}' class="wf_div_ct" style="display:none;margin-top:10px" >
+  <div class="header" >附件信息</div>
+  <div class="body" id="${data:id_attachPanel}"> 
+    <table id="${data:id_attachTable}" class="attachTable" style="border-collapse:separate;border-width: 1px;" width="100%" border="0" cellspacing="1" cellpadding="0" bgcolor="#CDCDCD">
+      <tr> 
+        <td height="24" align="center" bgcolor="#F6F6F6" width="20%">附件名称</td>
+        <td align="center" bgcolor="#F6F6F6" width="20%">上传者</td>
+        <td align="center" bgcolor="#F6F6F6" width="20%">上传时间</td>
+        <td align="center" bgcolor="#F6F6F6" width="20%">操作</td>
+      </tr>
+    </table>
+  </div>
+</div>
+<div id='${data:id_displayRd}' class="wf_div_ct" style="display:none;margin-top:10px" >
+  <div class="header" >评阅信息</div>
+  <div class="body" id="${data:id_readerPanel}"> 
+    <table id="${data:id_readTable}" style="border-collapse:separate;border-width: 1px;" width="100%" border="0" cellspacing="1" cellpadding="0" bgcolor="#CDCDCD">
+      <tr> 
+        <td height="24" align="center" bgcolor="#F6F6F6" width="20%">分发人</td>
+        <td align="center" bgcolor="#F6F6F6" width="20%">评阅人</td>
+        <td align="center" bgcolor="#F6F6F6" width="20%">所属部门</td>
+        <td align="center" bgcolor="#F6F6F6" width="20%">评阅内容</td>
+        <td align="center" bgcolor="#F6F6F6" width="20%">评阅日期</td>
+      </tr>
+    </table>
+  </div>
+</div>

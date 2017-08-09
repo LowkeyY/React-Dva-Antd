@@ -1,0 +1,38 @@
+import java.util.ArrayList;
+
+import com.kinglib.*;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+import com.kinglib.workbench.application.*;
+@class{
+
+	public void doGet(Jacper jacper) {
+
+		String id = jacper.getStr("id");
+		Connection conPlat = jacper.getConnection("plat"); 
+
+		ObjectNode currentNode = ObjectManager.getObject(id);
+		ObjectNode applicationNode = currentNode.upTo(ObjectType.APPLICATION);
+
+		JSONObject resultJSON = new JSONObject();
+
+		try {
+			ApplicationFactory appFactory = ApplicationFactory.getInstance();
+			Application app = appFactory.getApplication(conPlat, applicationNode.getId()+"");
+			int terminalType=app.getTerminalType();
+			resultJSON.put("success",true);
+			resultJSON.put("terminalType",terminalType);
+			jacper.print(resultJSON);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+	public void doPost(Jacper jacper){
+		this.doGet(jacper);
+	}
+}

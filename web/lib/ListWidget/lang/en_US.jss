@@ -1,0 +1,1 @@
+lib.ListWidget.lang={"数据":"Data","无数据":"No data","清空":"Clear","取消":"Cancel"}

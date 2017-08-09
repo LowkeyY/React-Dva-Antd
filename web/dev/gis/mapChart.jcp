@@ -1,0 +1,65 @@
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.gis.*;
+
+@class{
+	public void doPost(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		String object_id = jacper.getStr("object_id");
+		ObjectManager OM=ObjectManager.getInstance();
+		String fields=jacper.getStr("fields");
+		String type = jacper.getStr("type");
+		if(type.equals("save")){
+			try{	
+				JSONArray jarr=new JSONArray(fields);
+				conPlat.setAutoCommit(false);	
+				conPlat.exec("delete from $[plat].map_chart where LAYER_ID=?",new String[]{object_id});
+				for ( int i=0; i<jarr.length(); i++ ) {
+					JSONObject js=jarr.getJSONObject(i);
+					conPlat.exec("insert into $[plat].map_chart (LAYER_ID,index_id,title,color) values (?,?,?,?)",new String[]{object_id,i+"",js.getString("title"),js.getString("color")});
+				}
+				ObjectNode mapLayerNode=OM.getObject(object_id);
+				ObjectNode mapNode=mapLayerNode.upTo(ObjectType.MAP);
+				String mapId=mapNode.getId();
+				WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+				conPlat.commit();
+				webMap.reloadLayer(conPlat);
+				<?{success:true,id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+		}else if(type.equals("reSet")){
+			try{	
+				conPlat.setAutoCommit(false);	
+				conPlat.exec("delete from $[plat].map_chart where LAYER_ID=?",new String[]{object_id});
+				ObjectNode mapLayerNode=OM.getObject(object_id);
+				ObjectNode mapNode=mapLayerNode.upTo(ObjectType.MAP);
+				String mapId=mapNode.getId();
+				WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+				conPlat.commit();
+				webMap.reloadLayer(conPlat);
+				<?{success:true,id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+		}
+	}
+}

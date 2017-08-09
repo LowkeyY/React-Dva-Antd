@@ -1,0 +1,112 @@
+
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+
+import com.kinglib.util.json.*;
+import com.susing.sql.*;
+import com.kinglib.*;
+import java.util.*;  
+import com.kinglib.workbench.*;
+import com.kinglib.bi.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+	
+	Connection conPlat = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String parent_id = jacper.getStr("parent_id");
+	String type = jacper.getStr("type");
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+	    	JSONObject portaletJSON = new JSONObject();	
+			String[] rs = conPlat.getRow("select a.logic_name,a.physical_name,a.description from $[plat].portlet_base a where a.portalet_id=?",new String[]{parent_id});
+			if(rs!=null){
+				portaletJSON.put("logic_name",rs[0]);
+				portaletJSON.put("physical_name",rs[1]);
+				portaletJSON.put("description",rs[2]);
+			}	
+			ObjectNode node=ObjectManager.getObject(parent_id);
+			if(node!=null){
+				portaletJSON.put("lastModifyTime",node.getLastModifyTime());
+				portaletJSON.put("lastModifyName",node.getLastModifyName());
+			}
+		   <?{success:true,data:?>portaletJSON.toString()<?}?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper) {
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = hs.uid+"";
+
+	String type = jacper.getStr("type");
+
+	String logic_name = jacper.getStr("logic_name");
+	String physical_name = jacper.getStr("physical_name");
+	String description = jacper.getStr("description");
+
+	ObjectManager OM=ObjectManager.getInstance();
+
+	if (type.equals("save")){
+		try{	
+			String parent_id = jacper.getStr("parent_id");
+			String object_id  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = com.kinglib.SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+			ObjectNode applicationNode=OM.getObject(parent_id);
+			conPlat.exec("INSERT INTO $[plat].portlet_base (portalet_id, logic_name, physical_name, description) VALUES (?,?,?,?)",new String[]{object_id+"",logic_name+"",physical_name,description});	
+			applicationNode.addChild(conPlat,object_id,logic_name,ObjectType.PORTALET,hs.uid);
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			conPlat.close();
+		}
+	}else if ( type.equals("updatesave")) {
+		String object_id = jacper.getStr("parent_id");		
+		PortaletFactory.getInstance().remove(object_id);
+		ObjectNode portaletNode=OM.getObject(object_id);
+		conPlat.exec("UPDATE $[plat].portlet_base SET logic_name =?,physical_name = ?,description =? WHERE object_id=?",new String[]{logic_name,physical_name,description,object_id+""});
+		portaletNode.updateName(conPlat,logic_name);
+		conPlat.close();
+		<?{success:true,id:'?>object_id<?'}?>;
+	}else if (type.equals("delete")){
+		String object_id = jacper.getStr("parent_id");
+		
+		try{	
+			conPlat.setAutoCommit(false);	
+			ObjectNode portaletNode=OM.getObject(object_id);
+			portaletNode.destroy(conPlat);
+			conPlat.commit();
+			<?{success:true}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

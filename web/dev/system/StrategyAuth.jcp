@@ -1,0 +1,300 @@
+import java.util.*;
+import com.kinglib.*;
+import java.util.Arrays;
+
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.ui.core.*;
+import com.kinglib.ui.menu.MenuFactory;
+import com.kinglib.ui.menu.MenuFactory;
+import com.kinglib.bi.*;
+import com.kinglib.util.*;
+import com.susing.core.KingleSystem;
+import com.social.api.core.model.*;
+import com.susing.cache.Cache;
+import com.susing.cache.CacheProvider;
+
+@class{
+	
+	private static HashMap<String,String> pageTypeMap=null;
+
+	public void doGet(Jacper jacper){
+
+		
+		if(pageTypeMap==null){
+			pageTypeMap=new  HashMap<String,String>();
+			pageTypeMap.put("list",jacper.trans("列表页面"));  
+			pageTypeMap.put("view",jacper.trans("预览页面"));
+			pageTypeMap.put("new",jacper.trans("新建页面"));
+			pageTypeMap.put("edit",jacper.trans("复制编辑页面"));
+			pageTypeMap.put("listquery",jacper.trans("列表查询"));
+			pageTypeMap.put("selectinput",jacper.trans("选择录入"));
+			pageTypeMap.put("crossinput",jacper.trans("交叉录入"));
+			pageTypeMap.put("report",jacper.trans("报表页面"));
+			pageTypeMap.put("dataupdate",jacper.trans("数据整改"));
+			pageTypeMap.put("listinput",jacper.trans("列表录入页面"));
+			pageTypeMap.put("chart",jacper.trans("统计图页面"));
+			pageTypeMap.put("singlequery",jacper.trans("单记录查询"));
+			pageTypeMap.put("embed",jacper.trans("外挂程序"));
+			pageTypeMap.put("integrate",jacper.trans("应用集成"));
+			pageTypeMap.put("batchupdate",jacper.trans("批量更新"));
+		}
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String userId = hs.uid+"";
+		String deptId=hs.getString("dept_id");
+		CertManager catche=CertManager.getInstance();
+		User u=catche.getUser(userId);
+		UserType userType=u.getUserType();
+
+		String strategyId = jacper.getString("strategyId");
+		String objectId = jacper.getString("objectId");
+		Connection conPlat = jacper.getConnection("plat");
+
+		HashSet<String> appSet=new HashSet<String>();
+		if (u.getUserType()!=UserType.SUPER&&u.getUserType()!=UserType.ADMINISTRATOR){
+			String[][] rs=conPlat.get("select id from $[plat].system_auth where roleid=?",new String[]{userId+""},0);
+			for(int i=0;i<rs.length;i++){
+				appSet.add(rs[i][0]);
+			}
+		}
+		ObjectNode node=ObjectManager.getObject(objectId);
+		if(node.getType()!=ObjectType.APPLICATIONGROUP)
+			node=node.upTo(ObjectType.APPLICATIONGROUP);
+		if(node==null) return;
+		ObjectNode[] apps=node.findAllChildsByType(ObjectType.APPLICATION);
+
+		if ( apps == null  || apps.length==0) {
+			<?<script>Ext.msg("error","?>jacper.trans("请先定制应用")<?！");</script>?>;
+			return;
+		}
+		
+		boolean haveData=false;
+		HashMap<String,String> authMap=null;
+		HashSet<String> idMap=null;
+		String[][] rs = conPlat.get("select app_id,module_id,prg_id,auth_str from $[plat].sys_strategy_auth where strategy_id=? and group_id=?",new String[]{strategyId,objectId});
+		if(rs!=null && rs.length>0){
+			authMap=new HashMap<String,String>(rs.length*2);
+			idMap=new HashSet<String>(rs.length*3);
+			for(int i=0;i<rs.length;i++){
+				StringBuilder sb=new StringBuilder(30);
+				for(int j=0;j<3;j++){
+					idMap.add(rs[i][j]);
+					sb.append(rs[i][j]).append(",");
+				}
+				authMap.put(sb.toString(),rs[i][3]);
+			}
+			haveData=true;
+		}
+		rs=null;
+		<?
+		<fieldset style='width:680px;padding:5px 0 0 20px;font-size:11px;'>
+			<legend >?>jacper.trans("权限分配列表")<?</legend>
+			<DIV  STYLE="height:100%;overflow-y:auto;">
+				<table width="100%" cellspacing=0 cellpadding>
+				<tr><td>         
+				?>;
+				String focus = "style=\"background-color:#F9F9FF;\"";
+				String none = "none";
+				boolean shown=false;
+				String aid,mid,pid,prefix,authString;
+				String checked = "checked";
+
+				for ( int i=0; i<apps.length; i++ ) {//Application
+					aid=String.valueOf(apps[i].getId());
+					shown=(haveData && idMap.contains(aid));
+					if (userType.getValue()!=1&&userType.getValue()!=0){
+						if(!appSet.contains(aid+"")) continue;
+					}
+					<?
+					<table>
+					<tr id="appid?>aid<?" ?>(shown)?focus:""<?>        
+					<td width="3%"><input type="checkbox" name="tabchk" value="?>aid<?" onclick="Ext.get('tab?>aid<?').setStyle('display',this.checked?'':'none');" ?>(shown)?checked:""<?/></td>
+					<td width="97%" style="font-size:12px">?>apps[i].getName()<?</td>
+					</tr>
+
+					<tr id="tab?>aid<?" style="display:?>(shown)?"":none<?">
+						<td colspan=2 width="100%">
+						?>;
+
+						ObjectNode[] modules=apps[i].getChilds(ObjectType.MODULE);//Modules
+						for ( int j=0; j<modules.length; j++ ) {
+							mid=String.valueOf(modules[j].getId());
+							shown=(haveData && idMap.contains(mid));
+
+							<?
+							<table width="100%">
+								<tr><td width="8%" align=right><input type="checkbox" name="modchk" value="?>mid<?" onclick="Ext.get('mod?>mid<?').setStyle('display',this.checked?'':'none')" ?>(shown)?checked:""<? /></td>
+								<td width="92%" style="font-size:12px">
+								?>modules[j].getName()<?
+								</td></tr>
+								<tr id="mod?>mid<?" style="display:?>(shown)?"":none<?"><td width="100%" colspan=2>
+								?>;   
+								
+
+								ObjectNode[] programs=modules[j].findAllChildsByType(ObjectType.PROGRAM);
+
+								for ( int k=0; k<programs.length; k++ ) {
+									pid=String.valueOf(programs[k].getId());
+									shown=(haveData && idMap.contains(pid));
+
+									<?
+									<table width="100%">
+										<tr>  
+											<td width="16%" align=right><input type="checkbox" name="prgchk" value="?>aid<?,?>mid<?,?>pid<?" onclick="Ext.get('prg?>pid<?').setStyle('display',this.checked?'':'none')"  ?>(shown)?checked:""<? /></td>                                
+											<td width="84%" style="font-size:12px">
+											?>programs[k].getName()<?
+											</td>              
+										</tr>
+										<tr id="prg?>pid<?" style="display:?>(shown)?"":none<?">
+											<td>&nbsp;</td>
+											<td>
+												<table width="100%" style="font-size:12px">?>;
+												
+												
+												try{
+													String[] ts=ButtonFactory.getButtons(conPlat,programs[k].getId());
+													if(ts!=null && ts.length>0){
+														JSONObject[] btns=new JSONObject[ts.length];
+														for(int m=0;m<ts.length;m++){
+															btns[m]=new JSONObject(ts[m]);
+														}
+														//受jcp调用限制,定义放到外面去了--tz
+														Arrays.sort(btns, new JSONObjectComparator());
+
+														prefix=aid+","+mid+","+pid+",";
+														authString=haveData?authMap.get(prefix):null;
+														String state=btns[0].getString("state");
+														int pos=0;
+														for(int m=1;m<btns.length;m++){
+																if(!btns[m].getString("state").equals(state)){
+																	getPage(jacper,btns,pos,m,pageTypeMap.get(state),prefix,authString);
+																	pos=m;
+																	state=btns[m].getString("state");
+																}
+														}
+														getPage(jacper,btns,pos,ts.length,pageTypeMap.get(state),prefix,authString);
+													}
+												}catch(Exception e){
+													e.printStackTrace();
+												}
+												<?</table>
+											</td>
+										</tr>
+									</table>
+									?>;
+								}
+								<?              
+								</td></tr>
+							</table>
+							?>;
+						}              
+						<?
+						</td>
+					</tr>
+					</table>
+					?>;
+				}
+				<?
+				</td></tr>
+				</table>
+			</div>
+		</fieldset>		
+		?>;
+		conPlat.close();
+	}
+
+	
+	private void getPage(Jacper jacper,JSONObject[] btns,int start,int limit,String name,String prefix,String authStr) throws JSONException{
+		boolean have=false;
+		StringBuilder sb=new StringBuilder();
+		for(int i=start;i<limit;i++){
+				have=true;
+				 if(btns[i].getString("constraint_type").equals("1")){
+					sb.append("<input type=\"checkbox\" name=\"buttonchk\" value=\"").append(prefix).append(i).append("\"  ");
+					sb.append((authStr!=null && authStr.indexOf(","+i+",")!=-1)?"checked":"").append(" >").append(btns[i].getString("text")).append("&nbsp;&nbsp;");
+				}
+		}
+		if(!have) return;
+		StringBuilder csb=new StringBuilder(sb.length()+100);
+		csb.append("<tr width=\"100%\"><td width=\"4%\"></td><td width=\"30%\">").append(name).append("</td><td width=\"66%\">");
+		csb.append(sb).append("</td></tr>");
+		jacper.print(csb.toString());
+	}
+
+
+	public void doPost(Jacper jacper){
+			
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		Connection conPlat=jacper.getConnection("plat");
+		String strategy_id =jacper.getStr("strategyId");
+		String group_id=jacper.getStr("objectId");
+		int total=jacper.getInt("total",0);
+		String module_id ="";
+		String prg_id ="";
+		String auth_str ="";
+		String app_id ="";
+	
+		CacheProvider cacheProvider=KingleSystem.getCacheProvider();
+
+		try{
+			CertManager cache=CertManager.getInstance();
+			conPlat.setAutoCommit(false);	
+			conPlat.exec("delete from $[plat].sys_strategy_auth where strategy_id=? and group_id=?",new String[]{strategy_id,group_id});
+			cache.removeStrategyAuth(strategy_id);
+			if(total>0){
+				String[][] result=new String[total][6];
+				JSONObject js = new JSONObject(jacper.getStr("result"));
+				Iterator  keys =js.keys();
+				String key;
+				int i=0;
+				HashSet<String> set =new HashSet<String>();
+				HashMap<String, String>  prgMap=new HashMap<String, String>();
+				while (keys.hasNext()) {
+					key=(String)keys.next();
+					System.arraycopy(key.split(","),0,result[i],0,3);
+					result[i][3]=js.getString(key);
+					result[i][4]=group_id;
+					result[i][5]=strategy_id;
+					set.add(result[i][1]);
+					String programAuth=result[i][3];
+					if(programAuth.indexOf(",")!=-1&&(programAuth.length()>1)){
+					  programAuth=programAuth.substring(1,programAuth.length()-1);
+					}
+					prgMap.put(result[i][2],programAuth);
+					i++;					
+				}
+				StringBuilder sb = new StringBuilder(100);
+				for (String m : set) {
+					if (sb.length() > 0)
+						sb.append(",");
+					sb.append(m);
+				}
+				cache.loadStrategyAuth(strategy_id,sb.toString(),prgMap);
+				conPlat.exec("insert into $[plat].sys_strategy_auth ( app_id,module_id,prg_id,auth_str,group_id,strategy_id) values (?,?,?,?,?,?)",result);
+			}
+			conPlat.commit();
+			<?{success:true}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			//清除权限缓存。
+			ButtonFactory.clearCache();
+			MenuFactory.getInstance().clearMenuPrivilege();
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {
+			
+			}
+		}
+	}
+}
+

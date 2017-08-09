@@ -1,0 +1,41 @@
+import com.kinglib.Jacper;
+import com.kinglib.portal.PotalUnits;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+
+
+//public class A0_Jcp{
+@class{
+	public void doGet(Jacper jacper){
+		doPost(jacper);
+	}
+
+	public void doPost(Jacper jacper){
+		JSONArray urlja = new JSONArray();
+		try {
+
+			String allMenuJson=PotalUnits.getAllMenu();
+
+			JSONArray ja = new JSONArray(allMenuJson);
+			for (int i = 0; i < ja.length(); i++) {
+				JSONObject jo =ja.getJSONObject(i);
+
+				String sf = jo.getString("face_sys_isValid");
+				if (sf.equals("true")) {
+					String sinterface= jo.getString("face_sys_url");
+					if (!sinterface.equals("")) {
+						JSONObject urljo = new JSONObject();
+						urljo.put("name", jo.getString("sys_app_id"));
+						urljo.put("boxLabel", jo.getString("default_title")+"("+sinterface+")");
+						urlja.put(urljo);
+					}
+				}
+			}
+			jacper.print(new JSONObject().put("data", urlja));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+}

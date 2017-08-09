@@ -1,0 +1,74 @@
+import com.kinglib.Jacper;
+import com.kinglib.ui.core.utils.OperationManager;
+import com.kinglib.ui.core.utils.Operation;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+import com.kinglib.workbench.ProgramNode;
+import com.kinglib.workbench.program.ProgramType;
+
+@class{
+    
+    
+	public void doGet(Jacper jacper) {
+		String objectId = jacper.getString("objectId", "-1");
+		if (objectId.equals("-1"))
+			return;
+		ObjectNode cnode = ObjectManager.getObject(objectId);
+		if (cnode == null || cnode.getType() != ObjectType.PROGRAM)
+			return;
+		ProgramNode node = (ProgramNode) cnode;
+		JSONObject json = new JSONObject();
+
+		try {
+			OperationManager opm=OperationManager.getInstance();
+			json.put("meta", opm.getOperationMeta(node));
+			JSONArray pageTypes = new JSONArray();
+			ProgramType p = node.getProgramType();
+			for (String type : p.getStates()) {
+				JSONArray menu = new JSONArray();
+				menu.put(type);
+				menu.put(p.getStateName(type));
+				pageTypes.put(menu);
+			}
+			json.put("pageTypes", pageTypes);
+
+			JSONArray templates = new JSONArray();
+			String[] type = node.getProgramType().getStates();
+			Operation opera = null;
+			for (String pageType : type) {
+				String[] actions = opm.getOperationGroup(pageType);
+				if (actions != null) {
+					for (String action : actions) {
+						JSONArray menu = new JSONArray();
+						menu.put(action);
+						opera = opm.getOperation(action);
+						menu.put(opera.getTitle());
+						menu.put(pageType);
+						menu.put(opera.getJson());
+						templates.put(menu);
+					}
+
+				}
+			}
+			json.put("templates", templates);
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		jacper.print(json);
+	}
+
+	public void doPost(Jacper jacper){
+		
+	}
+	
+	public void doPut(Jacper jacper){
+	}
+	
+	public void doDelete(Jacper jacper){
+	}
+	
+}

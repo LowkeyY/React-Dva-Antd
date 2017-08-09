@@ -1,0 +1,77 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.Files;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.search.SearchRunningQueue;
+import gpra.filesystem.task.HWTaskWorkUserOpt;
+import gpra.filesystem.task.HWTaskWorkUserTimer;
+
+import java.io.FileInputStream;
+import java.io.InputStream;
+
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import com.susing.upload.FileExtend;
+
+//public class FilePreview{
+@class{
+	public void doGet(Jacper jacper) {
+		boolean isLogin = jacper.setSession();
+		boolean isLocal = "true".equals(jacper.getStr("fileIsLocal"));
+		Connection conTmp = jacper.getConnection(HWUnits.HW_DBLINK);
+		
+		
+		String fileId=jacper.getString("fileExportData","");
+		String userid = String.valueOf(jacper.getSession().uid);
+		String filePath = jacper.getString("fileDataId", ""), fileName = "preview", fileType = isLocal ? jacper.getString("fileDataType", ".pdf") : ".pdf";	
+		InputStream in = null;
+		if (filePath.length() > 0 && fileName.length() > 0) {
+			try {
+				String useraddr = jacper.getRequest().getRemoteAddr();
+				HttpSession session = jacper.getRequest().getSession();
+				HWTaskWorkUserTimer.add(session, fileId);
+				SearchRunningQueue.add(new HWTaskWorkUserTimer(userid , useraddr , fileId , session));
+//				conTmp.exec("insert into DIR_DOWNLOAD_COUNT values(sys_guid(),?,?,'1',sysdate,?)",new String[]{fileId , userid , jacper.getRequest().getRemoteAddr()});				
+				SearchRunningQueue.add(new HWTaskWorkUserOpt(fileId  , userid , jacper.getRequest().getRemoteAddr() , notIntegral(jacper)));
+			
+				HttpServletResponse res = jacper.getResponse();
+				filePath += (isLocal ? "" : fileType);
+				fileName += fileType;
+				if(filePath.toLowerCase().startsWith("file:"))
+					filePath = filePath.substring(5);
+				in = new FileInputStream(filePath);
+				//"application/pdf";
+				res.setContentType(FileExtend.getContentType(fileType));
+				res.setHeader("Content-Disposition", "inline;filename="+ fileName);
+				res.setHeader("Content-Length", String.valueOf(in.available()));
+				res.setHeader("Accept-ranges", "bytes");
+				
+				
+				Files.copyRange(in, res.getOutputStream(), 1024);
+			} catch (Exception e) {
+				e.printStackTrace();
+				jacper.print("对不起，物理文件暂时无法预览 ，请直接下载。");
+			} finally {
+				try {
+					if (in != null) {
+						in.close();
+					}
+				} catch (Exception e2) {
+				}
+			}
+		} else {
+			jacper.print("对不起，文件暂时无法预览 ，请直接下载。");
+		}
+	}
+	
+	//shen_id 审核模块,s_id 审批模块, my_type 个人空间 （5：获准使用的资料）
+	public boolean notIntegral(Jacper jacper) {
+		String exportItem = "", exportData = "";
+		if ((exportItem = jacper.getStr("exportItem").toLowerCase()).length() > 0
+				&& (exportData = jacper.getStr("exportData")).length() > 0)
+			return exportItem.matches("shen_id|s_id") || (exportItem.matches("my_type") && !"5".equals(exportData));
+		return false;
+	}
+}

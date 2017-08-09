@@ -1,0 +1,45 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.workbench.*;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.database.*;
+import com.susing.sql.*;
+import com.susing.core.*;
+import com.kinglib.workbench.quality.*;
+@class{
+
+public void doGet(Jacper jacper){
+
+	boolean isLogin = jacper.setSession();  
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid; 
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	String objectId = jacper.getStr("parent_id");
+	jacper.getResponse().setContentType("application/x-json");
+	QualityFactory  QF=QualityFactory.getInstance();
+
+	String dblink_name="";
+	try{
+		JSONObject dbTypeJSON = new JSONObject(); 
+		Quality quality=QF.getQuality(conPlat,objectId);
+		boolean type=true;
+		MetaTable mt = MetaFactory.getObject(quality.getTabId());
+		dblink_name = mt.getDblink();
+		DataSourceManager DM=KingleSystem.getDataSourceManager();
+		type=DM.isStatic(dblink_name);
+		dbTypeJSON.put("isStatic",type);
+		jacper.print(dbTypeJSON);
+	}catch(Exception e){
+			e.printStackTrace(); 
+	}finally{
+		conPlat.close();
+	}
+}
+} 
+
+
+		

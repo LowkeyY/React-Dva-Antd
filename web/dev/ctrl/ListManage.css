@@ -1,0 +1,15 @@
+.listmanage-ux-justify {
+	background-image:url(/themes/icon/all/text_align_justify.gif);
+}
+.listmanage-ux-left {
+	background-image:url(/themes/icon/all/text_align_left.gif);
+}
+.listmanage-ux-center {
+	background-image:url(/themes/icon/all/text_align_center.gif);
+}
+.listmanage-ux-right {
+	background-image:url(/themes/icon/all/text_align_right.gif);
+}
+.ux-menu-editableitem {
+	margin: 3px 8px 2px 2px;float:left;
+}

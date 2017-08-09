@@ -1,0 +1,74 @@
+
+import com.kinglib.*;    
+
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+
+@class{
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String parent_id = jacper.getStr("objectId");
+	String type = jacper.getStr("type");
+
+	jacper.getResponse().setContentType("application/x-json");
+
+
+	try{	
+		String[][] rs = conPlat.get(
+		"select a.SEARCH_ID from $[plat].ctrl_searchindex a  where  a.CTRL_ID=? order by seq",new String[]{parent_id},0);
+		String importString="";
+		if(rs.length>0){
+			for(int i=0;i<rs.length;i++){
+				importString+=","+rs[i][0];
+			}
+			JSONObject widgetJSON = new JSONObject("{}");
+			widgetJSON.put("object_id",parent_id);
+			widgetJSON.put("importitem",importString.substring(1));
+		   <?[?>widgetJSON.toString()<?]?>;
+	   }
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+	public void doPost(Jacper jacper){
+
+		Connection conPlat=jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		int user_id = (int)hs.uid;
+
+		String type = jacper.getStr("type");
+		String parent_id = jacper.getStr("objectId");
+		String propertySet = jacper.getStr("importitem");
+		String[] properties=propertySet.split(",");
+
+
+		try{	
+			conPlat.setAutoCommit(false);	
+			conPlat.exec("delete from $[plat].ctrl_searchindex  WHERE CTRL_ID =?",new String[]{parent_id});
+			for(int i=0;i<properties.length;i++){
+				conPlat.exec("insert into  $[plat].ctrl_searchindex (ctrl_id,search_id,seq) values (?,?,?)",new String[]{parent_id,properties[i],i+""});	
+			}
+			<?{success:true}?>;
+			conPlat.commit();
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}	
+	}
+}

@@ -1,0 +1,40 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+import com.social.api.core.model.*; 
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+@class{
+
+public void doGet(Jacper jacper){
+
+	boolean isLogin = jacper.setSession();  
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid; 
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{
+			JSONObject orgJSON = new JSONObject("{}"); 
+			if (user_id==0||user_id==1){
+				Organization org=CertManager.getPrimaryOrg();
+				orgJSON.put("id",org.getId());
+				orgJSON.put("shortName",org.getShortName());
+				orgJSON.put("name",org.getName());
+			}else{
+				User user=CertManager.getUser(user_id+"");
+				Organization org=user.getOrganization();
+				orgJSON.put("id",org.getId());
+				orgJSON.put("shortName",org.getShortName());
+				orgJSON.put("name",org.getName());
+			}
+			jacper.print(orgJSON);
+		}catch(Exception e){
+			e.printStackTrace(); 
+		}
+}
+} 
+
+
+		

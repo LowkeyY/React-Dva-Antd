@@ -1,0 +1,53 @@
+
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workbench.dataservice.DataServiceFactory;
+
+@class{
+// 数据服务格式化jcp
+	public void doGet(Jacper jacper) {
+		jacper.setSession();
+		Connection conPlat = jacper.getConnection("plat");
+		String objectId = jacper.getStr("objectId");
+		JSONObject ret = new JSONObject();
+		try {
+			String[] result = conPlat.getRow("select FORMAT_TEMPLATE from $[plat].DATA_SERVICE WHERE OBJECT_ID=?", new String[] { objectId });
+			ret.put("success", true);
+			JSONObject data = new JSONObject();
+			data.put("content", result[0]);
+			ret.put("data", data);
+		} catch (Exception e) {
+			try {
+				ret.put("success", false);
+				ret.put("message", e.getMessage());
+			} catch (JSONException e1) {
+			}
+		} finally {
+			conPlat.close();
+		}
+		jacper.print(ret);
+	}
+
+	public void doPost(Jacper jacper) {
+		jacper.setSession();
+
+		String objectId = jacper.getStr("parent_id");
+		String content = jacper.getStr("content");
+		Connection conPlat = jacper.getConnection("plat");
+
+		try {
+			conPlat.exec("update $[plat].DATA_SERVICE set FORMAT_TEMPLATE=? where object_id=?", new String[] {content,objectId});
+			DataServiceFactory.getInstance().remove(objectId);
+			jacper.print("{success:true}");
+		} catch (Exception e) {
+			jacper.print("{success:false,message:'" + e.getMessage() + "'}");
+		} finally {
+			conPlat.close();
+		}
+	}
+
+
+}

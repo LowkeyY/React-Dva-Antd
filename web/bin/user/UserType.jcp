@@ -1,0 +1,52 @@
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.UserType;
+
+@class{
+
+	public void doPost(Jacper jacper) {
+		
+		String userId = String.valueOf(jacper.getSession().uid);
+		UserType myType = CertManager.getUser(userId).getUserType();
+		JSONObject result = new JSONObject();
+		
+		try {
+			JSONArray types = new JSONArray();
+			if (myType.getValue() < UserType.DEPT_ADMIN.getValue()) {
+				types.put(this.toJSON(UserType.ARCHITECT));
+				types.put(this.toJSON(UserType.DEVELOPER));
+				types.put(this.toJSON(UserType.DESIGNER));
+			}
+			types.put(this.toJSON(UserType.DEPT_ADMIN));
+			types.put(this.toJSON(UserType.USER));
+			result.put("types", types);
+			result.put("success", true);
+		} catch (Exception e) {
+			try {
+				result.put("message", e.getMessage());
+				result.put("success", false);
+			} catch (JSONException e1) {
+				e1.printStackTrace();
+			}
+		}
+		jacper.print(result);
+	}
+
+	/**
+	 * 将UserType转换成JSON格式
+	 * @param dept_admin
+	 * @return
+	 * @throws JSONException
+	 */
+	private JSONObject toJSON(UserType type) throws JSONException {
+		JSONObject json = new JSONObject();
+		json.put("text", type.getName());
+		json.put("value", type.getValue());
+		return json;
+	}
+
+}

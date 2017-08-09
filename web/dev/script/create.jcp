@@ -1,0 +1,123 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.bi.*;
+import java.io.*;
+import org.w3c.dom.*;
+import com.susing.core.*;
+
+@class{
+public void doGet(Jacper jacper){
+	
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String fullName = jacper.getStr("fullName");
+	String parent_id = jacper.getStr("parent_id");
+
+	String homeDir="";
+	Element jcpConfig = (Element)KingleSystem.getProperty("jacper-config");
+	if(jcpConfig != null){
+		NodeList list = jcpConfig.getElementsByTagName("path");
+		String[][] pathInfo = new String[list.getLength()][2];
+		for(int i=0;i<pathInfo.length;i++){
+			Element el = (Element)list.item(i);
+			pathInfo[i][0] =el.getAttribute("url-starts");
+			pathInfo[i][1] = el.getAttribute("source-path");
+			if(pathInfo[i][0].equals("/"))  homeDir=pathInfo[i][1];
+		}
+	}
+
+	String content = "";
+	BufferedReader inReader = null;
+	try {
+		//File file = new File(fullName);System.out.println(file);
+		File file = new File(homeDir+fullName);
+		BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
+		if (in != null) {
+			InputStreamReader isr = new InputStreamReader(in, "utf-8");
+			inReader = new BufferedReader(isr);
+			StringBuffer buffer = new StringBuffer();
+			int ll;
+			while ((ll = inReader.read()) > -1) {
+				buffer.append((char) ll);
+			}
+			content = buffer.toString();
+			<??>content<??>;
+		}
+	}catch(Exception e) {
+		e.printStackTrace();
+	}finally {
+		try {
+			if (inReader != null)
+				inReader.close();
+		} catch (IOException e) {
+		}
+	}
+}
+public void doPost(Jacper jacper){
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;   
+
+	String type = jacper.getStr("type");
+	String content = jacper.getStr("code");
+
+	String homeDir="";
+	Element jcpConfig = (Element)KingleSystem.getProperty("jacper-config");
+	if(jcpConfig != null){
+		NodeList list = jcpConfig.getElementsByTagName("path");
+		String[][] pathInfo = new String[list.getLength()][2];
+		for(int i=0;i<pathInfo.length;i++){
+			Element el = (Element)list.item(i);
+			pathInfo[i][0] =el.getAttribute("url-starts");
+			pathInfo[i][1] = el.getAttribute("source-path");
+			if(pathInfo[i][0].equals("/"))  homeDir=pathInfo[i][1];
+		}
+	}
+	if(type.equals("save")){
+		String dir = jacper.getStr("dir");
+		String fileName = jacper.getStr("fileName");System.out.println("save dir==="+dir+"--filename==="+fileName);
+		try {
+			OutputStreamWriter out = new OutputStreamWriter(new FileOutputStream(dir+File.separator+fileName),"UTF-8");
+			out.write(content);
+			out.flush();
+			out.close();
+			<?{success:true,id:'"?>fileName<?"'}?>;
+		}catch(Exception e) {
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}
+	}else if(type.equals("updatesave")){
+		try{	
+			String fullName = jacper.getStr("fullName");
+			//File file = new File(homeDir+fullName); 
+			File file = new File(fullName);
+			file.delete();
+			//OutputStreamWriter out = new OutputStreamWriter(new FileOutputStream(fullName),"UTF-8");
+			OutputStreamWriter out = new OutputStreamWriter(new FileOutputStream(homeDir+fullName),"UTF-8");
+			out.write(content);
+			out.flush();
+			out.close();
+			<?{success:true}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}		
+	}else if(type.equals("delete")){
+		try{
+			String fullName = jacper.getStr("fullName");
+			//File file = new File(fullName); 
+			File file = new File(homeDir+fullName);
+			file.delete();
+			<?{success:true}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}
+	}
+}
+}

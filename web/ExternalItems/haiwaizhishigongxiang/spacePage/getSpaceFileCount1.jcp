@@ -1,0 +1,106 @@
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import gpra.filesystem.HWUnits;
+import com.kinglib.*;
+
+	//public class up{
+		@class{
+	public void doPost(Jacper jacper) {
+		Connection con=jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			String date="";
+			
+			String sql="select space_id,space_name from DIR_SPACE_BASE where p_space_id='8afaec81-53efdc82-0153-efdc829f-0000' or p_space_id is null";
+			String[][] rs = con.get(sql);
+			for (String[] strings : rs) {
+				String sql2="select count(file_id) from dir_file_base where space_id in (select space_id from DIR_SPACE_BASE where space_id='"+strings[0]+"' or  p_space_id in (select space_id from DIR_SPACE_BASE where space_id='"+strings[0]+"' and p_space_id is not null))";
+				String[][] rs2 = con.get(sql2);
+				//date+="<point name=\""+strings[1]+"\" y=\""+rs2[0][0]+"\"/>";
+				date+="<point name=\""+strings[1]+"\" y=\""+rs2[0][0]+"\"/>";
+			}
+			
+			String data="<anychart>"
+			+"<settings>"
+			+"<animation enabled=\"True\" /> "
+			+"</settings>"
+			+" <margin all=\"0\" /> "
+			+"<charts>"
+			+"<chart name=\"chart69087\" plot_type=\"CategorizedHorizontal\" leftLen=\"52\" rightLen=\"0\">"
+			+" <data_plot_settings /> "
+			+"<chart_settings>"
+			+"<title>"
+			+" <text>空间文件排行</text> "
+			+" </title>"
+			+"<chart_background>"
+			+" <fill enabled=\"true\" type=\"Solid\" color=\"#FFFFFF\" /> "
+			+" <border enabled=\"False\" /> "
+			+" <inside_margin all=\"8\" /> "
+			+" </chart_background>"
+			+"<legend enabled=\"True\" position=\"Top\" align=\"Far\" inside_dataplot=\"true\" align_by=\"Chart\" Columns=\"1\">"
+			+" <title enabled=\"false\" /> "
+			+" </legend>"
+			+"<data_plot_background>"
+			+" <border enabled=\"False\" /> "
+			+" <fill type=\"Solid\" color=\"#FFFFFF\" /> "
+			+" </data_plot_background>"
+			+"<axes>"
+			+"<x_axis>"
+			+" <zero_line enabled=\"False\" /> "
+			+"<labels rotation=\"0\">"
+			+" <format>{%Value}{numDecimals:0,thousandsSeparator:}</format> "
+			+" </labels>"
+			+"<title>"
+			+" <text>空间</text> "
+			+" </title>"
+			+" <scale minimum=\"DefaultValue\" /> "
+			+"<major_grid>"
+			+" <line color=\"#C0C0C0\" /> "
+			+" </major_grid>"
+			+" <minor_grid>"
+			+" <line color=\"#C0C0C0\" opacity=\"0.5\" /> "
+			+" </minor_grid>"
+			+" </x_axis>"
+			+"<y_axis name=\"yaxis69087-0\" position=\"Normal\">"
+			+" <zero_line enabled=\"False\" /> "
+			+"<title>"
+			+" <font bold=\"True\" /> "
+			+" <text>文件数量</text> "
+			+" </title>"
+			+"<labels>"
+			+" <format>{%Value}{numDecimals:0,thousandsSeparator:}</format> "
+			+" </labels>"
+			+" <scale type=\"Linear\" minimum=\"0\" /> "
+			+"<major_grid>"
+			+" <line color=\"#C0C0C0\" /> "
+			+" </major_grid>"
+			+" <minor_grid>"
+			+"<line color=\"#C0C0C0\" opacity=\"0.5\" /> "
+			+" </minor_grid>"
+			+" </y_axis>"
+			+" </axes>"
+			+" </chart_settings>"
+			+"<styles>"
+			+" <bar_style name=\"lineColor0\">"
+			+" <fill color=\"#33CCCC\" opacity=\"0.8\" type=\"Solid\" /> "
+			+" <line color=\"#33CCCC\" /> "
+			+" </bar_style>"
+			+" </styles>"
+			+"<data>"
+			+"<series name=\"文件数量\" id=\"s0\" color=\"#33CCCC\" type=\"Bar\" y_axis=\"yaxis69087-0\" style=\"lineColor0\">"
+			+"<tooltip enabled=\"True\">"
+			+" <format>{%Name}{numDecimals:0,thousandsSeparator:} {%SeriesName}:{%YValue}{numDecimals:0,thousandsSeparator:}</format> "
+			+"  </tooltip>"
+			+date
+			+" </series>"
+			+" </data>"
+			+" </chart>"
+			+" </charts>"
+			+" </anychart>";
+			
+			jacper.print("{success:true,data:'"+data+"'}");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

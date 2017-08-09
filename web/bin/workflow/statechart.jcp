@@ -1,0 +1,273 @@
+
+/* 已发箱
+ * @(#)/docflowk/archivesback.jcp	1.0.0 03/04/14
+ *
+ * Copyright 2003 Bizdict Co.,Ltd. All rights reserved.
+ *
+ * 主程序作者：
+ * @author ch
+ *
+ * 修改者：
+ *
+ * 修改日期:
+ *
+ * 修改理由:
+ *
+ */
+
+
+
+
+
+import java.io.IOException;
+
+ 
+import com.kinglib.*;
+import SoftwareFX.ChartFX.*;
+
+import java.io.*;
+import java.util.*;
+import javax.servlet.*;
+
+@class{
+	public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	Connection conCert = jacper.getConnection("cert");
+	
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	String dept_id=hs.getString("dept_id");
+	
+	String role_id=hs.getString("role_id");
+
+	ServletOutputStream so= null;
+	try{
+		so=jacper.getOutputStream();
+	}catch (Exception e){
+		e.printStackTrace();
+	}
+
+	String type=jacper.getStr("type");
+
+	
+	Chart chart = new  Chart();
+	DefaultBorder myBorder = new DefaultBorder(0);
+	Axis axisX = chart.getAxisX();
+	java.util.List list1 = new java.util.ArrayList();
+	java.util.List list2 = new java.util.ArrayList();
+	java.util.List list4 = new java.util.ArrayList();
+	SoftwareFX.ChartFX.ListProvider lstDataProvider = new SoftwareFX.ChartFX.ListProvider();
+	Axis axis=null;		
+	SeriesAttributes series = null;
+	String width = jacper.getStr("width");
+	String height = jacper.getStr("height");
+	String sql="";
+	String[][] result =null;
+
+	if(type.equals("1")){
+		sql="SELECT  case when a.state=1 then '"+jacper.trans("未完成")+"' else '"+jacper.trans("已完成")+"' end,count(h.instance_id) from $[work].wfentry a,$[work].historystep  b,$[work].currentstep  c,$[plat].workflow_instance h where a.name=h.instance_id and a.id=b.entry_id and a.id=c.entry_id  and b.step_id=1  and  b.caller=?  group by a.state";
+		result = conPlat.get(sql,new String[]{user_id+""},0);	
+		if(result!=null){
+			chart.setGallery(Gallery.PIE); 
+			chart.setChart3D(true);
+			chart.setBorderObject (myBorder);
+			chart.setAxesStyle(2);
+			chart.setRightGap(10);
+			chart.setBottomGap(10);
+			chart.setTopGap(10);
+			chart.setBackColor( java.awt.Color.decode("#FFFFFF") );
+			list1 = new java.util.ArrayList(result.length);
+			list2 = new java.util.ArrayList(result.length);
+			list4 = new java.util.ArrayList();
+			for(int i=0;i<result.length;i++){
+				list1.add(result[i][0]);
+				list2.add(new Float(Float.parseFloat(result[i][1])));	
+			}
+			list4.add(list1);
+			list4.add(list2);
+			lstDataProvider = new SoftwareFX.ChartFX.ListProvider(list4);
+			chart.setDataSource(lstDataProvider);	
+			chart.setPointLabels(true);
+
+			axisX.setVisible(true);
+			series = chart.getSeries(0);
+			series.setColor(java.awt.Color.decode("#00FF00"));
+			chart.setBorderEffect(BorderEffect.RAISED);
+			chart.setAxesStyle(AxesStyle.MATH);						
+
+			axis = chart.getAxis(0);
+			jacper.getResponse().setContentType("image/png");				
+			try{
+				chart.getHtmlDataEx(width,height,"png",so,System.out,System.out);
+				System.out.flush();
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	}else if(type.equals("2")){
+						
+		
+		String roleString="";
+		String[][] wf=conPlat.get("SELECT strategy_id from  $[plat].SYS_STRATEGY_ROLE  where role_id=?",new String[]{role_id});
+		if(wf!=null&&wf.length!=0){
+		for(int i=0;i< wf.length;i++)
+				roleString+=",'role:"+wf[i][0]+"'";
+				roleString=roleString.substring(1,roleString.length());
+			sql="SELECT   case when a.state=1 then '"+jacper.trans("未完成")+"' else '"+jacper.trans("已完成")+"' end ,count(h.instance_id) from $[work].wfentry  a,$[work].historystep b,$[work].currentstep c,$[plat].workflow_instance h,$[cert].user_base f  where a.name=h.instance_id and a.id=b.entry_id and a.id=c.entry_id and f.user_id=b.caller  and  (c.owner=? or c.owner=? or c.owner in ("+roleString+"))  group by a.state";
+		}else{
+			sql="SELECT  case when a.state=1 then '"+jacper.trans("未完成")+"' else '"+jacper.trans("已完成")+"' end ,count(h.instance_id)  from $[work].wfentry  a,$[work].historystep b,$[work].currentstep  c,$[plat].workflow_instance h,$[cert].user_base f where a.name=h.instance_id and a.id=b.entry_id and a.id=c.entry_id  and f.user_id=b.caller and  (c.owner=? or c.owner=?)  group by a.state";
+		}
+
+		result = conPlat.get(sql,new String[]{role_id,user_id+""},0);	
+		if(result!=null){
+			chart.setGallery(Gallery.PIE); 
+			chart.setChart3D(true);
+			myBorder = new DefaultBorder(0); 
+			chart.setBorderObject (myBorder);
+			chart.setAxesStyle(2);
+			chart.setRightGap(10);
+			chart.setBottomGap(10);
+			chart.setTopGap(10);
+			chart.setBackColor( java.awt.Color.decode("#FFFFFF") );
+			chart.setPointLabels(true);
+
+			axisX = chart.getAxisX();
+			list1 = new java.util.ArrayList(result.length);
+			list2 = new java.util.ArrayList(result.length);
+			list4 = new java.util.ArrayList();
+			for(int i=0;i<result.length;i++){
+				list1.add(result[i][0]);
+				list2.add(new Float(Float.parseFloat(result[i][1])));	
+			}
+			list4.add(list1);
+			list4.add(list2);
+			lstDataProvider = new SoftwareFX.ChartFX.ListProvider(list4);
+			chart.setDataSource(lstDataProvider);	
+
+			axisX.setVisible(true);
+			series = null;
+			series = chart.getSeries(0);
+			series.setColor(java.awt.Color.decode("#00FF00"));
+			chart.setBorderEffect(BorderEffect.RAISED);
+			chart.setAxesStyle(AxesStyle.MATH);						
+			axis=null;
+			axis = chart.getAxis(0);
+			jacper.getResponse().setContentType("image/png");				
+			try{
+				chart.getHtmlDataEx(width,height,"png",so,System.out,System.out);
+				System.out.flush();
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	}else if(type.equals("3")){
+
+		sql="SELECT  h.instance_name,count(h.instance_id) from $[work].wfentry a,$[work].historystep  b,$[work].currentstep  c,$[plat].workflow_instance h where a.name=h.instance_id and a.id=b.entry_id and a.id=c.entry_id  and b.step_id=1  and a.state=1 and  b.caller=? group by h.instance_name";
+		
+		result = conPlat.get(sql,new String[]{user_id+""},0);	
+		if(result!=null){
+			chart = new  Chart();
+			chart.setGallery(Gallery.GANTT); 
+			myBorder = new DefaultBorder(0); 
+			chart.setBorderObject (myBorder);
+			chart.setAxesStyle(2);
+			chart.setRightGap(10);
+			chart.setBottomGap(10);
+			chart.setTopGap(10);
+			chart.setBackColor( java.awt.Color.decode("#FFFFFF") );
+			chart.setBorder(true);
+			chart.setBorderEffect(BorderEffect.RAISED);
+			chart.setPointLabels(true);
+
+			axisX = chart.getAxisX();
+			list1 = new java.util.ArrayList(result.length);
+			list2 = new java.util.ArrayList(result.length);
+			list4 = new java.util.ArrayList();
+			for(int i=0;i<result.length;i++){
+				list1.add(result[i][0]);
+				list2.add(new Float(Float.parseFloat(result[i][1])));	
+			}
+			list4.add(list1);
+			list4.add(list2);
+			lstDataProvider = new SoftwareFX.ChartFX.ListProvider(list4);
+			chart.setDataSource(lstDataProvider);	
+
+			axisX.setVisible(true);
+			series = null;
+			series = chart.getSeries(0);
+			series.setColor(java.awt.Color.decode("#00FF00"));
+			chart.setBorderEffect(BorderEffect.RAISED);
+			chart.setAxesStyle(AxesStyle.MATH);						
+			axis=null;
+			axis = chart.getAxis(0);
+			jacper.getResponse().setContentType("image/png");				
+			try{
+				chart.getHtmlDataEx(width,height,"png",so,System.out,System.out);
+				System.out.flush();
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	}else if(type.equals("4")){
+
+		String roleString="";
+		String[][] wf=conPlat.get("SELECT strategy_id from  $[plat].SYS_STRATEGY_ROLE  where role_id=?",new String[]{role_id});
+		if(wf!=null&&wf.length!=0){
+		for(int i=0;i< wf.length;i++)
+			roleString+=",'role:"+wf[i][0]+"'";
+			roleString=roleString.substring(1,roleString.length());
+			sql="SELECT    h.instance_name,count(h.instance_id) from $[work].wfentry  a,$[work].historystep b,$[work].currentstep c,$[plat].workflow_instance h,$[cert].user_base f  where a.name=h.instance_id and a.id=b.entry_id and a.id=c.entry_id and f.user_id=b.caller  and  (c.owner=? or c.owner=? or c.owner in ("+roleString+")) group by h.instance_name";
+		}else{
+			sql="SELECT    h.instance_name,count(h.instance_id) from $[work].wfentry  a,$[work].historystep b,$[work].currentstep c,$[plat].workflow_instance h,$[cert].user_base f  where a.name=h.instance_id and a.id=b.entry_id and a.id=c.entry_id and f.user_id=b.caller  and  (c.owner=? or c.owner=?) group by h.instance_name";
+		}
+		result = conPlat.get(sql,new String[]{role_id,user_id+""},0);	
+
+		if(result!=null){
+			chart.setGallery(Gallery.GANTT); 
+			myBorder = new DefaultBorder(0); 
+			chart.setBorderObject (myBorder);
+			chart.setAxesStyle(2);
+			chart.setRightGap(10);
+			chart.setBottomGap(10);
+			chart.setTopGap(10);
+			chart.setBackColor( java.awt.Color.decode("#FFFFFF") );
+			chart.setBorder(true);
+			chart.setBorderEffect(BorderEffect.RAISED);
+			chart.setPointLabels(true);
+
+			axisX = chart.getAxisX();
+			list1 = new java.util.ArrayList(result.length);
+			list2 = new java.util.ArrayList(result.length);
+			list4 = new java.util.ArrayList();
+			for(int i=0;i<result.length;i++){
+				list1.add(result[i][0]);
+				list2.add(new Float(Float.parseFloat(result[i][1])));	
+			}
+			list4.add(list1);
+			list4.add(list2);
+			lstDataProvider = new SoftwareFX.ChartFX.ListProvider(list4);
+			chart.setDataSource(lstDataProvider);	
+
+			axisX.setVisible(true);
+			series = null;
+			series = chart.getSeries(0);
+			series.setColor(java.awt.Color.decode("#00FF00"));
+			chart.setBorderEffect(BorderEffect.RAISED);
+			chart.setAxesStyle(AxesStyle.MATH);						
+			axis=null;
+			axis = chart.getAxis(0);
+			jacper.getResponse().setContentType("image/png");				
+			try{
+				chart.getHtmlDataEx(width,height,"png",so,System.out,System.out);
+				System.out.flush();
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	}
+ }
+}
+

@@ -1,0 +1,90 @@
+
+
+import com.kinglib.*;
+import com.social.api.core.model.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.database.*;
+import com.kinglib.ui.core.utils.*;
+
+@class{
+	public void doPost(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		String objectId=jacper.getString("objectId","-1");
+		if(objectId.equals("-1"))
+			return;
+		String tableId= ProgramFactory.getInstance().getProgram(conPlat,objectId).getTabId();
+		MetaTable mt=MetaFactory.getObject(tableId);
+		String dataId=jacper.getStr("dataId");
+		String[] values=dataId.split("::");
+		String name=mt.getName()+"_AUTH";
+		StringBuilder sb=new StringBuilder();
+		for(MetaColumn mc:mt.getPrimaryKeys()){
+			if(sb.length()>0)
+				sb.append(" and ");
+			CoreUtils.appendWhere(sb,mc,"?");
+		}
+
+		String condition=sb.toString()+" and auth_type=?";
+		String auth=jacper.getStr("authType");
+	
+		String[] params=new String[values.length+1];
+		for(int i=0;i<params.length;i++){
+			if(i<params.length-1){
+				params[i]=values[i];
+			}else{
+				params[i]=auth;
+			}
+		}
+
+		String authType=(String)com.susing.core.KingleSystem.getProperty("auth_type");
+
+		if(auth.indexOf("R")!=-1)
+			authType="1";
+		else 
+			authType="0";
+
+		String dbLink=mt.getDblink();
+		Connection conApp = jacper.getConnection(dbLink);
+		String[][] userArray=conApp.get("select USER_ID,DEPT_ID from "+name+"  where "+condition,params);
+
+		jacper.getResponse().setContentType("application/x-json");		
+		try{
+				JSONObject authJSON = new JSONObject("{}");
+				JSONArray authJSONArray=new JSONArray();		
+				for(int i=0;i<userArray.length;i++){
+					JSONObject tempJSON = new JSONObject("{}");
+					String[] oneUser=new String[4];
+					Dept d = Dept.getDept(userArray[i][1]);
+					oneUser[2]=d.getShortName();
+					oneUser[3]=userArray[i][1];
+					oneUser[0]=userArray[i][0];
+					if(userArray[i][0].equals("-9")){
+						oneUser[1]=jacper.trans("当前部门所有人员");
+					}else if(userArray[i][0].equals("-99")){
+						oneUser[1]=jacper.trans("当前部门及所有子部门人员");
+					}else{
+						if(authType.equals("0")){	
+							User u=User.getUser(userArray[i][0]);
+							oneUser[1]=u.getRealName();
+						}else if(authType.equals("1")){
+							Role r=Role.getRole(userArray[i][0]);
+							oneUser[1]=r.getRoleTitle();
+						}
+					}
+					oneUser[0]=oneUser[3]+"_"+oneUser[0];
+					tempJSON.put("user_id",oneUser[0]);
+					tempJSON.put("user_name",oneUser[1]);
+					tempJSON.put("dept_name",oneUser[2]);
+					tempJSON.put("dept_id",oneUser[3]);
+					authJSONArray.put(tempJSON);
+				}
+				authJSON.put("authArray",authJSONArray);
+				jacper.print(authJSON.toString());
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+}
+}

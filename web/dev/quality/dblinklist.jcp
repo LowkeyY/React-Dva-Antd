@@ -1,0 +1,53 @@
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+import com.kinglib.workbench.dblink.*;
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.database.MetaFactory;
+import java.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.susing.core.KingleSystem;
+import com.kinglib.workbench.quality.*;
+@class{
+
+public void doPost(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String id = jacper.getString("parent_id","0");
+	QualityFactory  QF=QualityFactory.getInstance();
+	Quality quality=QF.getQuality(conPlat,id);
+	MetaTable mt = MetaFactory.getObject(quality.getTabId());
+	String dblink = mt.getDblink();
+	jacper.getResponse().setContentType("application/x-json");
+	try{	
+			JSONObject	dblinkJSON=null;
+			dblinkJSON = new JSONObject("{}");
+			String[][] rs= conPlat.get("select link_id,dblink_name,URL,USERNAME,PASSWD,name from $[plat].quality_dblink  where dblink_name=?",new String[]{dblink});
+			JSONArray rowsJSONArray = new JSONArray();
+			if(rs != null){
+				for(int i=0;i<rs.length;i++){
+					JSONObject nodeJSON = new JSONObject("{}");
+					nodeJSON.put("link_id",rs[i][0]);
+					nodeJSON.put("dblink_name",rs[i][1]);
+					nodeJSON.put("url",rs[i][2]);
+					nodeJSON.put("username",rs[i][3]);
+					nodeJSON.put("passwd",rs[i][4]);
+					nodeJSON.put("name",rs[i][5]);
+					rowsJSONArray.put(nodeJSON);
+				}
+			}
+			dblinkJSON.put("success",true);
+			dblinkJSON.put("Rows",rowsJSONArray);
+		   <??>dblinkJSON.toString()<??>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+}

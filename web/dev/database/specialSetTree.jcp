@@ -1,0 +1,36 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.database.*;
+import com.kinglib.i18n.*;
+
+@class{
+
+public void doPost(Jacper jacper){
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid; 
+	String type =String.valueOf(DataType.parseByName(jacper.getStr("type")).getValue());
+	try{
+		JSONArray treeJSONArray=new JSONArray();
+		boolean isLeaf;
+		Translator t=I18n.getLocal(user_id+"").getTranslator(SpecialSet.class);
+		for(SpecialSet sp:SpecialSet.values()){
+			if(!sp.matchType(type)) continue;
+			JSONObject resultJSON = new JSONObject("{}");
+			resultJSON.put("text",sp.toString(t));
+			resultJSON.put("value",sp.getValue());
+			treeJSONArray.put(resultJSON);
+		}
+		JSONObject ret=new JSONObject("{success:true}");
+		ret.put("items",treeJSONArray);
+		jacper.print(ret.toString());
+	}catch(Exception e){
+		e.printStackTrace();
+	}
+}
+}
+
+
+			

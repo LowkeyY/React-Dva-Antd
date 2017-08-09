@@ -1,0 +1,43 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+@class{
+public void doGet(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	String id=jacper.getStr("id");
+	String root = jacper.getStr("root");
+	String app_type=jacper.getStr("app_type");
+
+	String level=jacper.getStr("level");
+
+	String forder_id = id;
+	String hasChild = "0";
+
+	String[] rrss=null;		
+	String[][] rs=null;
+	<?<root _id="?>forder_id<?">?>;
+	<?<forder _parent="?>forder_id<?" event="event1">?>;	
+	
+	if(level.equals("1")){		
+		//rs = conPlat.get("select top_id,top_title,icon_url,portal_id from $[plat].sys_top where is_system='true' and parent_top='0' order by top_seq ",new String[]{},0);		
+		//rs = conPlat.get("select top_id,top_title,icon_url,portal_id from $[plat].sys_top where  parent_top='0' order by top_seq ",new String[]{},0);		
+		rs = conPlat.get("select application_id,default_title,default_icon_url,0 from potal_menu order by default_seq");
+		if(rs!=null){				
+			for(int i=0;i<rs.length;i++){
+				<?<e _id="?>rs[i][0]<?" _hasChild ="?>hasChild<?" icon0="/themes/icon?>rs[i][2]<?" icon1="/themes/icon?>rs[i][2]<?" title="?>rs[i][1]<?"  program="top"  type="view" params="isSystem=y&amp;from=menu&amp;id=?>rs[i][0]<?&amp;portal_id=?>rs[i][3]<?" url="/bin/menu/tree.jcp?level=2&amp;id=?>rs[i][0]<?&amp;parent_app=?>rs[i][0]<?&amp;app_type=top&amp;root=?>root<?"/>?>;
+			}
+		}
+	}
+	conPlat.close();
+	<?</forder>?>;
+	<?</root>?>;
+}
+}
+

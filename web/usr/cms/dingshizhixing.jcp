@@ -1,0 +1,48 @@
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.GaoJian;
+import com.kinglib.util.Log;
+
+import java.sql.SQLException;
+
+import com.susing.core.KingleSystem;
+
+@class{
+	public void doPost(Jacper jacper) {
+		HttpSession hs = jacper.getSession();
+		String userId = String.valueOf(hs.uid);
+
+		String ids = jacper.getString("id");
+		String type = jacper.getString("type");
+		String riqi = jacper.getString("riqi");
+		
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		GaoJian gj = service.getGaoJian(ids);
+		
+		try {
+			if("update".equals(type)){
+				service.getConnection().exec(
+						"update " + gj.getTableName() + " set dingshi=?,dingshizhe=?,zuizhongzhixingriqi=$str_date(?,15) where id = ? ", 
+						new String[]{"true",userId,riqi,ids});
+			}else{
+				service.getConnection().exec(
+						"update " + gj.getTableName() + " set dingshi=?,dingshizhe=?,zuizhongzhixingriqi=sysdate where id = ? ", 
+						new String[]{"false","",ids});
+			}
+			DingshiLogInfo("update".equals(type) ? "添加" : "取消", gj, userId);
+			jacper.print("{success:true,id:\"" + ids + "\"}");
+		} catch (SQLException e) {
+			jacper.print("{success:false,message:'" + e.toString() + "'}");
+			e.printStackTrace();
+		}
+	}
+	public void DingshiLogInfo(String type, GaoJian gaojian, String userId) {
+		if (gaojian == null || userId == null || userId.length() == 0)
+			return;
+		StringBuilder message = new StringBuilder(type + "了定时执行任务。操作稿件：稿件标题[" + gaojian.biaoti + "]" + ",稿件ID["
+				+ gaojian.id + "](所属栏目[" + gaojian.getLanMu().mingcheng + "],所属站点[" + gaojian.getZhanDian().mingcheng
+				+ "])。");
+		Log.info(message.toString(), "网站群操作日志", userId);
+	}
+}

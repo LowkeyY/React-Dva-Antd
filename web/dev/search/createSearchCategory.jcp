@@ -1,0 +1,97 @@
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.workbench.search.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+	public void doPost(Jacper jacper) {
+		Connection conPlat = jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		int user_id = (int)hs.uid;
+
+		String type = jacper.getStr("type");
+		String logic_name = jacper.getStr("logic_name");
+		String phy_name = jacper.getStr("phy_name");
+		String search_type = jacper.getStr("search_type");
+		String tooltip_text = jacper.getStr("tooltip_text");
+		String main_table = jacper.getStr("main_table");
+		String index_database = jacper.getStr("index_database");
+		String advanced_search = jacper.getStr("advanced_search");
+		String note = jacper.getStr("note");
+
+		ObjectManager OM=ObjectManager.getInstance();
+		SearchCategoryFactory  SCF=SearchCategoryFactory.getInstance();
+
+		if(type.equals("save")){
+			try{	
+
+				conPlat.setAutoCommit(false);	
+				String object_id  = "";
+				String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+				if(idType==null||idType.equals("0")){
+					object_id = SQLUtils.getNextVal(conPlat,1)+"";
+				}else{
+					object_id =UUID.randomUUID().toString();
+				}
+				String parent_id = jacper.getStr("parent_id");
+
+				ObjectNode applicationNode=OM.getObject(parent_id);
+				applicationNode.addChild(conPlat,object_id,logic_name,ObjectType.SEARCHCATEGORY,user_id);	
+
+				conPlat.exec("insert into $[plat].SEARCH_CATEGORY (object_id,LOGIC_NAME,PHY_NAME,SEARCH_TYPE,TOOLTIP_TEXT,MAIN_TABLE,INDEX_DATABASE,ADVANCED_SEARCH,NOTE) values(?,?,?,?,?,?,?,?,?)",new String[]{object_id+"",logic_name,phy_name,search_type,tooltip_text,main_table,index_database,advanced_search,note});
+		
+				conPlat.commit();
+				<?{success:true,id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+		}else if(type.equals("updatesave")){
+			String object_id = jacper.getStr("object_id");
+			try{	
+				ObjectNode searchCategoryNode=OM.getObject(object_id);
+				searchCategoryNode.updateName(conPlat,logic_name);
+				conPlat.exec("update $[plat].SEARCH_CATEGORY set LOGIC_NAME=?,PHY_NAME=?,SEARCH_TYPE=?,TOOLTIP_TEXT=?,MAIN_TABLE=?,INDEX_DATABASE=?,ADVANCED_SEARCH=?,NOTE=? where object_id=?",new String[]{logic_name,phy_name,search_type,tooltip_text,main_table,index_database,advanced_search,note,object_id});
+				SCF.remove(object_id);
+				conPlat.commit();
+				<?{success:true,id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				conPlat.close();
+			}
+	}else if(type.equals("delete")){
+			String object_id = jacper.getStr("object_id");
+			try{	
+				conPlat.setAutoCommit(false);	
+				ObjectNode searchCategoryNode=OM.getObject(object_id);
+				searchCategoryNode.destroy(conPlat);
+				SCF.remove(object_id);
+				conPlat.commit();
+				conPlat.exec("delete from $[plat].SEARCH_CATEGORY where object_id=?",new String[]{object_id});
+				<?{success:true,id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				e.printStackTrace();
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+		}
+	}
+}

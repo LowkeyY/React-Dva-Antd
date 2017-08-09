@@ -1,0 +1,46 @@
+import java.io.IOException;      
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.smartkms.file.*;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+
+
+@class{
+public void doPost(Jacper jacper){
+
+	boolean isLogin = jacper.setSession();  
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	Connection conUtils = jacper.getConnection("utils");
+	Connection conCert = jacper.getConnection("plat");
+
+	String folder=jacper.getStr("folder");
+	String save=jacper.getStr("save");
+	try{
+		if(folder.indexOf("TagsFolder")==-1){
+			FileConfig fileConf =FileConfigFactory.getInstance().getFileConfig(conUtils,conCert,user_id+"");
+			if(folder.equals("")){
+				folder=fileConf.getCurrentFolderId();
+			}
+			JSONObject viewJson=fileConf.getViewJSON(conUtils,folder);
+			<??>viewJson.toString()<??>;
+			fileConf.setCurrentFolderId(conCert,folder);
+			FileList cutFiles =FileListFactory.getInstance().getFileList(conUtils,folder);
+		}else{
+			FileTagFactory tagInstance=FileTagFactory.getInstance();
+			String[] tagArray=folder.split(":");
+			JSONObject viewJson=tagInstance.getViewJSON(conUtils,conCert,user_id+"",tagArray[1]);
+			<??>viewJson.toString()<??>;
+		}
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conUtils.close();
+		conCert.close();
+	}
+}
+}

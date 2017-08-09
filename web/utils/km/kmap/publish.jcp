@@ -1,0 +1,261 @@
+
+/*
+ * @(#)/kmap/publish.jcp	1.0.0 03/04/04
+ *
+ * Copyright 2003 Bizdict Co.,Ltd. All rights reserved.
+ *
+ * 主程序作者：
+ * @author ch
+ *
+ * 修改者：
+ *
+ * 修改日期:
+ *
+ * 修改理由:
+ *
+ */
+
+import java.io.IOException;
+
+
+import java.io.IOException;
+
+
+import com.kinglib.*;
+import com.susing.*;
+import com.susing.upload.FileUpload;
+import javax.servlet.ServletException;
+import com.susing.core.KingleSystem;
+import java.io.File;
+
+@class{
+
+
+	public void doGet(Jacper jacper){
+		Connection conUtils=jacper.getConnection("utils");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+
+		int parent_id = jacper.getInt("parent_id",jacper.trans("类别ID出错"));
+		String auth = jacper.getStr("auth");
+ 		String page_id = jacper.getStr("page_id");
+		if(page_id.equals("")) page_id="0";
+
+		String[] rss = conUtils.getRow("select url from $[utils].kmap_category where category_id=?",new String[]{parent_id+""});
+ 		
+		String knowledge_id = jacper.getStr("knowledge_id");
+		
+		String knowledgeName="";
+		if(!knowledge_id.equals("")){ 
+			String[][] rs1 = conUtils.get("select knowledge_name from $[utils].knowledge where knowledge_id=?",new String[]{knowledge_id});
+			knowledgeName=rs1[0][0];
+		}
+<?
+<html>
+<head>
+<title>?>jacper.trans("知识管理")<?</title>
+<meta http-equiv="Content-Type" content="text/html">
+<yacus style="behavior:url(#default#userdata);" id="__YACUS_CACHE"/>
+<SCRIPT SRC="/JavaScript"></SCRIPT>
+<script src='/lib/FCKeditor/fckeditor.js'></script>
+<script src='/themes/js/show.js'></script>
+<script src='/themes/js/verify.js'></script>
+<script src="/themes/js/show_menu.js"></script>
+<script src='/themes/js/dateOut.js'></script>
+<script src="/lib/sigFileUpload/sigFileUpload.js"></script>
+<script src="/lib/sigFileUpload/DefaultProcess.js"></script>
+<script src="/lib/sigImageUpload/SingleImageTemplate.js"></script> 
+<script src="/lib/sigImageUpload/DefaultProcess.js"></script>
+<script src="/lib/sigImageUpload/ScaleDown.js"></script>      
+<link rel='stylesheet' type='text/css' href='/themes/css/standard.css'>
+<SCRIPT>
+susing("MButton","Menu");
+function main(){  
+	var leftwin;
+	var titleMap = new Map();
+	leftwin =  new MButton("?>jacper.trans("切换窗填充")<?","/themes/icon/xp/leftwin.gif");   
+	leftwin.click = function(){
+		if(parent.Scon1._LEFTWIN_.style.display == 'none'){
+			parent.Scon1._LEFTWIN_.style.display = '';
+			parent.rightFrame.cols="26%,100%";
+			leftwin.setDown(false);
+
+		}else{
+			parent.Scon1._LEFTWIN_.style.display = 'none';
+			parent.rightFrame.cols="0%,100%";
+			leftwin.setDown(true);
+		}
+	}
+	save = new MButton("?>jacper.trans("保存")<?","/themes/icon/common/save.gif");
+	save.click = function(){
+		subform()
+	}
+	titleMap.append("",save);
+	cancel = new MButton("?>jacper.trans("取消")<?","/themes/icon/common/redo.gif");
+	cancel.click = function(){
+		self.location.href='categorycreate.jcp?type=view&parent_id=?>parent_id<?&auth=?>auth<?&ran='+Math.random()
+	}
+	titleMap.append("",cancel);
+	titleMap.append("<span style='height:22;width:6;background-image:url(\"/themes/images/separator.gif\")'> </span>",leftwin);
+	titleMap.finish(titlemap);
+	leftwin.setDown(false);
+}
+</SCRIPT>
+</head>
+<body topmargin="0" leftmargin="0" bgcolor='#F6F6F6' style="overflow:auto"   >
+<script>var frm = new ShowForm("publish.jcp","post");</script>
+<script>eval(frm.nam).encoding="multipart/form-data";</script>
+<table height="100%" width="100%"  cellspacing="0" cellpadding="0">
+<tr height=20  width="100%"><td>
+<table cellspacing cellpadding align=center width=100%>
+		<tr><td nowrap width='100%' height='25' colspan='2'>
+				<table width='100%' cellspacing='0' cellpadding='0' height='28' bgcolor="#9EBEF5">
+						<tr><td nowrap width='2' height='25' ></td><td valign='bottom'>
+								<table width="66%" cellspacing="0" cellpadding="0" background="/themes/images/bg2.gif">
+								   <tr>
+										<td width=7><img src="/themes/images/t1.gif"></td>
+										<td width="100%" background="/themes/images/bg2.gif" id=titlemap></td>
+										<td width=13><img src="/themes/images/tbar_tail.gif"></td>
+								   </tr>
+								</table>
+						</td></tr>
+				</table>
+		</td></tr>
+</table>
+</td></tr>
+<tr  width="100%"  height="100%"><td  style="border-left:1px solid #ACA899;">
+<table  id="_UPWIN_" cellSpacing="3" cellPadding width="100%" height=100% bgcolor="#ECE9D8" style="border-left:1px solid #ACA899;border-right:1px solid #ACA899;border-top:1px solid #ACA899" >
+  <tr  height="100%"><td>			
+  <table width="100%" style="border-top:1px solid #ACA899;border-left:1px solid #ACA899;border-right:1px solid #FFFFFF;border-bottom:1px solid #FFFFFF" cellspacing cellpadding height="100%">
+		<tr  height="100%"><td valign="top" bgcolor="#FFFFF7">	
+						<table cellpadding cellspacing width="100%"  height="100%">
+							<tr height=1><td bgcolor="#FEFAEF"></td></tr>?>;
+							if(page_id.equals("0")){
+								<?<tr  height="20">
+								<td width="15%" height="20" align="right">?>jacper.trans("标题")<?:</td>
+								<td width="85%" height="20" colspan=3><script>document.write(frm.Text("dir_name","","width:350"));</script></td>
+								</tr>?>;
+							}
+							<?<tr  height="100%">
+								<td width="100%" noWrap valign="middle" align="left" colspan="4"  height="100%" class="query_table_td_input" >						
+									<DIV id="htmlinput" style="position:relative: left:0; top:5;  height:100%;  width:100%">
+									<script>document.write(frm.Textarea("file_detail",''));</script>
+									</DIV>
+								</td>
+							</tr>?>;
+							if(page_id.equals("0")){
+								<?<tr height="20"><td colspan=4>
+									<table align=center width="100%" cellspacing=6 cellpadding >
+									<tr>
+									<td width="10%" height="20" align="right">?>jacper.trans("附件")<?:</td>
+									<td width="48%" height="20">
+									<input type=file name='file_id'>
+									</td>
+									<td width="42%" height="20"><script>document.write(frm.Checkbox("dispic","false","?>jacper.trans("如为图片则显示(附件最大为200兆)")<?","this.value=this.checked;//alert(this.value);"));</script></td>
+									</table>
+								</td></tr>?>;
+							}else{
+							<?
+							<script>
+								document.write(frm.Hidden("dir_name","?>knowledgeName<?"));
+								document.write(frm.Hidden("knowledge_id","?>knowledge_id<?"));
+							</script>							
+							?>;
+							}
+						<?</table>
+			</td></tr>
+		</table>
+	</td></tr>
+	</table>
+</td></tr>        
+<tr height=20  width="100%">
+	<td background="/themes/default/images/status_bg.gif" id="statu"></td></tr>
+</table>
+<script>
+document.write(frm.Hidden("parent_id","?>parent_id<?"));
+document.write(frm.Hidden("page_id","?>page_id<?"));
+document.write(frm.Hidden("url","?>rss[0]<?"));
+document.write(frm.Hidden("auth","?>auth<?"));
+frm.Close();
+</script>
+<script>
+var sBasePath = '/lib/FCKeditor/';
+var oFCKeditor = new FCKeditor( 'file_detail' );
+oFCKeditor.Config['SkinPath'] = '/lib/FCKeditor/editor/skins/office2003/';
+oFCKeditor.BasePath	= sBasePath ;
+oFCKeditor.Height	= htmlinput.offsetHeight;
+oFCKeditor.ReplaceTextarea();
+function subform(){
+	var fm=eval(frm.nam);
+	if(fm.dir_name.value==''){
+			alert("?>jacper.trans("标题不能为空")<?!");
+			return false;
+	}	
+
+	fm.submit();
+}
+</script>
+</body>
+</html>
+?>;
+	}
+
+	public void doPost(Jacper jacper){
+
+		if(FileUpload.isMultipartContent(jacper.getRequest().getContentType())){
+			jacper=new JacperFile(jacper);
+			((JacperFile)jacper).action();
+		}
+
+		Connection conUtils=jacper.getConnection("utils");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String user_id = hs.uid+"";
+
+		int parent_id = Integer.parseInt(jacper.getStr("parent_id"));
+
+		String url = jacper.getStr("url");
+		String comment = jacper.getStr("file_detail");
+	    String dir_name = jacper.getStr("dir_name");
+		int page_id = Integer.parseInt(jacper.getStr("page_id"));
+
+		String auth = jacper.getStr("auth");
+		String dispic = jacper.getStr("dispic");
+
+		dispic=dispic.equals("true")?"1":"0";
+		dir_name = dir_name.replaceAll("<","< ");
+		dir_name = dir_name.replaceAll("'","\\\\'");
+
+		comment = comment.replaceAll("'","’");
+		comment = comment.replaceAll("\"","“");
+
+		String knowledge_id = jacper.getStr("knowledge_id");
+		
+		if(knowledge_id.equals("")){
+			knowledge_id = SQLUtils.getNextVal(jacper.getConnection("plat"),18)+"";
+		}else{
+			conUtils.exec("update $[utils].knowledge set page_id=page_id+1 where knowledge_id=? and page_id>?",new String[]{knowledge_id+"",page_id+""});
+		}
+
+		if(knowledge_id.trim().length()!=0){
+			EFile uf = ((JacperFile)jacper).getFile("file_id");
+			if ( uf != null ) {
+				String fileName=uf.getAttribute("file-name");
+				fileName=fileName.substring(fileName.lastIndexOf("\\")+1,fileName.length());
+				String fileType=uf.getAttribute("content-type");
+				String fileSize = (int)uf.length()+"";
+
+				conUtils.execLarge("insert into $[utils].kmap_attach (knowledge_id,category_id,attach_file,file_link,dispic,file_name,file_type) values(?,?,?,?,?,?,?)",new Object[]{knowledge_id,parent_id,uf,"",dispic,fileName,fileType});
+			}
+		}
+		page_id=page_id+1;
+		url=url+">>"+dir_name;
+		conUtils.execLarge("insert into $[utils].knowledge (knowledge_id,category_id,creator_id,create_date,update_person,update_date,auth_id,url,knowledge_name,fors,knowledge_detail,page_id,read_times) values (?,?,?,$getdate(),?,$getdate(),'-999999',?,?,'y',?,?,0)",new String[]{knowledge_id+"",parent_id+"",user_id,user_id,url,dir_name,comment,page_id+""});
+		
+		<?<script>self.location.replace("categorycreate.jcp?type=edit&knowledge_id=?>knowledge_id<?&parent_id=?>parent_id<?&page_id=?>page_id<?&auth=?>auth<?");</script>?>;
+		
+	}
+}

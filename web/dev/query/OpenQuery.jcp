@@ -1,0 +1,170 @@
+
+
+import java.util.Map;
+import electric.xml.*;
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.workbench.*;
+import com.kinglibx.query.*;
+import com.susing.sql.DataSourceFactory;   
+import com.kinglib.bi.*;
+
+@class{
+
+	public void doGet(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		Connection conTemp =null;
+
+		String id = jacper.getString("query_id","-1");
+
+	try{
+		if(id.equals("-1")){
+			jacper.setError(jacper.trans("未知事件,请按标准操作"));
+			return;
+		}   
+		String[][] result = conPlat.get("select content,is_join,query_name from $[plat].app_query where query_id=?",new String[]{id+""});
+		if(result.length==0){
+			jacper.setError(jacper.trans("该文件不存在,请刷新重试"));
+			return;
+		}
+		String[][] imports = conPlat.get("select distinct import_name,alias from $[plat].app_query_import where query_id=?",new String[]{id+""});
+
+		ObjectNode node=ObjectManager.getObject(id+"");
+		String modifyTime="";
+		String modifyName="";
+		if(node!=null){
+			modifyTime=node.getLastModifyTime();
+			modifyName=node.getLastModifyName();
+		}
+
+		//  列信息
+		StringBuffer sb = new StringBuffer();
+		sb.append("<query name=\"").append(result[0][2]).append("\" where=\"").append(Strings.convertHTML(result[0][0])).append("\" lastModifyTime=\"").append(modifyTime).append("\" lastModifyName=\"").append(modifyName).append("\" level=\"").append(Strings.convertHTML(result[0][1])).append("\"><columns>");
+
+		result = conPlat.get("select column_name,point from $[plat].app_query_column where query_id=? order by order_id",new String[]{id+""});
+		for(int i=0;i<result.length;i++){
+			String[] o = result[i];
+			sb.append("<c name=\"").append(Strings.convertHTML(o[0].replaceAll("<","&lt;").replaceAll("<","&gt;"))).append("\" point=\"").append(Strings.convertHTML(o[1])).append("\" parent=\"").append(getRename(imports,o[1])).append("\"/>");
+		}
+		sb.append("</columns><import>");
+
+
+		QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+		QueryExtend QE=queryEF.getQueryExtend(conPlat,id);
+		String server =QE.getServer(conPlat,id+"");
+
+		conTemp = jacper.getConnection(server);
+
+		//	引用表信息
+		QueryFactory qf = QueryFactory.getInstance();
+		for(int i=0;i<imports.length;i++){
+			String name = imports[i][0];
+			String rename = imports[i][1];
+			String isSys = "1";
+			String[] columns = null;
+			String[][] paras = null;
+			String query_id="-1";
+
+			if(name.indexOf("$[")==-1){
+				String tmp = Strings.getFirstKey(name,'[',']');
+				if(tmp==null)
+					return;
+				query_id = tmp;
+				isSys = "0";
+				Query q = qf.getQuery(conPlat,query_id);
+				name = q.getName();
+				ParamNode[] params = q.getParamNode();
+				columns = q.getCells();
+
+				paras = new String[params.length][2];
+				for(int j=0;j<params.length;j++){
+					paras[j][0] = params[j].getParamName();
+					paras[j][1] = params[j].isNotNull()?"1":"0";
+				}
+			}else{
+				if(name.indexOf("$[")!=-1){
+					server=name.substring(2,(name.indexOf("]")));
+				}else{
+					server=name.substring(0,(name.indexOf(".")));
+				}
+				String schemaString=DataSourceFactory.getConnectionMap(server);
+				String catalog="";
+				String schema="";
+				if(schemaString.indexOf(".")==-1){
+					schema=schemaString;
+				}else{
+					String[] schemaArray=schemaString.split(".");
+					catalog=schemaArray[0];
+					schema=schemaArray[1];
+				}
+				String tableName=name.substring(name.indexOf(".")+1,name.length());
+				columns = Database.getColumnNames(conTemp,catalog,schema,tableName);
+			}
+
+			sb.append("<query name=\"").append(name).append("\" rename=\"").append(rename).append("\" query_id=\"").append(query_id).append("\" server=\"").append(server).append("\" isSys=\"").append(isSys).append("\"><column>");
+			for(int j=0;j<columns.length;j++){
+				sb.append("<c name=\"").append(Strings.convertHTML(columns[j])).append("\"/>");
+			}
+			sb.append("</column><param>");
+			if(paras == null){
+				sb.append("</param></query>");
+				continue;
+			}
+			
+			result = conPlat.get("select param_name,param_value from $[plat].app_query_import where query_id=? and import_name=?",new String[]{id+"",imports[i][0]});
+			Map map = Factory.newHashMap();
+			for(int j=0;j<result.length;j++)
+				map.put(result[j][0],result[j][1]);		
+
+			for(int j=0;j<paras.length;j++){
+				String[] o = paras[j];
+				String pname = o[0];
+				Object obj = map.get(pname);
+				String value = obj==null?"":obj.toString();
+				sb.append("<c name=\"").append(Strings.convertHTML(pname)).append("\" value=\"").append(Strings.convertHTML(value)).append("\" notnull=\"").append(o[1]).append("\"/>");
+			}
+			sb.append("</param></query>");
+		}
+		sb.append("</import><params>");
+		
+		//	参数信息
+		result = conPlat.get("select param_name,utype,nullable,perfix,suffix,default_value from $[plat].app_query_param where query_id=?",new String[]{id+""});
+		Map map = Factory.newHashMap();
+		for(int i=0;i<result.length;i++){
+			String[] o = result[i];
+			String param_name = o[0];
+			String utype = o[1];
+			String notnull = o[2];
+			String perfix = o[3].replaceAll("<","&lt;").replaceAll("<","&gt;");
+			String suffix = o[4].replaceAll("<","&lt;").replaceAll("<","&gt;");
+			String defaultValue = o[5];
+			if(notnull.equals("1"))
+				map.put(param_name,"${"+param_name+"|"+utype+"|"+defaultValue+"}");
+			else
+				map.put(param_name,"${"+param_name+"|"+perfix+"|"+suffix+"|"+utype+"|"+defaultValue+"}");
+
+			sb.append("<c name=\"").append(param_name).append("\" utype=\"").append(utype).append("\" notnull=\"").append(notnull).append("\" perfix=\"").append(perfix).append("\" suffix=\"").append(suffix).append("\" default=\"").append(defaultValue).append("\"/>");
+		}
+		sb.append("</params></query>");
+		conPlat.close();
+		String resource = Strings.replaceKey(sb.toString(),"${","}",map);
+		<??>resource<??>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+			if(conTemp!=null)
+				conTemp.close();
+		}
+	}
+	private String getRename(String[][] src,String str){
+		for(int i=0;i<src.length;i++){
+			String rename = src[i][1];
+			if(str.indexOf(rename)!=-1)
+				return rename;
+		}
+		return "unknown";
+	}
+	
+}

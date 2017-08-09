@@ -1,0 +1,50 @@
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.social.api.core.model.User;
+import com.social.api.core.model.User;
+import java.net.InetAddress;
+import com.kinglib.util.json.JSONObject;
+
+@class{
+ 	public void doPost(Jacper jacper) {
+ 		//TODO 远程接口与日志尚未写好,写好后，应报至配置文件中设定的主服务器中，并在本地存留日志供管理员待查。
+ 		HttpSession hs = jacper.getSession();
+ 		String content=jacper.getString("content");
+ 		if(content!=null){
+  			try {
+  				JSONObject report = new JSONObject(content);
+  				report.put("userId", hs.uid);
+  				User u=User.getUser(String.valueOf(hs.uid));
+   				
+  				String stackTrace=report.getString("stackTrace");
+  				if(stackTrace!=null && stackTrace.length()>30){
+  					int pos=stackTrace.lastIndexOf("Err.java");
+  					if(pos!=-1){
+  						pos=stackTrace.indexOf("at",pos);
+		  				if(pos!=-1){
+		  					stackTrace=stackTrace.substring(pos);
+		  					report.put("stackTrace",stackTrace);
+  						}
+  					}
+  				}
+  				if(u!=null)
+  					report.put("userType", u.getUserType().getValue());
+  				report.put("server", jacper.trans("此处填写本服务器的唯一标识符"));
+ 				InetAddress LocalIP=InetAddress.getLocalHost();
+  				report.put("ip", LocalIP);
+  				System.out.println("\n\n"+jacper.trans("错误"));
+  				System.out.println(report.getString("message"));
+  				if(report.has("stackTrace"))
+  					System.out.println(report.getString("stackTrace"));
+  				else if(report.has("causeStackTrace"))
+  					System.out.println(report.getString("causeStackTrace"));
+  				else 
+  					System.out.println(report);
+  			}catch(Exception e){
+ 				
+ 			}
+ 		}
+ 		jacper.print("{success:true}");
+ 	}
+ }
+ 	

@@ -1,0 +1,47 @@
+import com.kinglib.workbench.application.ApplicationFactory;
+
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+
+@class{
+
+	public void doGet(Jacper jacper) {
+
+		jacper.setSession();
+		Connection conPlat = jacper.getConnection("plat");
+		String object_id = jacper.getString("object_id");
+		Object[] docArr = conPlat.getLarge("select content from $[plat].sys_doc where parent_id=?", new String[] { object_id });
+		if (docArr != null && docArr.length > 0 && docArr[0] != null) {
+			jacper.print(docArr[0].toString());
+		}
+		conPlat.close();
+
+	}
+
+
+	
+	public void doPost(Jacper jacper){
+		
+		HttpSession hs = jacper.getSession();
+		Connection conPlat = jacper.getConnection("plat");
+		String content = jacper.getStr("content");
+		String object_id = jacper.getStr("object_id");
+		
+		try{
+			conPlat.exec("delete from $[plat].sys_doc where parent_id=?",new String[]{object_id});
+			StringBuffer temp=new StringBuffer(content);
+			conPlat.execLarge("insert into $[plat].sys_doc (parent_id,content,creator_id,create_date) values (?,?,?,$getdate())",new Object[]{object_id,temp,String.valueOf(hs.uid)});   
+			jacper.print("{success:true,objectId:'"+object_id+"'}");	
+		}catch(Exception e){
+			String message=e.getCause().getMessage();
+			message=message.replaceAll("\n","");
+			jacper.print("{success:false,message:'"+message+"'}");	
+			e.printStackTrace();
+		}finally{
+			if(conPlat!=null)
+				conPlat.close();
+		}
+	}
+
+}

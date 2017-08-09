@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config charset="UTF-8">
+	
+	<var-def name="content">
+		<html-to-xml omithtmlenvelope="False">
+			<shell return="ret.toString()"><![CDATA[
+				String ret=html.toString();				
+				String clen="";
+				String cdec="";
+				ret=ret.replaceAll("\\<p\\sclass\\=\\\"1[^\\\"]+","<p class=\"1");
+			]]></shell>
+		</html-to-xml>
+	</var-def> 
+	<var-def name="result">
+		<loop item="table" index="i">
+			<list>
+				<xpath expression="//table">
+					<var name="content"/>
+				</xpath>
+			</list>
+			<body>
+						<shell return="col.toString()"><![CDATA[
+							String col="";
+							String tab=table.toString().trim().replaceAll("[\\t|\\s]","");
+							String[] titles=tab.split("#");
+							col="<table name=\""+titles[2]+"\" title=\""+titles[1]+"\">";
+						]]></shell>
+						<loop item="tr" index="j" filter="2-">
+							<list>
+								<xpath expression="//tr">
+									<var name="table"/>
+								</xpath>
+							</list>
+							<body>
+								<template>
+										&lt;row&gt;
+									<loop item="td" index="k">
+										<list>
+											<xpath expression="//td">
+												<var name="tr"/>
+											</xpath>
+										</list>
+										<body>
+											<empty>
+												<xtrim name="td" />
+											</empty>
+											<shell return="col.toString()"><![CDATA[
+												String col=k.toString();
+												String ct=td.toString().trim();
+												switch(Integer.parseInt(col)){
+													case 3:
+														col="name";
+														ct=ct.replaceAll("[\\t|\\s]","");	
+														break;
+													case 2:
+														col="title";
+														ct=ct.replaceAll("[\\t|\\s]","");
+														break;
+													case 4:
+														//包含长度和小数位--常量
+														col="type";
+														ct=ct.replaceAll("[\\t|\\s]","").toLowerCase();	
+														int pos=ct.indexOf("(");
+														if(pos==-1){
+															clen="0";
+															cdec="0";
+														}else{
+															String rs=ct;
+															ct=ct.substring(0,pos);
+															String rest=rs.substring(pos+1,rs.length()-1);
+															int pp=rest.indexOf(",");
+															if(pp==-1){
+																clen=rest;
+																cdec="0";
+															}else{
+																String[] mmn=rest.split(",");
+																clen=mmn[0];
+																cdec=mmn[1];
+															}
+														}
+														break;					
+													case 5:
+														col="length";	
+														//ct=clen.toString();;
+														break;	
+													case 6:
+														col="digitalDecimals";
+														//ct=cdec.toString();
+														break;
+													case 7:
+														col="notNull";	
+														if(ct.length()==0){
+															ct="false";
+														}else{
+															ct=ct.replaceAll("[\\t|\\s]","").toLowerCase();
+															if(ct.equals("y") || ct.equals("yes")|| ct.equals("1")|| ct.equals("true")|| ct.equals("是")){
+																ct="true";
+															}else{
+																ct="false";
+															}
+														}
+														break;
+													case 8:
+														col="primaryKey";
+														if(ct.length()==0){
+															ct="false";
+														}else{
+															ct=ct.toLowerCase();
+															if(ct.equals("y") || ct.equals("yes")|| ct.equals("1")|| ct.equals("true")|| ct.equals("是")){
+																ct="true";
+															}else{
+																ct="false";
+															}
+														}
+														break;													
+													case 9:
+														col="unit";	
+														break;						
+													case 10:
+														col="memo";	
+														break;
+													default:
+														col="";
+												}
+												if(!col.equals(""))
+												col="<"+col+">"+ct+"</"+col+">";
+											]]></shell>
+										
+										</body>
+									</loop>
+										&lt;/row&gt;
+								</template>
+							</body>
+						</loop>
+						<text>&lt;/table&gt;</text>
+			</body>
+		</loop>
+	</var-def>
+<shell>	
+</shell>
+	<var-def name="returnValue">
+		<text>&lt;tables&gt;</text>
+		<var name="result"/>
+		<text>&lt;/tables&gt;</text>
+	</var-def>  
+</config>

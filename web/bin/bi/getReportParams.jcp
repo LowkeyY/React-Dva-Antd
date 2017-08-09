@@ -1,0 +1,105 @@
+
+import java.io.IOException;
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.bi.*;
+import com.kinglibx.query.*;
+import com.kinglib.util.json.*;
+
+import com.kinglibx.report.*;
+import electric.xml.*;
+import com.kinglib.Err;
+import com.kinglib.util.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.ui.core.*;
+import com.kinglib.ui.core.utils.*;
+
+@class{
+	public void doGet(Jacper jacper){
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String userId=hs.uid+"";
+
+		Connection conPlat = jacper.getConnection("plat");
+
+		String report_id = jacper.getString("report_id","-1");
+
+		//jacper.getResponse().setContentType("application/x-json");
+
+		try{
+			String  query_id = jacper.getString("query_id","-1");
+			String reportType="normal";
+			String objectId="";
+			if(report_id.equals("-1")&&query_id.equals("-1")){
+				objectId=jacper.getStr("objectId");
+				Program prg =ProgramFactory.getInstance().getProgram(conPlat,objectId);
+				report_id=prg.getReportId();
+			}
+
+			JSONObject reportMetaJSON=new JSONObject("{}");
+
+			if(!objectId.equals("")){
+				JSONValue jval = ButtonFactory.getJson(conPlat,objectId, userId);
+				if (jval != null) {
+					reportMetaJSON.put("buttonArray",jval);
+				}	
+			}
+
+			if(!report_id.equals("-1")&&query_id.equals("-1")){
+				ReportFactory tf=ReportFactory.getInstance();
+				Report rpt=tf.getReport(conPlat,report_id+"");
+				query_id=rpt.getQueryId();
+
+				QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+				QueryExtend QE=queryEF.getQueryExtend(conPlat,query_id);
+				Query query =QE.getQuery();
+				String server=QE.getServer(conPlat,query_id+"");
+				Connection conTemp = jacper.getConnection(server);
+
+				String reportContent=rpt.getContent();
+				Map p = Factory.newHashMap();
+
+				String retQuery=jacper.getStr("query");
+				if(retQuery.equals("")) 
+					retQuery="{}";
+				JSONObject searchJson=new JSONObject(retQuery);
+				
+				if(objectId.equals("")){
+					p=QE.getAllQuerySearchCondition(jacper,conPlat,query,p,searchJson);
+				}else{
+					p=QE.getQueryImportCondition(jacper,conPlat,query_id+"");
+					p=QE.getQuerySearchCondition(jacper,conPlat,query,p,searchJson);
+				}
+
+				//ParseExcel xls = new ParseExcel((new Document(reportContent)).getRoot(),conTemp,p);
+				//int pageSize=xls.getPageRowNumber();
+				reportMetaJSON.put("pageSize",1);
+				//String[] reportTypeArray=Search.getKeys(reportContent,"<singleReport","</singleReport>");
+				//if(reportTypeArray!=null&&reportTypeArray.length!=0){
+				//	reportType="single";
+				//}
+			}
+
+			QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+			QueryExtend QE=queryEF.getQueryExtend(conPlat,query_id);
+
+			reportMetaJSON.put("query_id",query_id);
+			reportMetaJSON.put("report_type",reportType);
+			QuerySearch qs=null;
+			if(objectId.equals("")){
+				qs= QE.getFullQuerySearch(conPlat);
+			}else{
+				qs= QE.getQuerySearch(conPlat);
+			}
+
+			JSONObject searchEditor=qs.getSearchEditor(jacper,conPlat);
+			reportMetaJSON.put("searchEditor",searchEditor);	
+			<??>reportMetaJSON.toString()<??>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+}

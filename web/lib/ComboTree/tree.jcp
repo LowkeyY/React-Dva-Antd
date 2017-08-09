@@ -1,0 +1,15 @@
+
+import com.kinglib.*;
+import java.io.*;
+import java.util.*;
+
+import com.kinglib.util.json.*;
+
+@class{
+	
+
+
+	public void doGet(Jacper jacper){
+			jacper.print("{'root':[{'text':'栏目1',pid:'-1','id':'lm1','cls':'folder'},{'text':'栏目2','id':'lm2',pid:'-1','cls':'folder'},{'text':'稿件1','id':'gj1','leaf':true,'cls':'file',pid:'lm1'},{'text':'稿件2','id':'gj2','leaf':true,'cls':'file',pid:'lm2'},{'text':'稿件3','id':'gj3','leaf':true,'cls':'file',pid:'lm2'}]}");
+	}
+}

@@ -1,0 +1,77 @@
+
+import java.io.IOException;
+
+import com.social.api.core.model.User;
+import com.social.api.core.model.UserType;
+import com.kinglib.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+	String _id = jacper.getString("_id");
+	String level = jacper.getString("level");
+	String _name = jacper.getString("name");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String userId = hs.uid+"";
+	String deptId=hs.getString("dept_id");
+
+	User u = User.getUser(userId+"");
+	UserType userType=u.getUserType();;
+
+	String app_type=jacper.getStr("app_type");
+
+	String endicon="";
+	String starticon="";
+	if(level==null) level="0";
+	Connection conPlat = jacper.getConnection("plat");
+	
+	<?<root _id="?>_id<?">?>;
+	<?<forder _parent="?>_id<?" event="event1">?>;	
+	if (level.equals("0")) {
+			starticon="/themes/icon/xp/spzl.gif";
+			endicon="/themes/icon/xp/spzl.gif";		
+			if (userType.getValue()==1||userType.getValue()==0){
+				<?<e _id="0" _parent="top" title="?>jacper.trans("公用单位")<?" icon0="?>starticon<?" icon1="?>endicon<?" program="kind"  type="new" params="system_id=0" url="/dev/unit/tree.jcp?_id=0&amp;level=1&amp;name=?>jacper.trans("公用单位")<?" _hasChild="1"/>?>;
+			}
+
+			String sql="";
+			String[] params=new String[]{};
+			if (userType.getValue()==1||userType.getValue()==0){
+				sql="select a.system_id,a.system_name from $[plat].system_base a ";
+			}else{
+				params=new String[]{deptId,userId};
+				sql="select a.system_id,a.system_name from $[plat].system_base a,$[plat].system_auth b where a.system_id=b.id and b.deptid=? and b.roleid=?";
+			}
+			String[][] rs = conPlat.get(sql,params,0);
+			
+			if(rs!=null){	
+				String hasChild = "0";			
+				for(int i=0;i<rs.length;i++){					
+					String app_count = conPlat.getRow("SELECT  count(*) FROM $[plat].unit_group where system_id=?",new String[]{rs[i][0]})[0];
+
+					hasChild = Integer.parseInt(app_count)>0?"1":"0";
+
+					<?<e _id="?>rs[i][0]<?" _parent="top" title="?>rs[i][1]<?" _hasChild ="?>hasChild<?" icon0="?>starticon<?" icon1="?>endicon<?"  params="system_id=?>rs[i][0]<?"   program="kind"  url="/dev/unit/tree.jcp?level=1&amp;_id=?>rs[i][0]<?&amp;app_type=system&amp;parent_app=?>rs[i][0]<?"/>?>;
+				}
+			}
+	}else  if (level.equals("1")){
+
+		String[][] telBuf=conPlat.get("SELECT  id, name, DESCRIPCTION FROM $[plat].unit_group where system_id=?",new String[]{_id},0);
+
+		if ( telBuf != null ) {
+			String hasChild = "0";
+			starticon="/themes/icon/all/bricks.gif";
+			endicon="/themes/icon/all/bricks.gif";
+
+			for ( int i=0; i<telBuf.length; i++ ) {
+				<?<e _id="?>telBuf[i][0]<?" _parent="?>_id<?" title="?>telBuf[i][1]<?"  icon0="?>starticon<?" icon1="?>endicon<?"    program="unit"  type="view" params="system_id=?>_id<?&amp;group_id=?>telBuf[i][0]<?"  url="/dev/unit/tree.jcp?_id=?>telBuf[i][0]<?&amp;level=2&amp;name=?>_name<?&amp;kind_name=?>telBuf[i][1]<?" _hasChild="0"/>?>;
+			}
+		}
+	}
+	conPlat.close();
+	<?</forder></root>?>;
+}}
+
+

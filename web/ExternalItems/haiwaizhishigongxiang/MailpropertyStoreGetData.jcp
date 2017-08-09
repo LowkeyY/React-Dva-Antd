@@ -1,0 +1,84 @@
+import com.kinglib.*;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import gpra.filesystem.HWUnits;
+import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+//public class MailpropertyStoreGetData{
+@class{
+	public void doPost(Jacper jacper) {
+		String relationTable = jacper.getString("relationTable");
+		String exportData = jacper.getString("exportData","").split("::")[0];
+		JSONObject result = new JSONObject();
+		String spaceId=jacper.getStr("spaceId");
+		String sql = getDefaultSql(relationTable.toLowerCase() , exportData,spaceId);
+		Connection con = jacper.getConnection(HWUnits.HW_DBLINK);
+		
+		try {
+			if(sql == null){
+				jacper.print(result.put("root", new JSONArray()));
+				return;
+			}
+			String[][] rows;
+			if(exportData.length() > 0 && !"0".equals(exportData))
+				rows = con.get(sql , new String[]{exportData});
+			else
+				rows = con.get(sql);
+			JSONArray datas = new JSONArray();
+			if(rows != null && rows.length >0){
+				for(String[] row : rows)
+					datas.put(new JSONObject().put("value", row[0]).put("text", row[1]));
+			}
+			result.put("root", datas);
+			jacper.print(result);
+		} catch (Exception e) {
+			//e.printStackTrace();
+		} finally {
+			con.close();
+		}
+	}
+
+	private String getDefaultSql(String key, String exportData,String spaceid) {
+		HashMap<String , String> map = new HashMap<String , String>();
+			/** 大区* */
+		map.put("dir_zyzl_region", "select region_id||'::'||region_name_cn,region_name_cn from dir_zyzl_region where attribute='1' order by region_id");
+		/** 国家* */
+		map.put("dir_zyzl_country", "select country_id||'::'||country_name_cn,country_name_cn from dir_zyzl_country where attribute='1' "+(exportData.length() > 0 && !"0".equals(exportData) ? " and region_id = ?":"")+" order by country_id");
+		/** 盆地* */
+		map.put("dir_zyzl_basin", "select gp_id||'::'||basin_name_en,basin_name_en from dir_zyzl_basin where attribute='1' "+(exportData.length() > 0 && !"0".equals(exportData) ? " and regional_id = ?":"")+"order by basin_name_en");
+		/** 成藏组合* */
+		map.put("dir_zyzl_play", "select play_id||'::'||play_name_cn,play_name_cn from dir_zyzl_play where attribute='1' "+(exportData.length() > 0 ? " and play_basin_id = ?":"")+"order by play_name_cn");
+		/** 油田* */
+		map.put("dir_zyzl_field","select fie_id||'::'||field_name_en,field_name_en from dir_zyzl_field where attibute='1' "+(exportData.length() > 0 ? " and basin_id = ?":"")+"order by field_name_en");
+		/** 项目来源* */
+		map.put("dir_zyzl_xmly","select prj_source,prj_source from dir_zyzl_xmly where attribute='1' order by id");
+		/** 资料类型* */
+		map.put("dir_zyzl_zllx1","select datatype1,datatype1 from dir_zyzl_zllx1 where attribute='1' order by doc_type_id");
+		/** 所属业务* */
+		map.put("dir_zyzl_ssyw","select business,business from dir_zyzl_ssyw where attribute='1' order by id");
+		/** 所属学科* */
+		map.put("dir_zyzl_ssxk","select objects,objects from dir_zyzl_ssxk where attribute='1' order by id");
+		/** 所属单位* */
+		map.put("dir_zyzl_ssdw","select id||'::'||unit,unit from dir_zyzl_ssdw where attribute='1' order by id");
+		if(map.containsKey(key))
+			return map.get(key);
+		Matcher	mat = Pattern.compile("^dir_datum_(.+?)$").matcher(key);
+		
+		if(mat.find()){
+			if(mat.group(1).toUpperCase().equals("WELL")){
+				return new StringBuilder("select "+mat.group(1)+"_id||'::'||"+mat.group(1)+"_name,"+mat.group(1)+"_name"+" from "+key+" where 1=1 "+(exportData.length() > 0 ? "and p_"+mat.group(1)+"_id = ?":"")+" and (space_id='"+spaceid+"' or space_id is null) order by sort_seq").toString();
+			}else{
+				return new StringBuilder("select "+mat.group(1)+"_id||'::'||"+mat.group(1)+"_name,"+mat.group(1)+"_name"+" from "+key+(exportData.length() > 0 ? " where p_"+mat.group(1)+"_id = ?":"")+" order by sort_seq").toString();
+				
+			}
+		}
+		
+		return null;
+	}
+
+	public void doGet(Jacper jacper) {
+		doPost(jacper);
+	}
+}

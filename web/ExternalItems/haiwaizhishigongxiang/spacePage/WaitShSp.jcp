@@ -1,0 +1,105 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.space.HWSpaceFactory.HWSessions;
+
+//public class WaitShSp{
+@class{
+public void doGet(Jacper jacper) {
+doPost(jacper);
+}
+	public void doPost(Jacper jacper) {
+	try {
+			HttpSession hs = jacper.getSession();
+			Connection conEdu = jacper.getConnection(HWUnits.HW_DBLINK);
+			JSONObject jbout=new JSONObject();
+			JSONArray ja = new JSONArray();
+			
+			
+			
+			String spaceId=jacper.getSession().getString(HWSessions.HW_BASE_SPACEID.name());
+			String countsql="select count(*) from dir_file_base where space_id='"+spaceId+"' ";
+			String[] countrs=conEdu.getRow(countsql);
+			if(countrs!=null && countrs.length>0){
+				JSONObject jb=new JSONObject();
+				jb.put("name","资料总数");
+				jb.put("count",countrs[0]);
+				ja.put(jb);
+			}
+			
+			String rksql="select count(*) from dir_file_base where att_128='1' and space_id='"+spaceId+"' ";
+			String[] rkrs=conEdu.getRow(rksql);
+			if(rkrs!=null && rkrs.length>0){
+				JSONObject jb=new JSONObject();
+				jb.put("name","已入库资料");
+				jb.put("count",rkrs[0]);
+				ja.put(jb);
+			}
+			
+			
+			String sql="select count(*) from dir_file_base where att_128='0' and space_id='"+spaceId+"' ";
+			String[] rs=conEdu.getRow(sql);
+			if(rs!=null && rs.length>0){
+				JSONObject jb=new JSONObject();
+				jb.put("name","待审核资料");
+				jb.put("count",rs[0]);
+				ja.put(jb);
+			}
+			
+			String yshsql="select count(*) from dir_file_base where (att_128='1' or att_128='3') and space_id='"+spaceId+"' ";
+			String[] yshrs=conEdu.getRow(yshsql);
+			if(yshrs!=null && yshrs.length>0){
+				JSONObject jb=new JSONObject();
+				jb.put("name","已审核资料");
+				jb.put("count",yshrs[0]);
+				ja.put(jb);
+			}
+			
+			
+			String shSql="select count(*) from dir_file_base where file_id in (select file_id from DIR_APPLY_BASIC where space_id='"+spaceId+"' and apply_status='0')";
+			String[] shrs=conEdu.getRow(shSql);
+			if(shrs!=null && shrs.length>0){
+				JSONObject jb=new JSONObject();
+				jb.put("name","待审批资料");
+				jb.put("count",shrs[0]);
+				ja.put(jb);
+			}
+			
+			String yspSql="select count(*) from dir_file_base where file_id in (select file_id from DIR_APPLY_BASIC where space_id='"+spaceId+"' and (apply_status='1' or apply_status='2'))";
+			String[] ysprs=conEdu.getRow(yspSql);
+			if(ysprs!=null && ysprs.length>0){
+				JSONObject jb=new JSONObject();
+				jb.put("name","已审批资料");
+				jb.put("count",ysprs[0]);
+				ja.put(jb);
+			}
+			
+			
+			String bgtgx="select count(*) from dir_file_base where att_128='1' and space_id='"+spaceId+"' and is_secrecy='0' ";
+			String[] bgtrs=conEdu.getRow(bgtgx);
+			if(bgtrs!=null && bgtrs.length>0){
+				JSONObject jb=new JSONObject();
+				jb.put("name","办公厅共享文件");
+				jb.put("count",bgtrs[0]);
+				ja.put(jb);
+			}
+			
+			String csngx="select count(*) from dir_file_base where att_128='1' and space_id='"+spaceId+"' and is_secrecy='1'";
+			String[] csnrs=conEdu.getRow(csngx);
+			if(csnrs!=null && csnrs.length>0){
+				JSONObject jb=new JSONObject();
+				jb.put("name","处室内部共享文件");
+				jb.put("count",csnrs[0]);
+				ja.put(jb);
+			}
+			
+			jbout.put("authArray",ja);
+			jacper.print(jbout);
+	} catch (Exception e) {
+			e.printStackTrace();
+	}
+	}}

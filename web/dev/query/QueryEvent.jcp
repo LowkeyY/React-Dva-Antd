@@ -1,0 +1,249 @@
+
+
+import java.sql.SQLException;
+import java.util.ArrayList;
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglibx.query.*;
+import java.util.*;
+import org.w3c.dom.NodeList;
+import electric.xml.*;
+import com.kinglib.workbench.*;
+import com.kinglib.bi.*;
+
+@class{
+	private final Object lock = new Object();
+	public void doGet(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		String query_id = jacper.getString("query_id","-1");
+		String parent_id= jacper.getStr("parent_id");
+	
+	
+		if(!parent_id.equals("")){
+			String[][] tmp = conPlat.get("select query_id from $[plat].prg_base where query_id=?",new String[]{query_id+""},0);	
+			if (tmp.length> 0 ) {
+				<?<root><success>false</success><message>?>jacper.trans("该查询不能删除")<?</message></root>?>;
+				return;
+			}
+		}
+		String event = jacper.getString("event");
+
+
+		if( event==null || !event.equals("delete")){
+			<?<root><success>false</success><message>?>jacper.trans("请按标准操作")<?</message></root>?>;
+			return;
+		}
+		if(query_id.equals("-1")){
+			<?<root><success>false</success><message>?>jacper.trans("请按标准操作")<?</message></root>?>;
+			return;
+		}
+
+		String[] result = QueryFactory.getInstance().drop(conPlat,query_id);
+		ObjectManager OM=ObjectManager.getInstance();
+		if(result!=null){
+			<?<root><success>false</success><message>?>jacper.trans("无法执行删除操作,指定的文件已被别的文件引用")<?:\n?>Strings.arrayJoin(result,"\n")<?</message></root>?>;
+			return;
+		}else{
+			try{
+				ObjectNode queryNode=OM.getObject(query_id+"");
+				if(queryNode!=null){
+					queryNode.destroy(conPlat);
+				}
+				conPlat.close();
+			}catch(Exception e){}
+			<?<root><success>true</success><message>?>jacper.trans("删除成功")<?</message></root>?>;
+		}
+	}
+	public void XMLPost(JacperXML jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+		
+		Element xml;
+		try{
+			xml = jacper.getXML().getRoot();
+		}catch(Exception ex){
+			throw new KingleException(jacper.trans("xml文件整理错误"),ex);
+		}
+
+		String method = xml.getAttribute("method");
+		String query_name = xml.getAttribute("name");
+		String query_id = xml.getAttribute("query_id");
+		String forder = xml.getAttribute("forder");
+		String where = xml.getAttribute("where");
+		String level = xml.getAttribute("level");
+		String parent_id=xml.getAttribute("parent_id");
+
+		ObjectManager OM=ObjectManager.getInstance();
+		if(method.equals("create")){
+				String[][] result = conPlat.get("select forder_id from $[plat].app_query where query_name=? and forder_id=?",new String[]{query_name,forder});
+				if(result.length>0){
+					<?<root><success>false</success><message>?>jacper.trans("无法建立文件")<?[?>query_name<?],?>jacper.trans("指定的文件与现文件夹下文件重名.请指定另外一个文件名")<?.</message></root>?>;
+					return;
+				}
+				String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+				if(idType==null||idType.equals("0")){
+					query_id = SQLUtils.getNextVal(conPlat,1)+"";
+				}else{
+					query_id =UUID.randomUUID().toString();
+				}
+				String[][] columns = getColumn(xml.getElement("columns").getChildNodes(),query_id);
+				String[][] imports = getImport(xml.getElement("import").getChildNodes(),query_id);
+				String[][] params = getParams(xml.getElement("param").getChildNodes(),query_id);
+
+				synchronized(lock){
+					boolean autoCommit = false;
+					try{autoCommit = conPlat.getAutoCommit();}catch(SQLException ex){}
+					try{
+						conPlat.setAutoCommit(false);				
+						if(!parent_id.equals("")&&parent_id!=null){
+							ObjectNode applicationNode=OM.getObject(parent_id);
+							applicationNode.addChild(conPlat,query_id,query_name,ObjectType.QUERY,user_id);
+							conPlat.exec("insert into $[plat].app_query(forder_id,query_id,query_name,content,is_join,type) values(?,?,?,?,?,?)",new String[]{forder,query_id+"",query_name,where,level,"1"});
+						}else{
+							conPlat.exec("insert into $[plat].app_query(forder_id,query_id,query_name,content,is_join,type) values(?,?,?,?,?,?)",new String[]{forder,query_id+"",query_name,where,level,"2"});
+						}
+						conPlat.exec("insert into $[plat].app_query_column(query_id,column_name,point,order_id) values(?,?,?,?)",columns);
+						conPlat.exec("insert into $[plat].app_query_import(query_id,alias,import_name,param_name,param_value) values(?,?,?,?,?)",imports);
+						if(params.length>0)
+							conPlat.exec("insert into  $[plat].app_query_param(query_id,order_id,utype,param_name,nullable,perfix,suffix,default_value) values(?,?,?,?,?,?,?,?)",params);
+						if(autoCommit)
+							conPlat.commit();
+					}catch(Exception ex){
+						try{conPlat.rollback();}catch(Exception e){}
+						<?<root><success>false</success><message>SQL?>jacper.trans("执行错误")<?,?>ex.getMessage()<?</message></root>?>;
+					}finally{
+						try{
+							conPlat.setAutoCommit(autoCommit);
+							conPlat.close();
+						}catch(Exception e){}
+					}
+				}
+				<?<root><success>true</success><id>?>query_id<?</id></root>?>;
+		}else if (method.equals("update")){
+				String[][] result = conPlat.get("select forder_id,query_name from $[plat].app_query where query_id=?",new String[]{query_id+""});
+				forder= result[0][0];
+				query_name= result[0][1];
+
+
+				String[] delResult = QueryFactory.getInstance().drop(conPlat,query_id);
+				QueryExtendFactory.getInstance().remove(query_id);
+
+				if(delResult!=null){
+					<?<root><success>false</success><message>?>jacper.trans("无法执行更新或删除操作,指定的查询已被别的查询引用")<?:\n?>Strings.arrayJoin(delResult,"\n")<?</message></root>?>;
+					return;
+				}
+				String[][] columns = getColumn(xml.getElement("columns").getChildNodes(),query_id);
+				String[][] imports = getImport(xml.getElement("import").getChildNodes(),query_id);
+				String[][] params = getParams(xml.getElement("param").getChildNodes(),query_id);
+
+				synchronized(lock){
+					boolean autoCommit = false;
+					try{autoCommit = conPlat.getAutoCommit();}catch(SQLException ex){}
+					try{
+						conPlat.setAutoCommit(false);				
+						if(!parent_id.equals("")&&parent_id!=null){
+							conPlat.exec("insert into $[plat].app_query(forder_id,query_id,query_name,content,is_join,type) values(?,?,?,?,?,?)",new String[]{forder,query_id+"",query_name,where,level,"1"});
+						}else{
+							conPlat.exec("insert into $[plat].app_query(forder_id,query_id,query_name,content,is_join,type) values(?,?,?,?,?,?)",new String[]{forder,query_id+"",query_name,where,level,"2"});
+						}
+						conPlat.exec("insert into $[plat].app_query_column(query_id,column_name,point,order_id) values(?,?,?,?)",columns);
+						conPlat.exec("insert into $[plat].app_query_import(query_id,alias,import_name,param_name,param_value) values(?,?,?,?,?)",imports);
+						if(params.length>0)
+							conPlat.exec("insert into  $[plat].app_query_param(query_id,order_id,utype,param_name,nullable,perfix,suffix,default_value) values(?,?,?,?,?,?,?,?)",params);
+						if(autoCommit)
+							conPlat.commit();
+					}catch(Exception ex){
+						try{conPlat.rollback();}catch(Exception e){}
+						<?<root><success>false</success><message>SQL?>jacper.trans("执行错误")<??>ex.getMessage()<?</message></root>?>;
+					}finally{
+						try{
+							conPlat.setAutoCommit(autoCommit);
+							conPlat.close();
+						}catch(Exception e){}
+					}
+				}
+				<?<root><success>true</success><id>?>result[0][1]<?</id></root>?>;
+		}else{
+			String[] result = QueryFactory.getInstance().drop(conPlat,query_id);
+			QueryExtendFactory.getInstance().remove(query_id);
+			if(result!=null){
+				<?<root><success>false</success><message>?>jacper.trans("无法执行更新或删除操作,指定的文件已被别的文件引用")<?:\n?>Strings.arrayJoin(result,"\n")<?</message></root>?>;
+				return;
+			}
+			if(method.equals("delete"))
+				return;
+		}
+	}
+	private String[][] getImport(NodeList importList,String query_id){
+		ArrayList list = new ArrayList();
+		for(int i=0;i<importList.getLength();i++){
+			Element node = (Element)importList.item(i);
+			String name = node.getAttribute("name");
+			String rename = node.getAttribute("rename");
+			String import_id = node.getAttribute("query_id");
+			boolean isSys = node.getAttribute("isSys").equals("1");
+			if(!isSys)
+				name = "["+import_id+"]";
+
+			NodeList paramList = node.getElement("param").getChildNodes();
+			int len = paramList.getLength();
+			if(len==0){
+				String[] col = new String[5];
+				col[0] = query_id+"";
+				col[1] = rename;
+				col[2] = name;
+				col[3] = "";
+				col[4] = "";
+				list.add(col);
+			}
+			for(int j=0;j<len;j++){
+				Element param = (Element)paramList.item(j);
+				String[] col = new String[5];
+				col[0] = query_id+"";
+				col[1] = rename;
+				col[2] = name;
+				col[3] = param.getAttribute("name");
+				col[4] = param.getAttribute("value");
+				list.add(col);
+			}
+		}
+		String[][] arr = new String[list.size()][5];
+		list.toArray(arr);
+		return arr;
+	}
+
+	private String[][] getColumn(NodeList columnList,String query_id){
+		int len = columnList.getLength();
+		String[][] arr = new String[len][4];
+
+		for(int i=0;i<len;i++){
+			Element node = (Element)columnList.item(i);
+			arr[i][0] = query_id+"";
+			arr[i][1] = node.getAttribute("name");
+			arr[i][2] = node.getAttribute("point");
+			arr[i][3] = i+"";
+		}		
+		return arr;
+	}
+
+	private String[][] getParams(NodeList paramList,String query_id){
+		int len = paramList.getLength();
+		String[][] arr = new String[len][8];
+		for(int i=0;i<len;i++){
+			Element node = (Element)paramList.item(i);
+			arr[i][0] = query_id+"";
+			arr[i][1] = i+"";
+			arr[i][2] = node.getAttribute("utype");
+			arr[i][3] = node.getAttribute("name");
+			arr[i][4] = node.getAttribute("notnull");
+			arr[i][5] = node.getAttribute("perfix");
+			arr[i][6] = node.getAttribute("suffix");
+			arr[i][7] = node.getAttribute("default");
+		}
+		return arr;
+	}
+}

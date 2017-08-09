@@ -1,0 +1,38 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.folder.*;
+@class{
+	public void doGet(Jacper jacper){
+		
+		Connection conPlat = jacper.getConnection("plat");
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		String objectId = jacper.getString("parent_id","0");
+		ProgramFolder pf=ProgramFolderFactory.getInstance().getProgramFolder(objectId+"");
+		FolderNode root=pf.getRoot();
+
+		String treeTitle=root.getTitle();
+        String eventString="";
+		String url = "/bin/exe/folderTree.jcp?objectId="+objectId+"&amp;id=0";
+		String starticon="/themes/icon"+root.getStartIcon();
+		String endicon="/themes/icon"+root.getEndIcon();
+
+		try{
+			JSONObject navJSON = new JSONObject("{}");
+			navJSON.put("treeTitle",treeTitle);
+			navJSON.put("eventType","0");
+			navJSON.put("url",url);
+			navJSON.put("eventString",eventString);
+			navJSON.put("startIcon",starticon);
+			navJSON.put("endIcon",endicon);
+			jacper.getResponse().setContentType("application/x-json");
+			<??>navJSON.toString()<??>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		conPlat.close();
+	}
+}

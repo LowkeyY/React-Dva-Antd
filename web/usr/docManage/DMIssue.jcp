@@ -1,0 +1,219 @@
+
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workflow.Workflow;
+import com.kinglib.workflow.basic.BasicWorkflow;
+import com.kinglib.workflow.config.DefaultConfiguration;
+import com.kinglib.workflow.loader.StepDescriptor;
+import com.kinglib.workflow.loader.WorkflowDescriptor;
+import com.kinglib.workflow.spi.Step;
+
+import java.sql.SQLException;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+
+@class{
+	public void doGet(Jacper jacper){
+		
+		HttpSession hs = jacper.getSession();
+		
+		String dataId = jacper.getString("dataId", "");
+		
+		if(dataId.length()>0){
+			Connection con = jacper.getConnection("education");
+			String[] rs = con.getRow("select KCKNR from OA_OD_CANVIEWUSERS where GWXH = ? and YHID = ?",
+					new String[]{dataId,String.valueOf(hs.uid)});
+			if(rs!=null && rs.length>0){
+				JSONObject rData = new JSONObject();
+				String[] types = rs[0].split(",");
+				try {
+					for(String type:types){
+						// 0 正文 ，1 发文单，2 附件。
+						int ty = Integer.parseInt(type);
+						JSONObject obj = getResults(con,ty,new String[]{dataId});
+						rData.put(type, obj!=null?obj:"");
+					}
+					if(rData.length()>0)
+						jacper.print("{success:true,items:'"+rData+"'}");
+					else
+						jacper.print("{success:false,message:'未查询到结果。'}");
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
+				
+			}else{
+				jacper.print("{success:false,message:'未查询到结果。'}");
+			}
+		}else{
+			jacper.print("{success:false,message:'参数丢失。'}");
+		}
+	}
+	public JSONObject getResults(Connection con,int type,String[] params){
+		JSONObject obj = null;
+		switch(type){
+			case 0 :
+				String[] rs = con.getRow("select " +
+						"case when a.fwzh is null then '审批正文'||substr(b.wjmc,instr(b.wjmc,'.',-1)) else" +
+						" a.fwzh||substr(b.wjmc,instr(b.wjmc,'.',-1)) end," +
+						"b.wjdx,a.gwxh from OA_OFFICIAL_DOCUMENT a left outer join OA_OD_CONTENT b " +
+						"on a.gwxh = b.gwxh where a.gwxh=?",params);
+				if(rs!=null && rs.length>0){
+					obj = new JSONObject();
+					JSONObject rObj = new JSONObject();
+					try {
+						rObj.put("name", rs[0]);
+						rObj.put("size", rs[1]);
+						rObj.put("ids", rs[2]);
+						obj.put("items", rObj);
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+				}
+				break;
+			case 1 :
+				String[] rss = con.getRow("select " +
+						"fwzh,mj,bt,ztc,ngr,xzgzl,gzlbsx from OA_OFFICIAL_DOCUMENT where gwxh=?",
+						params);
+				if(rss!=null && rss.length>0){
+					obj = new JSONObject();
+					JSONObject items = new JSONObject();
+					try {
+						JSONObject textInfo = new JSONObject();
+						textInfo.put("fwzh", rss[0]);
+						textInfo.put("mj", rss[1]);
+						textInfo.put("bt", rss[2]);
+						textInfo.put("ztc", rss[3]);
+						textInfo.put("ngr", CertManager.getUser(rss[4]).getRealName());
+						textInfo.put("ngrId", rss[4]);
+						items.put("textInfo", textInfo);
+						String workflowId = "".equals(rss[5])?"":rss[5].substring(0,36);
+						String instanceId = "".equals(rss[5])?"":rss[5].substring(36);
+						long entryId =  "".equals(rss[6])?-1:Integer.parseInt(rss[6]);
+						JSONArray stepDatas = new JSONArray();
+						if(!"".equals(workflowId) && !"".equals(instanceId) && entryId!=-1){
+							Workflow wf = new BasicWorkflow("");
+							DefaultConfiguration config = new DefaultConfiguration();
+							wf.setConfiguration(config);
+							WorkflowDescriptor wd =  wf.getWorkflowDescriptor(instanceId);
+							JSONArray historyArr = new JSONArray();
+							for (Object r : wf.getHistorySteps(entryId)) {
+								historyArr.put(stepToJson((Step) r, wd));
+							}
+							if(historyArr.length()>0){
+								int len = historyArr.length();
+								for (int i = 0; i < len; i++) {
+									if(historyArr.get(len - i - 1)!=null)
+										stepDatas.put(i, historyArr.get(len - i - 1));
+								}
+							}
+						}
+						if(stepDatas.length()>0){
+							items.put("stepDatas", stepDatas);
+						}
+						obj.put("items", items);
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+				}
+				break;
+			case 2 :
+				String[][] rsss = con.get("select t.fjwjm,t.fjdx,to_char(t.scrq,'yyyy/mm/dd hh24:mi:ss'),t.fjxh from OA_OD_ATTACHMENT t where t.gwxh=?",params);
+				if(rsss!=null && rsss.length>0){
+					try {
+						obj = new JSONObject();
+						JSONArray ja = new JSONArray();
+						for(int i = 0;i<rsss.length;i++){
+							JSONObject rObj = new JSONObject();
+							rObj.put("name", rsss[i][0]);
+							rObj.put("size", rsss[i][1]);
+							rObj.put("date", rsss[i][2]);
+							rObj.put("ids", rsss[i][3]);
+							ja.put(rObj);	
+						}
+						obj.put("items", ja);
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+				}
+				break;
+		}
+		return obj;
+	}
+	
+	public void doPost(Jacper jacper){
+		
+		HttpSession hs = jacper.getSession();
+		
+		String dataId = jacper.getString("dataId", "");
+		String dm_text = jacper.getString("dm_text", "");
+		String dm_owner = jacper.getString("dm_owner", "");
+		
+		if(dataId.length()>0){
+			String dm_owners[] = dm_owner.split(",");
+			if(dm_owners.length>0){
+				String finalValues[][] = new String[dm_owners.length][3]; // dataId , user , text
+				for(int i = 0;i<dm_owners.length;i++){
+					finalValues[i][0] = dataId;
+					finalValues[i][1] = dm_owners[i];
+					finalValues[i][2] = dm_text;
+				}
+				
+				Connection con = jacper.getConnection("education");
+				String delSql = "delete from OA_OD_CANVIEWUSERS where GWXH = '"+dataId+"' and YHID in ("+dm_owner+")";
+				
+				String insertSql = "insert into OA_OD_CANVIEWUSERS(GWXH,YHID,KCKNR) values(?,?,?)";
+				try {
+					con.setAutoCommit(false);
+					con.exec(delSql);
+					con.exec(insertSql,finalValues);
+					con.commit();
+					jacper.print("{success:true,message:'已发送给指定用户。'}");
+				} catch (SQLException e) {
+					e.printStackTrace();
+					try {
+						con.rollback();
+					} catch (SQLException e1) {
+						e1.printStackTrace();
+					}
+					jacper.print("{success:false,message:'执行错误，请联系管理员。'}");
+				}				
+			}else{
+				jacper.print("{success:false,message:'选择的用户不明确，请重新选择。'}");
+			}
+		}else{
+			jacper.print("{success:false,message:'参数丢失。'}");
+		}
+	}
+	private JSONObject stepToJson(Step step, WorkflowDescriptor wd) throws JSONException {
+
+		JSONObject json = new JSONObject();
+
+		User u;
+		StepDescriptor sd;
+		String value = "";
+
+		if (step.getOwner().length() > 0) {
+			u = CertManager.getUser(step.getOwner());
+			if (u != null)
+				value = u.getRealName();
+		}
+		json.put("userName", value);
+
+		value = "";
+		sd = wd.getStep(step.getStepId());
+		if (sd != null) {
+			value = sd.getName();
+		}
+
+		json.put("stepName", value);
+
+		json.put("detail", step.getComment());
+
+		return json;
+	}
+}

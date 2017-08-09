@@ -1,0 +1,227 @@
+/*
+ * @(#)/	1.0.0 2008/05/30
+ *
+ * Copyright 2001 Bizdict Co.,Ltd. All rights reserved.
+ *
+ * 主程序作者：
+ * @author tianzhou
+ *
+ * 修改日期:2008.5.30
+ *
+ * 修改理由:升级至Ext
+ * 
+ */
+
+
+import java.util.HashMap;
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.database.DataType;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.SpecialSet;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.UserData;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workbench.program.ProgramFactory;
+import com.kinglib.ui.core.CustomizeFactory;
+@class{
+
+	public void doGet(Jacper jacper) {
+
+		String object_id = jacper.getStr("object_id");
+		Connection conPlat = jacper.getConnection("plat");
+		String[][] rss = null;
+
+		if (jacper.getStr("type").equals("reset")) {
+			conPlat.exec("delete from $[plat].ctrl_lst where module_id=?",
+					new String[] { object_id });
+		} else {
+			rss = conPlat
+					.get(
+							"select  list_item,tab_id,list_title,target_type,target,target_id,target_task,SORTABLE,SORT_TYPE,ALIGN,width,RENDER_TYPE,widget_id from $[plat].ctrl_lst where module_id=? order by seq",
+							new String[] { object_id }, 0);
+		}
+
+		JSONArray jarr = new JSONArray(),mjarr=null;
+		String tabId = "-1";
+		boolean haveData = (rss != null && rss.length > 0);
+
+		if (haveData) {
+			tabId = rss[0][1];
+		} else {
+			tabId = ProgramFactory.getInstance().getProgram(conPlat,
+				object_id).getTabId();		
+		}
+
+		MetaTable mt = MetaFactory.getObject(tabId);
+		if (mt != null) {
+
+			HashMap<String, MetaColumn> colMap = new HashMap<String, MetaColumn>();
+			for (MetaColumn col : mt.getColumns()) {
+				colMap.put(String.valueOf(col.getId()), col);
+			}
+
+			try {
+				if (haveData) {
+					for (int i = 0; i < rss.length; i++) {
+						JSONObject js = new JSONObject("{}");
+						js.put("tabid", rss[i][1]);
+						js.put("id", rss[i][0]);
+						js.put("header", rss[i][2]);
+						if (!rss[i][3].equals("")) {
+							JSONArray ja = new JSONArray();
+							ja.put(rss[i][3]);
+							ja.put(rss[i][4]);
+							ja.put(rss[i][5]);
+							ja.put("");
+							ja.put("");
+							ja.put("");
+							ja.put(rss[i][6]);
+							ja.put("");
+							ja.put("");
+							ja.put("");
+							js.put("extra", ja);
+						}
+						js.put("sortable", rss[i][7].equals("true"));
+						if (!rss[i][8].equals(""))
+							js.put("sortType", rss[i][8]);
+						if (!rss[i][9].equals(""))
+							js.put("align", rss[i][9]);
+						if (!rss[i][10].equals(""))
+							js.put("width", Integer.parseInt(rss[i][10]));
+						if (!rss[i][11].equals("-1") && !rss[i][11].equals(""))
+							js.put("renderType", Integer.parseInt(rss[i][11]));
+						if (!rss[i][12].equals(""))
+							js.put("widgetId", rss[i][12]);
+						MetaColumn col = colMap.get(rss[i][0]);
+						if(col==null){
+							continue;//列已被删除
+						}
+						colMap.remove(rss[i][0]);
+						mjarr=getWidgetType(jacper,conPlat,col);
+						if(mjarr!=null){
+							js.put("res",mjarr);
+						}
+						js.put("dataIndex", col.getPname());
+						js.put("pkmark", col.isPrimaryKey());
+						js.put("type", col.getDataType().toString());
+						jarr.put(js);
+					}
+				}
+				for (MetaColumn col : mt.getColumns()) {
+					if(!colMap.containsKey(String.valueOf(col.getId())))
+						continue;
+					
+					//数据类型过滤
+					DataType type = col.getDataType();
+					if (type == DataType.CLOB || type == DataType.BLOB
+							|| type == DataType.GEOMETRY
+							|| type == DataType.UNSUPPORT)
+						continue;
+					
+					//特殊选项过滤
+					SpecialSet spec=col.getSpecialSet();
+					if(spec==SpecialSet.WorkflowSign)
+						continue;
+						
+					JSONObject js = new JSONObject();
+					js.put("tabid", col.getObjectId());
+					js.put("id", col.getId());
+					js.put("header", col.getLname());
+					js.put("hidden", haveData);
+					js.put("dataIndex", col.getPname());
+					js.put("pkmark", col.isPrimaryKey());
+					js.put("type", type.toString());
+					mjarr=getWidgetType(jacper,conPlat,col);
+					if(mjarr!=null){
+						js.put("res",mjarr);
+					}
+					jarr.put(js);
+				}
+				jacper.print("{success:true,data:" + jarr + "}");
+			} catch (Exception e) {
+			e.printStackTrace();
+				jacper
+						.print("{success:false,message:'" + e.getMessage()
+								+ "'}");
+				e.printStackTrace();
+			}
+
+		} else {
+			jacper.print("{success:false,message:'"+jacper.trans("无法取得关联表")+"'}");
+		}
+
+		conPlat.close();
+	}
+
+
+	public void doPost(Jacper jacper){
+		String content=jacper.getStr("cols");
+		if(content.equals("")) return;
+		String object_id=jacper.getStr("object_id");
+		Connection conPlat =null;
+
+		try{
+			conPlat = jacper.getConnection("plat");
+			conPlat.setAutoCommit(false);	
+			conPlat.exec("delete from  $[plat].ctrl_lst where module_id=?",new String[]{object_id});
+			UserData.deleteKey("ProgramList",object_id);
+			JSONArray cols=new JSONArray(content);
+			int seq=0;
+			for(int i=0;i<cols.length();i++){
+				JSONObject js=cols.getJSONObject(i);
+				if(!js.isNull("hidden") && js.getString("hidden").equals("true")) continue;
+				String[] target={"","","","","","",""};
+				if(!js.isNull("extra")){
+					JSONArray ja=js.getJSONArray("extra");
+					target[0]=ja.optString(0,target[0]);
+					target[1]=ja.optString(1,target[1]);
+					target[2]=ja.optString(2,target[2]);
+					target[3]=ja.optString(6,target[3]);
+					
+				}
+				conPlat.exec("insert into $[plat].ctrl_lst (module_id,list_item,tab_id,list_title,list_type,target_type,target,target_id,target_task,task_type,seq,SORTABLE,SORT_TYPE,ALIGN,width,RENDER_TYPE,widget_id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",new String[]{object_id,js.getString("id"),js.getString("tabid"),js.optString("header"),"1",target[0],target[1],target[2],target[3],target[2],String.valueOf(seq++),js.getString("sortable"),js.optString("sortType",""),js.optString("align",""),js.optString("width","-1"),js.optString("renderType","-1"),js.optString("widgetId","")});
+			}
+			conPlat.commit();	
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+				e.printStackTrace();
+			}catch(Exception e1) {}			
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);	
+				conPlat.close();
+				ProgramFactory.getInstance().remove(object_id);
+				CustomizeFactory.remove(object_id);
+			}catch(Exception e2) {}
+		}
+
+		jacper.print("{success:true,message:'"+jacper.trans("保存成功")+"'}");
+			
+	}
+	public JSONArray getWidgetType(Jacper jacper,Connection conPlat,MetaColumn column)throws Exception{
+			JSONArray ctrlJS =null;
+			String rss[][] = null;
+			if(column.hasForeignKey()){
+				ctrlJS	= new JSONArray(); 
+				rss=conPlat.get("select object_id,widgetlogic_name from $[plat].widget_base where tab1_id in (select link_table from $[plat].meta_constraint where object_id=? and (constraint_type='F' or constraint_type='R')) ",new String[]{String.valueOf(column.getObjectId())});
+
+				JSONArray ja = new JSONArray();
+				ja.put(jacper.trans("无"));
+				ja.put("0");
+				ctrlJS.put(ja);
+				for(int k=0;k<rss.length;k++){
+					ja = new JSONArray();
+					ja.put(rss[k][1]);
+					ja.put(String.valueOf(rss[k][0]));
+					ctrlJS.put(ja);
+				}
+			}
+			return ctrlJS;
+	}
+}

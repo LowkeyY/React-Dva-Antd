@@ -1,0 +1,129 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+import java.util.*;
+import com.kinglib.workbench.application.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.program.*;
+
+import com.social.api.core.model.User;
+import com.social.api.core.model.User;
+import com.social.api.core.model.UserType;
+
+@class{
+public void doGet(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String userId = hs.uid+"";
+	String deptId=hs.getString("dept_id");
+	User u = User.getUser(userId+"");
+	UserType userType=u.getUserType();
+
+	String id = jacper.getStr("id");
+	int level=jacper.getInt("level",0);
+	String hasChild = "0";
+	<?<root _id="?>id<?">?>;
+	HashSet<String> appSet=new HashSet<String>();
+
+
+	if (userType.getValue()!=1&&userType.getValue()!=0){
+		String[][] rs=conPlat.get("select id from $[plat].system_auth where roleid=?",new String[]{userId+""},0);
+		for(int i=0;i<rs.length;i++){
+			appSet.add(rs[i][0]);
+		}
+	}
+	if (level==0){	
+		<?<forder _parent="?>id<?">?>;
+		String sql="";
+		String[] params=new String[]{};
+		if (userType.getValue()==1||userType.getValue()==0){
+			sql="select a.system_id,a.system_name from $[plat].system_base a ";
+		}else{
+			params=new String[]{deptId,userId};
+			sql="select a.system_id,a.system_name from $[plat].system_base a,$[plat].system_auth b where a.system_id=b.id and b.deptid=? and b.roleid=?";
+		}
+		String[][] rs = conPlat.get(sql,params,0);
+		int appCount=0;
+		if(rs.length!=0){				
+			for(int i=0;i<rs.length;i++){	
+				ObjectNode systemNode=ObjectManager.getObject(rs[i][0]);
+				ObjectNode[] appNodes=systemNode.findAllChildsByType(ObjectType.APPLICATION);	
+				hasChild = "0";	
+				for(int k=0;k<appNodes.length;k++){
+					if((appSet.contains(appNodes[k].getId()+"")&&userType.getValue()!=1&&userType.getValue()!=0))
+						 appCount++;
+					else if(userType.getValue()!=1||userType.getValue()!=0){
+						appCount++;
+					}
+				}
+				if (appCount>0){
+					hasChild = "1";
+					<?<e _id="?>rs[i][0]<?" _parent="top" title="?>rs[i][1]<?" _hasChild ="?>hasChild<?" icon0="/themes/icon/xp/axx.gif" icon1="/themes/icon/xp/axx.gif"  url="/dev/program/tree.jcp?level=1&amp;id=?>rs[i][0]<?&amp;"/>?>;
+				}
+			}
+		}
+		<?</forder>?>;	
+	}else if (level==1){
+		<?<forder _parent="?>id<?">?>;
+			String starticon="/themes/icon/xp/spzl.gif";
+			String endicon="/themes/icon/xp/spzl.gif";
+			String sql="";
+			String[] params=new String[]{id+""};
+			if (userType.getValue()==1||userType.getValue()==0){
+				sql="SELECT a.object_id,a.applogic_name FROM $[plat].application_base a ,$[plat].application_group b where a.system_id=b.group_id and  b.system_id=? order by object_id asc ";
+			}else{
+				params=new String[]{id+"",deptId,userId};
+				sql="SELECT a.object_id,a.applogic_name FROM $[plat].application_base a ,$[plat].application_group b,$[plat].system_auth c where a.system_id=b.group_id and  b.system_id=? and a.object_id=c.id and c.deptid=? and c.roleid=? order by object_id asc";
+			}
+			String[][] selBuf = conPlat.get(sql,params,0);
+			if (selBuf != null ) {
+				for ( int i=0; i<selBuf.length; i++ ){
+					hasChild = "0";
+					ObjectNode appNode=ObjectManager.getObject(selBuf[i][0]);
+					ObjectNode[] prgNodes=appNode.findAllChildsByType(ObjectType.PROGRAM);
+					for(int j=0;j<prgNodes.length;j++){
+						if(((ProgramNode)prgNodes[j]).getProgramType()==ProgramType.FOLDER){
+							hasChild = "1";
+							break;
+						}
+					}
+					if(hasChild.equals("1"))
+					<?<e _id="?>selBuf[i][0]<?" _parent="?>id<?" _hasChild="?>hasChild<?"  icon0="?>starticon<?" icon1="?>endicon<?"  title="?>selBuf[i][1]<?"  url="/dev/program/tree.jcp?id=?>selBuf[i][0]<?&amp;level=2&amp;"/>?>;
+				}
+			}
+			<?</forder>?>;	
+	}else if (level==2){
+		<?<forder _parent="?>id<?">?>;
+		ObjectNode appNode=ObjectManager.getObject(id);
+		ObjectNode[] programNodes=appNode.findAllChildsByType(ObjectType.PROGRAM);
+		for(int i=0;i<programNodes.length;i++){
+			String[] rs = conPlat.getRow("select count(b.id) from $[plat].prg_base a left outer join  $[plat].prg_folder b on a.object_id=b.object_id where a.object_id=? group by a.object_id",new String[]{programNodes[i].getId()+""});
+			if(rs!=null&&!rs[0].equals("0")){
+				hasChild = "1";
+				<?<e _id="?>programNodes[i].getId()<?" _parent="?>id<?" title="?>programNodes[i].getName()<?" _hasChild ="?>hasChild<?" icon0="/themes/icon/common/scj.gif" icon1="/themes/icon/common/scj.gif"  url="/dev/program/tree.jcp?level=3&amp;id=0&amp;objectId=?>programNodes[i].getId()<?"/>?>;
+			}
+		}
+		<?</forder>?>;	
+	}else if (level==3){
+		String objectId=jacper.getStr("objectId");
+		if(id.equals("0")){
+			<?<forder _parent="?>objectId<?" event="event1">?>;	
+		}else{
+			<?<forder _parent="?>id<?" event="event1">?>;	
+		}
+		String[][] rs = conPlat.get("select max(a.id),max(a.DIR_NAME),max(a.START_ICON),max(a.END_ICON),count(b.id) from  $[plat].prg_folder a left outer join  $[plat].prg_folder b on a.id=b.parent_id where a.parent_id=? and  a.object_id=? group by a.id",new String[]{id,objectId},0);
+		for(int i=0;i<rs.length;i++){			
+			hasChild = "0";
+			if(!rs[i][4].equals("0"))
+				hasChild = "1";
+			<?<e _id="?>rs[i][0]<?" _hasChild ="?>hasChild<?"  title="?>rs[i][1]<?" params="folder_id=?>rs[i][0]<?"  icon0="/themes/icon?>rs[i][2]<?" icon1="/themes/icon/?>rs[i][3]<?"  url="/dev/program/tree.jcp?level=3&amp;id=?>rs[i][0]<?&amp;objectId=?>objectId<?"/>?>;
+		}
+		<?</forder>?>;
+	}
+	<?</root>?>;
+	conPlat.close();
+}
+}

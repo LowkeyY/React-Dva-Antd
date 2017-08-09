@@ -1,0 +1,12 @@
+import java.io.IOException;      
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+
+@class{
+public void doPost(Jacper jacper){
+	jacper.getResponse().setContentType("application/x-json");
+	<?{"CurrentView":"thumbs","CollapseFoldersPanel":false,"CurrentHeight":485,"SingleUploadMode":false,"UserName":"bizdict@126.com","FirstName":"jian","BaseTransferUrl":"http://www.digitalbucket.net/","Branding":null,"UpgradeAd":true,"FtpSupport":false}?>;
+}
+}

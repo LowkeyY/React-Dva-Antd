@@ -1,0 +1,51 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.workbench.*;
+
+import com.kinglib.util.json.*;
+
+
+@class{
+
+public void doGet(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+	boolean allowSelect=false;
+	String[][] rs=null;
+	String icon;
+	String parent_id=jacper.getString("node","0");
+	String object_id=jacper.getString("object_id","0");
+	ObjectNode[] childs=null;
+	if(parent_id.equals("0")){
+		icon="/themes/icon/xp/spzl.gif";
+		ObjectNode node=ObjectManager.getObject(object_id).upTo(ObjectType.SYSTEM);
+		childs=node.findAllChildsByType(ObjectType.APPLICATION);
+	}else{
+		allowSelect=true;
+		icon="/themes/icon/xp/table.gif";
+		ObjectNode node=ObjectManager.getObject(parent_id);
+		childs=node.getChilds(ObjectType.METATABLE);
+	}
+	conPlat.close();
+	try{
+		JSONArray treeJSONArray=new JSONArray();
+		boolean isLeaf;
+		for(int i=0;i<childs.length;i++){
+			JSONObject resultJSON = new JSONObject("{}");
+			resultJSON.put("text",childs[i].getName());
+			resultJSON.put("leaf",!childs[i].haveChild());
+			resultJSON.put("allowSelect",allowSelect);
+			resultJSON.put("id",childs[i].getId());
+			resultJSON.put("icon",icon);
+			treeJSONArray.put(resultJSON);
+		}			
+		jacper.print(treeJSONArray.toString());
+	}catch(Exception e){
+		e.printStackTrace();
+	}
+}
+}
+
+
+			

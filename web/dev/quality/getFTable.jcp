@@ -1,0 +1,51 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.database.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.bi.*;
+import java.util.ArrayList;
+import com.kinglib.workbench.quality.*;
+@class{
+	public void doPost(Jacper jacper){
+		
+		Connection conPlat = jacper.getConnection("plat");
+		String id = jacper.getString("parent_id","0");
+		//String type = jacper.getStr("method");
+
+		QualityFactory  QF=QualityFactory.getInstance();
+		Quality quality=QF.getQuality(conPlat,id);
+		MetaTable mt = MetaFactory.getObject(quality.getTabId());
+
+		jacper.getResponse().setContentType("application/x-json");
+		try{
+			String colId = jacper.getString("col_id","");
+			if(colId.equals(""))
+				return;
+			JSONObject colJSON = new JSONObject("{success:true}");
+			JSONArray jarr=new JSONArray();
+			MetaColumn fkColumn=mt.getColumn(colId);
+			Constraint[] constraints=mt.getConstraints(ConstraintType.ForeignKey);
+			for(Constraint c:constraints){
+				if(c.getColumnId()==Integer.parseInt(colId)){
+					String fkId=c.getLinkTable();
+					MetaTable fkmt = MetaFactory.getObject(fkId);
+					JSONObject js = new JSONObject("{}");
+					js.put("tabid",fkId);
+					js.put("lname",fkmt.getLname()); 
+					jarr.put(js);
+				}
+			}
+			colJSON.put("dataItem",jarr);
+			jacper.print(colJSON.toString());
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+	public void doGet(Jacper jacper){
+		doPost(jacper);
+	}
+}

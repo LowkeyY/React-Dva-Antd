@@ -1,0 +1,54 @@
+import com.kinglib.*;
+import com.susing.core.*;
+import com.susing.server.*;
+@class{
+
+	public void doGet(Jacper jacper){
+		
+		String parent_id = jacper.getStr("parent_id");
+		Connection conPlat = jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		try{	
+			Object[] data = conPlat.getLarge("SELECT SCRIPT_CONTENT FROM $[plat].APP_SCRIPT WHERE MODULE_ID=?",new String[]{parent_id});
+			if(data!=null && data.length>0){
+				jacper.print(data[0]);
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally {
+			conPlat.close();
+		}
+	}
+
+	public void doPost(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		String parent_id = jacper.getStr("parent_id");
+		String content = jacper.getString("content");
+		String type = jacper.getString("type");
+		try{	
+			
+			conPlat.exec("delete from $[plat].APP_SCRIPT where  MODULE_ID=?",new String[]{parent_id});
+			conPlat.execLarge("INSERT INTO $[plat].APP_SCRIPT (MODULE_ID, SCRIPT_CONTENT) VALUES (?,?)",new Object[]{parent_id,new StringBuffer(content)});
+			if(type.equals("task")){
+				String[][] rs = conPlat.get("select schedule_id from $[plat].sys_task_schedule a where a.task_id=?",new String[]{parent_id});
+				String[] serviceArray=KingleSystem.getServiceNames();
+				for(int i=0;i<serviceArray.length;i++){
+					if((jacper.trans("任务服务")).equals(serviceArray[i])){
+						for(int j=0;j<rs.length;j++){
+							KingleTaskService taskService=(KingleTaskService)KingleSystem.getService(serviceArray[i]);
+							taskService.stopTask(parent_id+"_"+rs[j][0]);
+							taskService.startTask(parent_id+"_"+rs[j][0]);
+						}
+					}
+				}
+			}
+			<?{success:true,id:'?>parent_id<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+			e.printStackTrace();
+		}finally {
+			conPlat.close();
+		}
+	}
+}

@@ -1,0 +1,42 @@
+.x-widget-window .x-window-tl{
+    padding-left:0!important
+}
+.x-widget-window .x-window-tr{
+    padding-right:0!important
+}
+.x-widget-window .x-window-tc{
+    background-image:none!important;background-color:white!important;border:1px solid grey!important;padding-left:6px!important;padding-right:6px!important
+}
+.x-widget-window .x-window-ml{
+    background-color:white!important;padding-left:0!important
+}
+.x-widget-window .x-window-mr{
+    padding-right:0!important
+}
+.x-widget-window .x-window-mc{
+    background-color:white!important;border-width:0!important;border:1px solid grey!important
+}
+.x-widget-window .x-window-body{
+    border:0 none!important
+}
+.x-widget-window .x-window-bl{
+    display:none!important
+}
+.x-widget-window .x-panel-body{
+    border-color:grey!important
+}
+.x-widget-window,.x-widget-noborder .x-panel-body{
+    border-width:0!important
+}
+.x-widget-transp .x-window-mr{
+    background-image:none!important
+}
+.x-widget-transp .x-window-ml{
+    background-color:transparent!important;background-image:none!important
+}
+.x-widget-transp .x-window-mc{
+    background-color:transparent!important
+}
+.x-widget-transp .x-panel-body{
+    background-color:transparent!important
+}

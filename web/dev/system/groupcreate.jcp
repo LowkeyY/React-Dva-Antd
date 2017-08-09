@@ -1,0 +1,122 @@
+
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+
+
+import com.kinglib.*;
+import java.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String id = jacper.getString("id","0");
+	jacper.getResponse().setContentType("application/x-json");
+	try{	
+			JSONObject groupJSON = new JSONObject("{}");
+
+			String[] rs= conPlat.getRow("select group_name,group_pname,group_desc from $[plat].application_group  where group_id=?",new String[]{""+id});
+			groupJSON.put("group_id",id+"");
+			groupJSON.put("group_name",rs[0]);
+			groupJSON.put("group_pname",rs[1]);
+			groupJSON.put("group_desc",rs[2]);
+			ObjectNode node=ObjectManager.getObject(id+"");
+			if(node!=null){
+				groupJSON.put("lastModifyTime",node.getLastModifyTime());
+				groupJSON.put("lastModifyName",node.getLastModifyName());
+			}
+
+		   <?[?>groupJSON.toString()<?]?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = String.valueOf(hs.uid);
+
+	String type=jacper.getString("type");		
+	String group_name = jacper.getString("group_name");
+	String group_pname = jacper.getString("group_pname");
+	String group_desc = jacper.getString("group_desc");
+
+	ObjectManager OM=ObjectManager.getInstance();
+
+	if (type.equals("save")) {
+		String system_id=jacper.getString("id");
+		try{	
+			conPlat.setAutoCommit(false);	
+			String group_id = "";	
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+
+			if(idType==null||idType.equals("0")){
+				group_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				group_id =UUID.randomUUID().toString();
+			}
+			ObjectNode systemNode=OM.getObject(system_id);
+			systemNode.addChild(conPlat,group_id,group_name,ObjectType.APPLICATIONGROUP,hs.uid);
+			conPlat.exec("insert into $[plat].application_group ( group_id,system_id,group_name,group_pname,group_desc) values (?,?,?,?,?)",new String[]{String.valueOf(group_id),system_id,group_name,group_pname,group_desc});
+			conPlat.commit();
+			<?{success:true,id:'?>group_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if ( type.equals("updatesave")){
+		String group_id = jacper.getString("id");
+		try{	
+			ObjectNode groupNode=OM.getObject(group_id);
+			groupNode.updateName(conPlat,group_name);
+			conPlat.exec("update $[plat].application_group set group_name=?,group_pname=?,group_desc=? where group_id=?",new String[]{group_name,group_pname,group_desc,group_id});
+			<?{success:true,id:'?>group_id<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}else if (type.equals("delete")) {
+		String groupId = jacper.getStr("id");
+		ObjectNode groupNode=OM.getObject(groupId);
+		try{	
+			conPlat.setAutoCommit(false);	
+			groupNode.destroy(conPlat);
+			conPlat.commit();
+			<?{success:true,id:'?>groupId<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

@@ -1,0 +1,1 @@
+FCKLang.QueryBtn="Insert/Edit Query";FCKLang.QueryDlgTitle="Query Properties";FCKLang.QueryDlgName="Query Name";FCKLang.QueryErrNoName="Please type the Query name";FCKLang.QueryErrNameInUse="The specified name is already in use";

@@ -1,0 +1,176 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.database.*;
+import java.util.HashMap;
+import com.kinglibx.query.*;
+import com.kinglib.bi.*;
+import com.kinglib.workbench.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+		String forder = jacper.getStr("forder_id");
+		String query_id = jacper.getString("query_id");
+		if(forder.equals(""))
+			forder = "200";
+		if(query_id != null)
+			showQuery(jacper,query_id);
+		else
+			showForder(jacper,forder);
+}
+  
+
+private final void showForder(Jacper jacper,String forder){
+	
+	Connection conPlat = jacper.getConnection("plat");
+	String parent_id = jacper.getStr("parent_id");
+
+	String forder_id = "200";
+	if(!forder.equals("200"))
+		forder_id = forder.substring(1);
+
+	String[][] data=new String[0][];
+	ObjectManager OM=ObjectManager.getInstance();
+
+	<?<root _id="?>forder<?">?>;
+		
+   if(parent_id.equals("")){
+   		 if(forder_id.equals("200")){
+			String[] childsNum = conPlat.getRow("select count(a.forder_id)+count(b.query_id) from $[plat].sys__forder a left outer join  $[plat].app_query b on a.parent_id=b.forder_id where a.parent_id='10000'",new String[]{});
+			 data=new String[][]{{"10000",jacper.trans("表映射查询目录"),childsNum[0]}};
+		 }else{
+			data = conPlat.get("select max(c.forder_id),max(c.forder_title),count(a.forder_id)+count(b.query_id) from $[plat].sys__forder c left outer join $[plat].sys__forder a on c.forder_id=a.parent_id left outer join $[plat].app_query b on c.forder_id=b.forder_id  where c.parent_id=? group by c.forder_id",new String[]{forder_id});
+		 }
+   }else{
+		 if(forder_id.equals("200")){
+			String[] childsNum = conPlat.getRow("select count(a.forder_id)+count(b.query_id) from $[plat].sys__forder a left outer join  $[plat].app_query b on a.parent_id=b.forder_id where a.parent_id='10000'",new String[]{});
+			String[] childsNum1 = conPlat.getRow("select count(a.forder_id)+count(b.query_id) from $[plat].sys__forder a left outer join  $[plat].app_query b on a.parent_id=b.forder_id where a.parent_id='20000'",new String[]{});
+
+			 data=new String[][]{{"10000",jacper.trans("表映射查询目录"),childsNum[0]},{"20000",jacper.trans("系统查询目录"),childsNum1[0]}};
+		 }else{
+			 ObjectNode systemNode=OM.getObject(parent_id).upTo(ObjectType.SYSTEM);;
+			 String systemId=systemNode.getId();
+			 data = conPlat.get("select max(c.forder_id),max(c.forder_title),count(a.forder_id)+count(b.query_id) from $[plat].sys__forder c left outer join $[plat].sys__forder a on c.forder_id=a.parent_id left outer join $[plat].app_query b on c.forder_id=b.forder_id  where c.parent_id=? and  c.object_id=? group by c.forder_id",new String[]{forder_id,systemId+""});	
+		 }
+	}	
+	for(int i=0;i<data.length;i++){
+		String childNumber="0";
+		if(Integer.parseInt(data[i][2])>0)
+			childNumber="1";
+		<?<forder _hasChild="?>childNumber<?" event="queryForder">?>;
+		<?<e _id="F?>data[i][0]<?" forder_id="F?>data[i][0]<?" _parent="?>forder<?" title="?>data[i][1]<?"/>?>;
+		<?</forder>?>;
+	}
+
+	data = conPlat.get("select query_id,query_name,is_join from $[plat].app_query where forder_id=? order by query_name",new String[]{forder_id});
+	<?<forder _hasChild="1" icon0="menutree/query" event="query_tab">?>;
+	for(int i=0;i<data.length;i++){
+		String query_id = data[i][0];
+		String query_name = data[i][1];
+		String level = data[i][2];
+
+		String conString="";
+		String sql="";
+		String[] titles = null;
+
+		QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+		QueryExtend QE=queryEF.getQueryExtend(conPlat,query_id);
+		String server =QE.getServer(conPlat,query_id);
+
+		<?<e _id="?>query_id<?" _parent="?>forder<?" title="?>query_name<?" server="?>server<?" level="?>level<?" url="/dev/query/ListQuery.jcp?query_id=?>query_id<?"/>?>;
+	}
+	conPlat.close();
+	<?</forder></root>?>;
+}
+
+private final void showQuery(Jacper jacper,String query_id){
+	Connection conPlat = jacper.getConnection("plat");
+	String[][] data = conPlat.get("select query_name from $[plat].app_query where query_id=?",new String[]{query_id});
+	if(data.length<1){
+		jacper.setError(jacper.trans("数据库中不存在")+":["+query_id+"]");
+		return;
+	}
+	String query_name = data[0][0];
+
+	<?<root _id="?>query_id<?">
+		<forder _parent="?>query_id<?">
+			<e _id="?>query_id<?_C" title="?>jacper.trans("字段")<?" />
+			<e _id="?>query_id<?_P" title="?>jacper.trans("参数")<?" />
+			<e _id="?>query_id<?_I" title="?>jacper.trans("引用")<?" />
+		</forder>
+	?>;
+
+	data = conPlat.get("select column_name from $[plat].app_query_column where query_id=? order by order_id",new String[]{query_id});
+
+	QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+	QueryExtend QE=queryEF.getQueryExtend(conPlat,query_id);
+	Query query=QE.getQuery();
+	//MetaColumn[] mcsa = getMetaColumns(conPlat, query_id, query.getCells());
+	String server =QE.getServer(conPlat,query_id);
+	Connection conTemp= jacper.getConnection(server);
+	HashMap params=new HashMap();
+    ParamNode[] paramNodes=query.getParamNode();
+	for(int i=0;i<paramNodes.length;i++){
+		params.put(paramNodes[i].getParamName(),"-999999");
+	}
+
+	String sqlStr = query.parseSql(conPlat,query.getCells(),params);
+
+	int[] types=conTemp.getTypes(sqlStr);
+	conTemp.close();
+	<?<cell icon0="menutree/column">?>;
+	for(int i=0;i<data.length;i++){
+		DataType dataType= DataType.parseByValue(types[i]);
+		String type="java.lang.String";
+		if(dataType==DataType.VARCHAR){
+			type="java.lang.String";
+		}else if(dataType==DataType.INT){
+			type="java.lang.Integer";
+		}else if(dataType==DataType.FLOAT){
+			type="java.lang.Double";
+		}else if(dataType==DataType.DATE){
+			type="java.sql.Timestamp";
+		}else if(dataType==DataType.BLOB){
+			type="java.lang.String";
+		}else if(dataType==DataType.CLOB){
+			type="java.lang.String";
+		}else if(dataType==DataType.GEOMETRY){
+			type="java.lang.String";
+		}else if(dataType==DataType.UNSUPPORT){
+			type="java.lang.String";
+		}
+		String column_name = data[i][0];
+		<?
+		<e _id="?>query_name+"."+column_name<?_C" _parent="?>query_id<?_C" title="?>column_name<?"  type="?>type<?"/>?>;			
+	}
+	<?</cell>?>;
+
+	data = conPlat.get("select param_name,nullable,utype,default_value from $[plat].app_query_param where query_id=? order by order_id",new String[]{query_id});
+
+	<?<cell icon0="menutree/param">?>;
+	for(int i=0;i<data.length;i++){
+		String param_name = data[i][0];
+		String notnull = data[i][1];
+		String utype = data[i][2];
+		String defaultValue = data[i][3];
+		<?
+		<e _id="?>query_name+"."+param_name<?_P" _parent="?>query_id<?_P" notnull="?>notnull<?" utype="?>utype<?" title="?>param_name<?" defaultvalue="?>defaultValue<?"/>
+		?>;
+	}
+	<?</cell>?>;
+
+	data = conPlat.get("select DISTINCT import_name from $[plat].app_query_import where query_id=?",new String[]{query_id});
+
+	<?<cell icon0="menutree/import">?>;
+	for(int i=0;i<data.length;i++){
+		String import_name = data[i][0];
+		<?<e _id="?>import_name<?_I" _parent="?>query_id<?_I" title="?>import_name<?" />
+		?>;
+	}
+	conPlat.close();
+	<?</cell>
+</root>?>;
+}
+}

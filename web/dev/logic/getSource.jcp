@@ -1,0 +1,66 @@
+
+import java.util.*;
+import com.kinglib.*;
+
+import com.kinglib.bi.*;
+import com.kinglib.util.json.*;
+import com.kinglibx.query.*;
+import com.kinglib.workbench.*;
+import com.kinglibx.query.*;
+
+@class{
+public void doGet(Jacper jacper) {
+	doPost(jacper);
+};                        
+public void doPost(Jacper jacper) {
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	String type = jacper.getStr("type");
+	String parent_id = jacper.getStr("parent_id");
+
+	jacper.getResponse().setContentType("application/x-json");
+	try{
+		JSONObject optionJSON = new JSONObject("{}");
+		String[][] styles=null;
+		if(type.equals("query")){
+			ObjectNode currentNode=ObjectManager.getObject(parent_id);
+			JSONArray jarr=new JSONArray();
+			try{
+				for(ObjectNode node:currentNode.upTo(ObjectType.APPLICATION).findAllChildsByType(ObjectType.QUERY)){
+						JSONObject items = new JSONObject();
+						items.put("value",node.getId());
+						items.put("text",node.getName());
+						jarr.put(items);
+				}
+				optionJSON.put("items",jarr);
+			}catch(Exception e){}
+			<??>optionJSON.toString()<??>;
+		}else if(type.equals("queryColumn")){
+			String  query_id = jacper.getString("query_id","-1");
+			QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+			QueryExtend QE=queryEF.getQueryExtend(conPlat,query_id);
+			Query query =QE.getQuery();
+			ColumnNode[] columns=query.getColumnNode();
+			JSONArray jarr=new JSONArray();
+			try{
+				for(int i=0;i<columns.length;i++){
+					JSONObject items = new JSONObject("{}");
+					items.put("text",columns[i].getQueryName());
+					items.put("value",columns[i].getColumnName());
+					jarr.put(items);
+				}
+				optionJSON.put("items",jarr);
+			}catch(Exception e){}
+			<??>optionJSON.toString()<??>;
+		}
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+}

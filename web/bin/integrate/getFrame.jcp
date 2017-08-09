@@ -1,0 +1,73 @@
+
+                  
+import java.io.IOException;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.integrate.*;
+
+@class{
+public void doGet(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		HttpSession hs = jacper.getSession();
+
+		long userId=hs.uid;
+		String deptId=hs.getString("dept_id");
+	    String roleId=hs.getString("role_id");
+
+		String objectId=jacper.getStr("parent_id"); 
+		String instanceId=jacper.getStr("instanceId"); 
+		try{
+			Integrate integrate =IntegrateFactory.getInstance().getIntegrate(conPlat,objectId);
+			int instanceNum=integrate.getInstanceNumber();
+			String osType=integrate.getOSType();
+			String integratType=integrate.getIntegratType();
+			if(instanceId.equals("")){
+				if(instanceNum>0){
+					if(userId==0||userId==1){
+					  if(instanceNum==1){
+						  String firstInstance=integrate.getFirstInstance();
+						  IntegrateInstance integrateInstance=integrate.getIntegrateInstance(firstInstance);
+						  JSONObject  instanceJSON=integrateInstance.getJSON();
+						  jacper.print("{success:true,instanceNum:1,osType:"+osType+",integratType:"+integratType+",Instance:"+instanceJSON.toString()+"}");
+					  }else{
+						  String[][] instanceArray=integrate.getInstanceArray();
+						  JSONArray jarr=new JSONArray();
+						  for (int i = 0; i <instanceArray.length; i++){
+									JSONObject items = new JSONObject("{}");
+									items.put("id",instanceArray[i][0]);
+									items.put("label",instanceArray[i][1]);
+									jarr.put(items);
+						  }
+						  jacper.print("{success:true,instanceNum:"+instanceNum+",instanceArray:"+jarr.toString()+"}");
+					  }
+					}else{
+						  String authType=(String)com.susing.core.KingleSystem.getProperty("auth_type");
+						   instanceId=integrate.getInstanceId(deptId);
+							if(instanceId==null){
+								if(authType.equals("0")){
+									instanceId=integrate.getInstanceId(userId+"");
+								}else if(authType.equals("1")){
+									instanceId=integrate.getInstanceId(roleId);
+								}
+							}
+						  IntegrateInstance integrateInstance=integrate.getIntegrateInstance(instanceId);
+						  JSONObject  instanceJSON=integrateInstance.getJSON();
+						  jacper.print("{success:true,instanceNum:1,osType:"+osType+",integratType:"+integratType+",Instance:"+instanceJSON.toString()+"}");
+					}	
+				}else{
+					jacper.print("{success:false,message:'"+jacper.trans("未定义系统集成实例")+"'}");
+				}
+			}else{
+				  IntegrateInstance integrateInstance=integrate.getIntegrateInstance(instanceId);
+				  JSONObject  instanceJSON=integrateInstance.getJSON();
+				  jacper.print("{success:true,instanceNum:1,osType:"+osType+",integratType:"+integratType+",Instance:"+instanceJSON.toString()+"}");
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+}
+

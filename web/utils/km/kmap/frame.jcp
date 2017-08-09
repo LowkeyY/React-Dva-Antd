@@ -1,0 +1,53 @@
+
+/*
+ * @(#)/system/frame.jcp	1.0.0 03/04/25
+ *
+ * Copyright 2003 Bizdict Co.,Ltd. All rights reserved.
+ *
+ * 主程序作者：
+ * @author lzy
+ *
+ * 修改者：
+ *
+ * 修改日期:
+ *
+ * 修改理由:   
+ *  
+ */
+
+
+import java.io.IOException;
+import com.kinglib.*;
+
+
+
+@class{
+
+
+	public void doGet(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+		
+		String type=jacper.getStr("type");
+
+		String url1 = "";
+		String url2 = "";
+		if ( type.equals("know") || type.equals("") ) {
+			url1 = "/utils/km/kmap/xmlload.jcp?view=create&";
+			url2 = "/utils/km/kmap/categorycreate.jcp?type=view&parent_id=-999&";
+		}
+		else if ( type.equals("file") ) {
+			url1 = "/utils/km/file/xmlload.jcp?view=create&";
+			url2 = "/utils/km/file/create.jcp?type=view&parent_id=-999&";
+		}		 
+		<?    
+			<frameset cols="20%,80%" id=rightFrame frameborder=0 FRAMESPACING=0 scrolling="no" border="10" name="">
+				<FRAME SRC="?>url1<?ran="+Math.random() NAME="Scon1" frameborder=0 scrolling="no" >
+				<FRAME SRC="?>url2<?ran="+Math.random() NAME="centermid1" frameborder=0 scrolling="no"> 
+			</FRAMESET>
+		?>;
+
+	}
+}
+

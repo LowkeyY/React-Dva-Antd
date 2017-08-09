@@ -1,0 +1,54 @@
+.x-cp-rgbpicker,.x-cp-huepicker,.x-cp-opacitypicker,.x-cp-slider{
+    position:absolute;cursor:pointer;_cursor:hand;background-repeat:no-repeat;margin:0;padding:0;border:0
+}
+.x-cp-slider{
+    left:-15px;top:-15px;width:15px;height:15px;background-image:url(/ui/lib/ext/resources/images/default/colorpicker-ux/slider-rgb.gif)!important
+}
+.x-cp-rgbpicker{
+    left:6px;top:6px;width:182px;height:182px;background-image:url(/ui/lib/ext/resources/images/default/colorpicker-ux/mask.png);background-color:red;_background-image:none;_filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='/ui/lib/ext/resources/images/default/colorpicker-ux/mask.png',sizingMethod='scale')
+}
+.x-cp-huepicker{
+    left:196px;top:6px;width:9px;height:183px;background-image:url(/ui/lib/ext/resources/images/default/colorpicker-ux/hue.png)!important
+}
+.x-cp-opacitypicker{
+    left:6px;top:196px;width:183px;height:9px;background-image:url(/ui/lib/ext/resources/images/default/colorpicker-ux/opacity.png)!important
+}
+.x-cp-clearfloat{
+    clear:both
+}
+.x-cp-formcontainer{
+    position:absolute;margin:0;padding:0;border:0;top:6px;left:215px;width:116px
+}
+.x-cp-formcontainer input{
+    text-align:center
+}
+.x-cp-formcontainer .x-form-item{
+    margin-bottom:3px
+}
+.x-cp-formcontainer .x-form-text{
+    height:17px
+}
+.x-cp-preview{
+    background-image:url(/lib/ext/resources/images/default/colorpicker-ux/opacity-back.gif)!important;background-repeat:no-repeat;background-position:0 22px
+}
+.x-cp-inverse{
+    background-image:url(/ui/lib/ext/resources/images/default/colorpicker-ux/inverse.png)!important
+}
+.x-cp-webSafe{
+    background-image:url(/ui/lib/ext/resources/images/default/colorpicker-ux/webSafe.png)!important
+}
+.x-cp-previewbox{
+    width:73px;height:21px
+}
+.x-cp-tooltipcolorbox{
+    width:30;height:16;border:solid 1px black
+}
+.x-form-field-wrap .x-form-colorfield-palette{
+    background-image:url('/ui/lib/ext/resources/images/default/colorpicker-ux/trigger-palette.gif')
+}
+.x-form-field-wrap .x-form-colorfield-picker{
+    background-image:url('/ui/lib/ext/resources/images/default/colorpicker-ux/trigger-picker.gif')
+}
+.x-form-colorfield-colorMask{
+    position:absolute
+}

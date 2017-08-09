@@ -1,0 +1,69 @@
+<root><class name="bin.user.data-view"><data-view><![CDATA[/*
+ * Ext JS Library 2.0 Beta 1
+ * Copyright(c) 2006-2007, Ext JS, LLC.
+ * licensing@extjs.com
+ * 
+ * http://extjs.com/license
+ */
+
+#authView .x-panel-body{
+	background: white;
+	border-left:0px solid #dddddd;
+	border-top:0px solid #dddddd;
+	font: 11px Arial, Helvetica, sans-serif;
+}
+#authView .thumb{
+	background: #ffffff;
+	padding: 3px;
+}
+#authView .thumb img{
+	height: 48px;
+	width: 48px;
+}
+#authView .thumb-wrap{
+	float: left;
+	margin: 4px;
+	margin-right: 0;
+	padding: 5px;
+}
+#authView .thumb-wrap span{
+	display: block;
+	overflow: hidden;
+	text-align: center;
+}
+
+#authView .x-view-over{
+    border:1px solid #dddddd;
+    background: #efefef url(/ext/resources/images/default/grid/row-over.gif) repeat-x left top;
+	padding: 4px;
+}
+
+#authView .x-view-selected{
+	background: #eff5fb url(/themes/images/selected.gif) no-repeat right bottom;
+	border:1px solid #99bbe8;
+	padding: 4px;
+}
+#authView .x-view-selected .thumb{
+	background:transparent;
+}
+
+
+DIV .middle{
+	background-repeat: repeat-y;
+	background-position: left top;
+	background-image: url('/themes/jsvm/system/img/menutree/middle.gif');
+}
+DIV .button{
+	background-repeat: repeat-y;
+	background-position: left top;
+	background-image: url('/themes/jsvm/system/img/menutree/middle.gif');
+}
+DIV .top{
+	background-repeat: repeat-y;
+	background-position: left top;
+	background-image: url('/themes/jsvm/system/img/menutree/vtop.gif');
+}             
+DIV .show{                      
+	margin-left:23px;
+}
+]]></data-view></class></root>

@@ -1,0 +1,104 @@
+
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import java.util.*;
+import org.w3c.dom.*;
+
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conUtils = jacper.getConnection("utils");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+	
+
+	String type = jacper.getStr("type");
+	int id = jacper.getInt("id",0);
+	String  parent_id = jacper.getStr("parent_id");
+
+	String[] rs = conUtils.getRow("select node_id,node_name,node_title,seq,current_stat,node_desc,parent_id from $[utils].portal_node where  node_id=?",new String[]{""+id});
+	
+	try{
+		JSONObject nodeJSON = new JSONObject("{}");
+		nodeJSON.put("id",rs[0]);
+		nodeJSON.put("node_name",rs[1]);
+		nodeJSON.put("node_title",rs[2]);
+		nodeJSON.put("seq",rs[3]);
+		nodeJSON.put("current_stat",rs[4]);
+		nodeJSON.put("node_desc",rs[5]);
+		nodeJSON.put("parent_id",rs[6]);
+		<?[?>nodeJSON.toString()<?]?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conUtils.close();
+	}
+	
+}
+
+public void doPost(Jacper jacper){
+	
+	Connection conUtils = jacper.getConnection("utils");
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String type=jacper.getString("type");
+	
+	String parent_id =jacper.getString("parent_id");
+	String node_name = jacper.getString("node_name");
+	String node_title = jacper.getString("node_title");
+	String seq = jacper.getString("seq");
+	String current_stat = jacper.getString("current_stat");
+	String node_desc = jacper.getString("node_desc");
+	String node_id = "";
+
+	if (type.equals("save")){
+		try{
+				String from=jacper.getStr("from");
+				if(from.equals("menu")){
+					parent_id = jacper.getString("id");
+				}
+				node_id = SQLUtils.getNextVal(conPlat,18)+"";
+				conUtils.exec("insert into $[utils].portal_node (node_id,parent_id,node_name,node_title,seq,current_stat,node_desc) values (?,?,?,?,?,?,?)",new String[]{node_id,parent_id,node_name,node_title,seq,current_stat,node_desc});
+				
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conUtils.close();
+				conPlat.close();
+			}
+	}else if (type.equals("updatesave")){
+		try{
+				node_id = jacper.getString("id");
+				conUtils.exec("update $[utils].portal_node set node_name=?,node_title=?,seq=?,current_stat=?,node_desc=? where node_id=?",new String[]{node_name,node_title,seq,current_stat,node_desc,node_id});
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conUtils.close();
+				conPlat.close();
+			}
+	}else if(type.equals("delete")){
+		try{
+				node_id = jacper.getString("id");
+				conUtils.exec("delete from $[utils].portal_node where  node_id=?",new String[]{""+node_id});
+				conUtils.exec("delete from $[utils].portal_content where  node_id=?",new String[]{""+node_id});
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conUtils.close();
+				conPlat.close();
+			}	
+	}
+}
+}

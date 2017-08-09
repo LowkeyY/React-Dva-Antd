@@ -1,0 +1,155 @@
+import com.kinglib.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.ui.core.*;
+import com.kinglib.ui.core.parser.*;
+import com.kinglib.ui.core.list.ListExtendCondition;
+import com.kinglib.ui.program.*;
+import com.kinglib.util.json.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.*;
+import com.kinglib.ui.tree.*;
+import com.kinglib.workbench.widget.*;
+
+@class{
+
+	private String getTableId(Param param){
+		String type=param.getStr("type");
+		String objectId=param.getStr("objectId");
+		String tabId="-998";
+
+		try{
+			Connection conPlat=param.getConnection("plat");
+			if(type.equals("program")){
+				tabId=com.kinglib.workbench.program.ProgramFactory.getInstance().getProgram(conPlat,objectId).getTabId();
+			}else if(type.equals("tree")){
+				String[] rs=conPlat.getRow("select tab_id from $[plat].ctrl_tree where ctrl_id=?",new String[]{objectId});
+				if(rs!=null && rs.length>0){
+					tabId=rs[0];
+				}
+			}else if(type.equals("widget")){
+				tabId=com.kinglib.workbench.widget.WidgetFactory.getWidget(conPlat,objectId).getTab1Id();
+			}else if(type.equals("quality")){
+				if(objectId.indexOf(":")==-1){
+					String[] rs=conPlat.getRow("select b.tab_id from $[plat].QUALITY_INSTANCE a,$[plat].QUALITY_BASE b where a.object_id=b.object_id and  a.instance_id=?",new String[]{objectId});
+					if(rs!=null && rs.length>0){
+						tabId=rs[0];
+					}
+				}else{
+					tabId=objectId.split(":")[1];
+				}
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		return tabId;
+	}
+
+
+	public void doPut(Jacper jacper){
+		Param param=new Param(jacper);
+		String objectId=param.getStr("objectId");
+		String type=param.getStr("type");
+		Connection conPlat=param.getConnection("plat");
+		String json=param.getStr("json");
+		try{
+			conPlat.exec("delete from  $[plat].prg_query where object_id=?",new String[]{objectId});
+			if(json.length()>0){
+				String tabId=this.getTableId(param);
+				if(tabId.equals("-998"))
+					return;
+				String sql=ListExtendCondition.praseSql(json,MetaFactory.getObject(tabId),"_A_L_I_A_S").toString();
+				conPlat.exec("insert into $[plat].prg_query(object_id,structure,sql) values(?,?,?)",new String[]{objectId,json,sql});
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			try{
+				if(type.equals("program")||type.equals("widget")){
+					ObjectNode node=ObjectManager.getObject(objectId);
+					if(node.getType()==ObjectType.PROGRAM){
+						CustomizeFactory.remove(objectId);
+					}
+				}else if(type.equals("tree")){
+					String cid=(json.length()==0)?"":objectId;
+					conPlat.exec("update $[plat].ctrl_tree set sql_extend=? where ctrl_id=?",new String[]{cid,objectId});
+					String[] rs=conPlat.getRow("select module_id  from $[plat].ctrl_tree where ctrl_id=?",new String[]{objectId});
+					if(rs!=null){
+						TreeFactory.getInstance().remove(rs[0]);
+					}
+				}
+			}catch(Exception e){
+			}
+			conPlat.close();
+		}
+
+	}
+
+	public void doPost(Jacper jacper){
+		try{	
+			Param param=new Param(jacper);
+			String tabId=this.getTableId(param);
+		
+			if(tabId.equals("-998")) return;
+			jacper.print("[");
+			boolean haveComma=false;
+			for(Column c:MetaFactory.getObject(tabId).getColumns()){
+				if(!haveComma){
+					haveComma=true;
+				}else{
+					jacper.print(",");
+				}
+				jacper.print("{'text':'"+c.getLname()+"','dataIndex':'"+c.getPname()+"','type':'"+c.getDataType()+"'}");
+			}
+			jacper.print("]");
+			param.closeAllConnection();
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+
+
+	public void doGet(Jacper jacper){
+		String json="";
+		try{
+			Param param=new Param(jacper);
+			String objectId=param.getStr("objectId");
+			String firstColName=param.getStr("node");
+			Connection conPlat=param.getConnection("plat");
+			String[] result=conPlat.getRow("select structure from $[plat].prg_query where object_id=?",new String[]{objectId});
+			if(result==null || result.length==0){
+				String tabId=this.getTableId(param);
+				if(tabId.equals("-998"))
+					return;
+				JSONArray jarr=new JSONArray();
+				Column c=MetaFactory.getObject(tabId).getColumnByName(firstColName);
+				String name=c.getPname();
+				String action="=";
+				if(c.getDataType()==DataType.VARCHAR){
+					action="like";
+				}
+				JSONObject jo=new JSONObject();
+				jo.put("text",jacper.trans("组:并且"));
+				jo.put("action","and");
+				jo.put("uiProvider","col");
+				JSONArray child=new JSONArray();
+					JSONObject joc=new JSONObject();
+					joc.put("leaf",true);
+					joc.put("name",name);
+					joc.put("action",action);
+					joc.put("value","");
+					joc.put("uiProvider","col");
+				child.put(joc);
+				jo.put("children",child);
+				jarr.put(jo);
+				json=jarr.toString();
+			}else{
+				json="["+result[0]+"]";
+			}
+			param.closeAllConnection();
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		jacper.print(json);
+
+	}
+}

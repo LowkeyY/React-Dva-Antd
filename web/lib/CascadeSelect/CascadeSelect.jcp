@@ -1,0 +1,97 @@
+
+import java.io.IOException;
+
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.widget.*;
+import com.kinglib.database.*;
+import java.util.*;
+import com.kinglib.ui.core.list.ListExtendCondition;
+
+@class{
+   
+	private String getJson(String[][] data,String[] columns){
+		if(data==null) return "";
+		JSONArray jarr=new JSONArray();
+		try{
+			for(int i=0;i<data.length;i++){
+				JSONObject items = new JSONObject("{}");
+				for(int j=0;j<columns.length;j++)
+					items.put(columns[j],data[i][j]);
+				jarr.put(items);
+			}
+		}catch(Exception e){}
+		return "{items:"+jarr+"}";
+	}
+	
+
+	public void doPost(Jacper jacper){  
+
+		jacper.setSession();
+		Connection conPlat = jacper.getConnection("plat"); 
+		String type= jacper.getStr("type");
+
+		String[][] groups=null;
+		String objectId = jacper.getString("objectId","-1");
+		Widget wid=WidgetFactory.getWidget(conPlat,objectId);
+		if(wid==null) return;
+
+
+		MetaTable mt=MetaFactory.getObject(wid.getTab1Id());
+		StringBuilder pname=new StringBuilder(50);
+		if(wid.getExportColumn()!=null){
+			String[] exportSplit = wid.getExportColumn().split(",");
+			for(int k=0;k<exportSplit.length;k++){
+				CoreUtils.appendSelect(pname, mt.getColumn(exportSplit[k]));
+				pname.append(",");
+			}
+		}
+		String dbLink=mt.getDblink();
+		Connection conApp = jacper.getConnection(dbLink);
+
+		CoreUtils.appendSelect(pname, mt.getColumn(wid.getTitleitem()));
+
+		StringBuilder sql=new StringBuilder(pname.length()+100);
+		sql.append("select  ").append(pname).append(" from ").append(mt.getName()).append(" a ");
+
+		Param param=new Param(jacper);
+		CoreUtils.appendWhereClause(sql, ListExtendCondition.getCondition(param,conPlat, objectId), false);
+
+		CoreUtils.appendWhereClause(sql, NavgatorHandler.generateCondition(param,mt,null), sql.indexOf("where")!=-1);
+		
+		if(wid.getOrderByitem()!=null&&!"".equals(wid.getOrderByitem())&&mt.getColumn(wid.getOrderByitem())!=null){
+          sql.append(" order by ").append(mt.getColumn(wid.getOrderByitem()).getPname()).append(" ").append(wid.getOrderBy());
+        }
+        
+		groups = conApp.get(sql.toString(),new String[]{});
+
+		JSONArray jarr=new JSONArray();
+		try{
+			int j;
+			for(int i=0;i<groups.length;i++){
+				StringBuffer sbf=new StringBuffer(20);
+				JSONObject items = new JSONObject();
+				for(j=0;j<groups[i].length-1;j++){
+					if(j>0) sbf.append("::");
+					sbf.append(groups[i][j]);
+				}
+				items.put("text",groups[i][j]);
+				items.put("value",sbf.toString());
+				jarr.put(items);
+			}
+		}catch(Exception e){
+			
+		}finally{
+			conPlat.close();
+		}
+
+		jacper.print("{items:"+jarr+"}");
+
+	}
+
+}

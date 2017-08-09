@@ -1,0 +1,136 @@
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+	public void doGet(Jacper jacper){
+			Connection conPlat = jacper.getConnection("plat");
+			String type=jacper.getStr("type");
+
+			if(type.equals("step")){
+				try{
+					JSONObject optionsJSON = new JSONObject("{}");
+
+					jacper.getResponse().setContentType("application/x-json");
+
+					String parent_id=jacper.getStr("parent_id");
+					String[][] relateProgram= conPlat.get("select a.object_id,a.act_name FROM $[plat].workflowact a,$[plat].object_base b where a.object_id=b.object_id and  b.parent_id=?",new String[]{parent_id});
+					
+					JSONArray jarr=new JSONArray();
+					for (int i = 0; i <relateProgram.length; i++){
+							JSONObject items = new JSONObject("{}");
+							items.put("id",relateProgram[i][0]);
+							items.put("label",relateProgram[i][1]);
+							jarr.put(items);
+					}
+					optionsJSON.put("ActArray",jarr);
+					<??>optionsJSON.toString()<??>;
+				}catch(Exception e){
+					e.printStackTrace();
+				}finally{
+					conPlat.close();
+				}
+			}else if(type.equals("result")){
+				
+				String parent_id = jacper.getStr("parent_id");
+				String pathType = jacper.getStr("pathType");
+				try{
+					JSONObject optionsJSON = new JSONObject();
+					jacper.getResponse().setContentType("application/x-json");
+					StringBuffer optionsb = new StringBuffer();
+					String optionsString ="";
+					ObjectManager OM=ObjectManager.getInstance();
+					ObjectNode wfNode=OM.getObject(parent_id);
+					ObjectNode groupNode=wfNode.upTo(ObjectType.APPLICATIONGROUP);
+					String[][] result = conPlat.get("select strategy_id,strategy_name from $[plat].sys_strategy where group_id=?",new String[]{groupNode.getId()+""});
+					if(result.length != 0){
+						for(int i=0;i<result.length;i++){
+							if(pathType.equals("absStrategy")){
+								optionsb.append(",['r:").append(result[i][0]).append("','").append(result[i][1]).append("']");
+							}else{
+								optionsb.append(",['d:").append(result[i][0]).append("','").append(result[i][1]).append("']");
+							}
+						}
+						if(optionsb.toString().length()!=0)
+							optionsString = "[" + optionsb.toString().substring(1) + "]";
+					}
+					optionsJSON.put("roleArray",optionsString);
+					<??>optionsJSON.toString()<??>;
+				}catch(Exception e){
+					e.printStackTrace();
+				}finally{
+					conPlat.close();
+				}
+		}else if(type.equals("program")){
+				String stepBindId = jacper.getStr("stepBindId");
+				try{
+				
+					String[][] result = conPlat.get("select c.object_id,c.prglogic_name from $[plat].object_base a,$[plat].object_base b,$[plat].prg_base c where a.parent_id=? and a.object_id=b.parent_id and b.object_id=c.object_id  order by c.object_id",new String[]{stepBindId});
+					
+					JSONObject optionsJSON = new JSONObject("{}");
+					jacper.getResponse().setContentType("application/x-json");
+					JSONArray programArr=new JSONArray();
+					for(int i=0;i<result.length;i++){
+						JSONObject items = new JSONObject("{}");
+						items.put("id",result[i][0]);
+						items.put("label",result[i][1]);
+						programArr.put(items);
+					}
+					optionsJSON.put("programs",programArr);
+					<??>optionsJSON.toString()<??>;	
+				}catch(Exception e){
+					e.printStackTrace();
+				}finally{
+					conPlat.close();
+				}
+		}else if(type.equals("logicProgram")){
+				String parentId = jacper.getStr("parent_id");
+				try{
+					String[][] result = conPlat.get("select c.object_id,d.prglogic_name from $[plat].object_base a,$[plat].object_base b,$[plat].object_base c,$[plat].prg_base d  where a.parent_id=? and a.object_id=b.parent_id  and b.object_id=c.parent_id and c.object_id=d.object_id  and d.PRGTYPE='8' order by c.object_id",new String[]{parentId});
+					JSONObject optionsJSON = new JSONObject("{}");
+					jacper.getResponse().setContentType("application/x-json");
+					JSONArray programArr=new JSONArray();
+					for(int i=0;i<result.length;i++){
+						JSONObject items = new JSONObject("{}");
+						items.put("id",result[i][0]);
+						items.put("label",result[i][1]);
+						programArr.put(items);
+					}
+					optionsJSON.put("programs",programArr);
+					<??>optionsJSON.toString()<??>;	
+				}catch(Exception e){
+					e.printStackTrace();
+				}finally{
+					conPlat.close();
+				}
+		}else if(type.equals("button")){
+				String id = jacper.getStr("id");
+				String stepBindType = jacper.getStr("stepBindType");
+				try{
+					String[][] result =null;
+					if(stepBindType.equals("new")||stepBindType.equals("view")||stepBindType.equals("edit")){
+						result = conPlat.get("select d.seq,d.button_name from $[plat].ctrl_button d where d.module_id=? and d.page_type=? order by d.seq",new String[]{id,stepBindType});
+					}else{
+						result = conPlat.get("select d.seq,d.button_name from $[plat].ctrl_button d where d.module_id=? order by d.seq",new String[]{id});
+					}
+					JSONObject optionsJSON = new JSONObject("{}");
+					jacper.getResponse().setContentType("application/x-json");
+					JSONArray buttonArr=new JSONArray();
+					for(int i=0;i<result.length;i++){
+						JSONObject items = new JSONObject("{}");
+						items.put("id",result[i][0]);
+						items.put("label",result[i][1]);
+						buttonArr.put(items);
+					}
+					optionsJSON.put("buttons",buttonArr);
+					<??>optionsJSON.toString()<??>;	
+				}catch(Exception e){
+					e.printStackTrace();
+				}finally{
+					conPlat.close();
+				}
+		}
+	}
+}
+

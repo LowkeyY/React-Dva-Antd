@@ -1,0 +1,89 @@
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+<title>系统帮助</title>
+
+
+<script type="text/javascript">
+document.write(['<style type="text/css">',top.window._STYLES,'</style>'].join('\r'));
+</script>
+<script type="text/javascript">
+window.eval.call(window, top.window._SCRIPTS);
+</script>
+<script>using("lib.jsvm.MenuTree");</SCRIPT>
+<link rel="stylesheet" type="text/css" href="/lib/alert/alert.css" />
+<tree_store style="behavior:url(#default#userdata);" id="tree_store"/>
+
+<script src='/lib/FCKeditor/fckeditor.js'></script>
+<script src='/lib/FCKeditor/ExtFckeditor.js'></script>
+<script type="text/javascript" src="/lib/alert/alert.js"></script>
+
+<script type="text/javascript" src="HelpPanel.js"></script>
+<script type="text/javascript" src="HelpNavPanel.js"></script>
+<script type="text/javascript" src="HelpPublishPanel.js"></script>
+<script type="text/javascript" src="HelpDetailPanel.js"></script>
+
+<script type="text/javascript">
+  var Help={};
+  Ext.onReady(function(){
+		Help.params={};
+/*		Help.mainPanel=new Ext.TabPanel({
+				region: 'center',
+				margins:'0 0 0 0', 
+				activeTab: 0,
+				deferredRender:false,
+				enableTabScroll:true,
+				monitorResize: true,
+				items:[{
+					id: 'welcome.html',
+					title: '欢迎',
+					closable:false,
+					autoScroll:true,
+					autoLoad: {url: '/home/system/help/welcome.html', scripts: true}
+				}]
+		});*/
+			Help.mainPanel=new Ext.Panel({
+				id:'ChartMain',
+				region:'center',
+				collapsible: false,
+				split:true,	
+				layout:'fit',
+				margins:'3 3 3 0',
+				items:[{
+					id: 'welcome.html',
+					title: '欢迎',
+					closable:false,
+					autoScroll:true,
+					autoLoad: {url: '/home/system/help/welcome.html', scripts: true}
+				}]
+		});   
+		Help.navPanel = new HelpNavPanel();
+		Help.Frame=new Ext.Viewport({
+						layout:'border',
+						items:[
+									Help.navPanel,Help.mainPanel
+						 ]
+		});
+	//	Help.navPanel.focusHistoryNode();
+});
+
+
+</script>
+</head>
+<body  style="margin:0px;padding:0px;" >
+<div id="body" style="font:normal 12px verdana; margin:0;padding:0;border:0 none; overflow:hidden;height:100%;width:100%;">	
+	  <div id="west">			
+			<table width="100%" height="100%" cellspacing="0" cellpadding="0" valign="top">
+				<tr>
+					<td bgcolor=white id='TreeDemo' style="border:1 solid #7F9DB9" valign="top">
+						<div style="width:100%;height:100%;overflow:auto">
+							<div id=resource_table></div>
+						</div>
+					</td>
+				</tr>
+			</table>
+	  </div>
+<div id="center" style="height:100%;width:100%;"></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,92 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.database.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.utils.*;
+import com.susing.sql.DataSourceFactory;
+import com.kinglib.bi.*;
+import java.util.ArrayList;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectType;
+import com.kinglib.workbench.ObjectNode;
+
+
+
+@class{
+	public void doPost(Jacper jacper){
+		
+		Log.flush();
+		Connection conLocal=jacper.getConnection("plat");
+		int startRow = jacper.getInt("start",0);
+		int rowCount = jacper.getInt("limit",100);
+		
+		String fTime = jacper.getStr("fTime");
+		String sTime = jacper.getStr("sTime");
+		String combo = jacper.getStr("combo");
+		String conText = jacper.getStr("conText");
+		String catText = jacper.getStr("catText");
+		String userId = jacper.getStr("userId");
+		
+		StringBuilder sql = new StringBuilder(200);
+		String sb  ="select $date_str(ENTRY_DATE,120),LOG_LEVEL,CONTENT,CATEGORY,RECORDER from $[plat].Log";
+		
+		
+		if(fTime.length()>0){
+			sql.append(sql.length()==0?" where ":" and ");
+			sql.append("ENTRY_DATE>=$str_date('").append(fTime).append("',111)");
+		
+		}
+		if(sTime.length()>0){
+			sql.append(sql.length()==0?" where ":" and ");
+			sql.append("ENTRY_DATE<$str_date('").append(sTime).append("',111)");
+		}
+		
+		if(combo.length()>0){
+				sql.append(sql.length()==0?" where ":" and ");
+				sql.append("LOG_LEVEL=").append(combo);
+		}
+		if(conText.length()>0){
+			sql.append(sql.length()==0?" where ":" and ");
+			sql.append("CONTENT like '%").append(conText).append("%'");
+		}
+		
+		if(catText.length()>0){
+			sql.append(sql.length()==0?" where ":" and ");
+			sql.append("CATEGORY like '%").append(catText).append("%'");
+		}
+		if(userId.length()>0){
+			sql.append(sql.length()==0?" where ":" and ");
+			sql.append("RECORDER like '%").append(userId).append("%'");
+		}
+		try{
+			JSONObject relJSON = new JSONObject();
+			String[] mcount =conLocal.getRow("select count(*) from $[plat].Log "+sql.toString());
+			String[][] rs=conLocal.get(sb+sql.toString()+" order by ENTRY_DATE desc",startRow,rowCount);
+			
+			if(rs!=null){
+				JSONArray data = new JSONArray();
+				for(int i=0;i<rs.length;i++){
+					JSONObject rowJSON = new JSONObject();
+					rowJSON.put("ENTRY_DATE",rs[i][0]);
+					rowJSON.put("LOG_LEVEL",rs[i][1]);
+					rowJSON.put("CONTENT",rs[i][2]);
+					rowJSON.put("CATEGORY",rs[i][3]);
+					rowJSON.put("RECORDER",rs[i][4]);
+					data.put(rowJSON);
+				}
+				relJSON.put("data",data);
+				relJSON.put("totalNumber",Integer.parseInt(mcount[0]));
+				jacper.print(relJSON);
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+			jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+		}finally{
+				conLocal.close();
+		}
+	}
+	public void doGet(Jacper jacper){
+		doPost(jacper);
+	}
+}

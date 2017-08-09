@@ -1,0 +1,57 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.grid.*;
+import com.social.api.core.model.*; 
+@class{
+	public void doGet(Jacper jacper){
+
+		Connection conCert= jacper.getConnection("cert");	
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		long user_id=hs.uid; 
+		String orgId="";
+
+		if (user_id==0||user_id==1){
+			Organization org=CertManager.getPrimaryOrg();
+			orgId=org.getId();
+		}else{
+			User user=CertManager.getUser(user_id+"");
+			orgId=user.getOrgId();
+		}
+
+		String firtim = jacper.getStr("first");
+		String sectim = jacper.getStr("second");
+
+		String sort = jacper.getStr("sort");
+		String dir = jacper.getStr("dir");
+
+		String sql ="$[cert].user_base a,$[cert].user_logs c where a.user_id=c.usr_id and ";
+		String[] param=null;
+
+		if(firtim.equals("")||sectim.equals("")){
+			 param=new String[]{orgId};
+			 sql += "a.org_id=? and  $datediff($getdate(),login_date)<30";
+		}else{
+			param=new String[]{orgId,firtim,sectim};
+			sql += "a.org_id=? and  login_date between $str_date(?,111) and $str_date(?,111)";
+		}
+
+		sql="select max(a.real_name),count(c.session_id),max($minutediff(c.login_date,c.update_date)),$date_str(max(c.login_date),111) from "+sql;
+
+		sql+=" group by c.usr_id";
+
+		int startRow = jacper.getInt("start",0);
+		int rowCount = jacper.getInt("limit",0);
+
+		Grid gd=new Grid(sql,jacper.trans("姓名"),	new String[]{jacper.trans("姓名"),jacper.trans("访问次数"),jacper.trans("使用时间(分钟)"),jacper.trans("最后访问时间")});
+		JSONObject gridJSON=gd.getJSON(conCert,param,startRow,rowCount,dir,sort);
+		jacper.getResponse().setContentType("application/x-json");
+                jacper.print(gridJSON.toString());
+		//<?(?>gridJSON.toString()<?)?>;
+		conCert.close();
+	}
+}

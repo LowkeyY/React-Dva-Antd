@@ -1,0 +1,470 @@
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.SQLUtils;
+import com.kinglib.bi.QueryExtend;
+import com.kinglib.bi.QueryExtendFactory;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.ui.core.utils.CoreUtils;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.ui.tree.TreeFactory;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.util.json.JSONValue;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.workbench.widget.*;
+import com.kinglib.workbench.application.Application;
+import com.kinglib.workbench.application.ApplicationFactory;
+import com.kinglibx.query.Query;
+
+import java.util.*;
+import java.text.Collator;
+
+@class{  
+	private String[] cols = { "module_id", "ctrl_id", "data_type",
+			"datasource", "tab_id", "level_num", "tree_type", "titleitem_id",
+			"parentitem_id", "sonitem_id", "importitem", "exportitem",
+			"order_column", "order_type", "start_icon", "end_icon","data_auth","task_type", "target_type",
+			"target","target_id","target_task","tree_herf","tree_herf2","tree_herf3"};
+
+	private int targetPos=18;
+	
+	private String getSql = null;           
+
+	private String insertSql = null;
+
+	private String updatetSql = null;
+
+	public void doGet(Jacper jacper) {
+		jacper.getSession();
+		String ctrl_id = jacper.getString("ctrl_id");
+		boolean meta = jacper.getStr("meta").equals("true");
+		String objectId = jacper.getStr("objectId");
+		Connection conPlat = jacper.getConnection("plat");
+		try {
+			JSONObject retJson = new JSONObject();
+			if (meta) {
+				JSONObject metas = getMetaData(jacper,objectId, ctrl_id, conPlat);
+				retJson.put("meta", metas);
+				if(metas.has("ctrl_id"))
+					ctrl_id = metas.getString("ctrl_id");
+			}
+			if (ctrl_id == null) {
+				retJson.put("state", "new");
+			} else {
+				retJson.put("state", "edit");
+				if (getSql == null) {
+					StringBuilder sql = new StringBuilder();
+					sql.append("select ");
+					for (int i = 0; i < cols.length; i++) {
+						if (i > 0)
+							sql.append(",");
+						sql.append(cols[i]);
+					}
+					sql
+							.append(" from $[plat].ctrl_tree where module_id=? and ctrl_id=?");
+					getSql = sql.toString();
+				}
+				retJson.put("ctrl_id", ctrl_id);
+				retJson.put("objectId", objectId);
+				String[] rs = conPlat.getRow(getSql, new String[] { objectId,
+						ctrl_id });
+				retJson.put("data", jsonFill(conPlat, rs));
+				retJson.put("tableColumn", getItems(rs[2], rs[4], conPlat));
+				int g=targetPos;
+				JSONArray jarr=null;
+				if(rs[g].equals(""))
+						jarr=new JSONArray("['0','','','','','','','','','']");
+				else
+						jarr=new JSONArray("['"+rs[g]+"','"+rs[g+1]+"','"+rs[g+2]+"','','','','"+rs[g+3]+"','"+rs[g+4]+"','"+rs[g+5]+"','"+rs[g+6]+"']");
+				retJson.put("target_type",jarr);
+			}
+			jacper.print(retJson);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			conPlat.close();
+		}
+	}            
+
+
+	public void doPost(Jacper jacper) {
+
+		String id = jacper.getStr("node");
+		boolean allowSelect = true;
+		String icon = "/themes/icon/all/table.gif";
+		ArrayList<String[]> al = new ArrayList<String[]>(5);
+		if (id.indexOf(":") == -1) {
+			allowSelect = false;
+			ObjectNode pnode = ObjectManager.getObject(id);
+			if (pnode == null)
+				return;
+			HashSet<String> dbLinkSet = new HashSet<String>();
+			ApplicationFactory appFactory = ApplicationFactory.getInstance();
+			Application app = null;
+			Connection conPlat = jacper.getConnection("plat");
+			icon = "/themes/icon/all/server_database.gif";
+			String dbLink = null;
+
+			for (ObjectNode node : pnode.upTo(ObjectType.SYSTEM)
+					.findAllChildsByType(ObjectType.APPLICATION)) {
+				app = appFactory.getApplication(conPlat, String.valueOf(node
+						.getId()));
+				dbLink = (app == null) ? null : app.getDatabaseLink();
+				if (dbLink != null)
+					dbLinkSet.add(dbLink);
+			}
+
+			conPlat.close();
+
+			for (String key : dbLinkSet) {
+				if (key.equals("plat") || key.equals("cert")
+						|| key.equals("utils") || key.equals("work")
+						|| key.equals("kingle") || key.equals("mdsys"))
+					continue;
+				al.add(new String[] { id + ":" + key, key, "false" });
+			}
+
+		} else {
+			String[] ids = id.split(":");
+			ObjectNode pnode = ObjectManager.getObject(ids[0]);
+			MetaTable mt = null;
+			for (ObjectNode node : pnode.upTo(ObjectType.SYSTEM)
+					.findAllChildsByType(ObjectType.METATABLE)) {
+				mt = MetaFactory.getObject(node.getId());
+				if (mt != null && mt.getDblink().equals(ids[1]))
+					al.add(new String[] { String.valueOf(node.getId()),
+							mt.getLname(), "true" });
+			}
+
+		}
+		try {
+			JSONArray treeJSONArray = new JSONArray();
+			for (String[] r : order(al)) {
+				JSONObject resultJSON = new JSONObject();
+				resultJSON.put("text", r[1]);
+				resultJSON.put("allowSelect", allowSelect);
+				resultJSON.put("leaf", allowSelect);
+				resultJSON.put("id", r[0]);
+				resultJSON.put("icon", icon);
+				treeJSONArray.put(resultJSON);
+			}
+			jacper.print(treeJSONArray.toString());
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void doPut(Jacper jacper) {
+		jacper.getSession();
+		Param param = new Param(jacper);
+		Connection conPlat = param.getConnection("plat");
+
+		String objectId = param.getStr("objectId");
+		String ctrl_id = param.getStr("ctrl_id");
+		boolean isInsert = (ctrl_id.equals("-1"));
+
+		try {
+			conPlat.setAutoCommit(false);
+			int start = 0, len = cols.length;
+			String msql;
+			if (isInsert) {
+				if (insertSql == null) {
+					StringBuilder sql = new StringBuilder();
+					sql.append("insert into $[plat].ctrl_tree (");
+					for (int i = 0; i < cols.length; i++) {
+						if (i > 0)
+							sql.append(",");
+						sql.append(cols[i]);
+					}
+					sql.append(") values (");
+					for (int i = 0; i < cols.length; i++) {
+						if (i > 0)
+							sql.append(",");
+						sql.append("?");
+					}
+					insertSql = sql.append(")").toString();
+				}
+				msql = insertSql;
+			} else {
+				start = 7;
+				len = len - start + 2;
+				if (updatetSql == null) {
+					StringBuilder sql = new StringBuilder();
+					sql.append("update $[plat].ctrl_tree set ");
+					for (int i = start; i < cols.length; i++) {
+						if (i > start)
+							sql.append(",");
+						sql.append(cols[i]).append("=?");
+					}
+					sql.append(" where module_id=? and ctrl_id=?");
+					updatetSql = sql.toString();
+				}
+				msql = updatetSql;
+			}
+			String[] value = new String[len];
+			for (int i = 0, j = targetPos-start-1; i < j; i++) {
+				value[i] = param.getStr(cols[i + start]);
+			}		
+			JSONArray js=new JSONArray(param.getStr("target_type"));
+			String task_type = "";
+			String target=js.getString(1);
+			String[] ids=target.split(",");
+			if(!target.equals("0")){
+				for(int i=0;i<ids.length;i++){
+					if(i>0) task_type+=",";
+					if(ids[i].equals("%define"))
+						task_type+="#";
+					else{
+						ObjectNode node=ObjectManager.getObject(ids[i]);
+						if(node!=null){
+							int type=node.getType();
+							if(type==ObjectType.PROGRAM){
+								task_type+=((ProgramNode)node).getProgramType().getValue();
+							}else if(type==ObjectType.WIDGET){
+								task_type+=((WidgetNode)node).getWidgetType().toString();
+							}
+						}
+					}
+				}
+			}
+			
+			int iconPos=targetPos-start;
+
+			value[iconPos-1]=task_type;
+			value[iconPos]=js.getString(0);
+			value[iconPos+1]=target;
+			value[iconPos+2]=js.getString(2);
+			value[iconPos+3]=js.getString(6);
+			value[iconPos+4]=js.getString(7);
+			value[iconPos+5]=js.getString(8);
+			value[iconPos+6]=js.getString(9);	
+			iconPos=cols.length-start;
+			if (isInsert) {
+				value[1] = String.valueOf(SQLUtils.getNextVal(conPlat, 1));
+				value[2]="1";
+				if (value[2].equals("1")) {
+					MetaTable mt = MetaFactory.getObject(value[4]);
+					value[3] = mt.getDblink();
+				} else {
+					value[4]=param.getStr("query_id");
+					QueryExtendFactory queryEF = QueryExtendFactory.getInstance();
+					QueryExtend QE = queryEF.getQueryExtend(conPlat, value[4]);
+					value[3] = QE.getServer(conPlat, value[4]);
+				}
+			} else {
+				iconPos=value.length;
+				value[iconPos - 2] = objectId;
+				value[iconPos - 1] = ctrl_id;
+			}
+			conPlat.exec(msql, value);
+			conPlat.commit();
+			try {
+				if (!isInsert) {
+					TreeFactory.getInstance().remove(objectId);
+				}
+			} catch (Exception e){
+			}
+			if (isInsert) {
+				JSONObject json = new JSONObject();
+				json.put("success", true);
+				JSONObject item = new JSONObject();
+				item.put("objectId", objectId);
+				item.put("ctrl_id", value[1]);
+				item.put("tree_type", value[6]);
+				item.put("text", jacper.trans("第x层"));
+				json.put("menu", item);
+				jacper.print(json);
+			} else {
+				jacper.print("{success:true,id:'" + objectId + "'}");
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			} catch (Exception e1) {
+			}
+			jacper.print("{success:false,id:'" + e.toString() + "'}");
+		} finally {
+			try {
+				conPlat.setAutoCommit(true);
+			} catch (Exception e) {
+			}
+			conPlat.close();
+		}
+	}
+
+	public void doDelete(Jacper jacper) {
+		jacper.getSession();
+		Param param = new Param(jacper);
+		String type = param.getString("ntype");
+		String objectId = param.getStr("objectId");
+		Connection conPlat = jacper.getConnection("plat");
+		
+		try {
+			if(type==null){
+			
+				conPlat
+					.exec(
+							"delete from $[plat].ctrl_tree where ctrl_id=? and module_id=?",
+							new String[] { param.getStr("ctrl_id"),objectId });
+				conPlat
+						.exec(
+								"delete from $[plat].ctrl_tree_icon_map where ctrl_id=? and module_id=?",
+								new String[] { param.getStr("ctrl_id"),objectId });
+				conPlat.exec("delete from  $[plat].prg_query where object_id=?",
+						new String[] { param.getStr("ctrl_id") });
+				TreeFactory.getInstance().remove(objectId);
+				jacper.print("{success:true}");
+			}else{
+				jacper.print(getItems(type, objectId, conPlat));
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			jacper.print("{success:false,message:'" + e.toString() + "'}");
+		} finally {
+			conPlat.close();
+		}
+	}
+
+	private JSONObject jsonFill(Connection conPlat, String[] rs) {
+		String indexTable = "titleitem_id,parentitem_id,sonitem_id,order_column,tab_id";
+		JSONObject navJSON = new JSONObject();
+		boolean isQuery = rs[2].equals("2");
+		MetaTable mt = (isQuery) ? null : MetaFactory.getObject(rs[4]);
+		if (!isQuery && mt == null)
+			isQuery = true;
+
+		try {
+			for (int j = 0; j < targetPos; j++) {
+				if (indexTable.indexOf(cols[j]) == -1) {
+					navJSON.put(cols[j], rs[j]);
+				} else if (cols[j].equals("tab_id")) {
+					String lname = null;
+					if (isQuery) {
+						QueryExtendFactory queryEF = QueryExtendFactory
+								.getInstance();
+						QueryExtend QE = queryEF.getQueryExtend(conPlat, rs[j]);
+						lname = QE.getQuery().getName();
+					} else {
+						lname = mt.getLname();
+					}
+					navJSON.put(cols[j], new JSONValue(CoreUtils
+							.createTextValueJSON(lname, rs[j])));
+				} else {
+					if(rs[j].trim().equals("")){
+						navJSON.put(cols[j],new JSONValue(CoreUtils
+									.createTextValueJSON("","")));
+					}else{
+						String mtitle=rs[j];
+						if(!isQuery){
+							MetaColumn mc=mt.getColumnByName(rs[j]);
+							if(mc!=null)
+								mtitle=mc.getLname();
+						}
+						String s=CoreUtils.createTextValueJSON(mtitle,rs[j]);
+						navJSON.put(cols[j],new JSONValue(s));
+					}
+				}
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return navJSON;
+	}
+
+	private JSONObject getMetaData(Jacper jacper,String objectId, String ctrlId,
+			Connection conPlat) throws JSONException {
+		JSONObject retJson = new JSONObject();
+		String sqlLevel = "select ctrl_id,tree_type from $[plat].ctrl_tree where module_id=? order by level_num";
+		String[][] levels = conPlat.get(sqlLevel, new String[] { objectId },
+				2000);
+		JSONArray levelArr = new JSONArray();
+		JSONObject item = null;
+		if (levels != null && levels.length > 0) {
+			if (ctrlId == null)
+				retJson.put("ctrl_id", levels[0][0]);
+			for (int i = 0; i < levels.length; i++) {
+				item = new JSONObject();
+				item.put("objectId", objectId);
+				item.put("ctrl_id", levels[i][0]);
+				item.put("tree_type", levels[i][1]);
+				item.put("text", jacper.trans("第") + (i + 1) + jacper.trans("层"));
+				levelArr.put(item);
+			}
+		} else if (ctrlId != null) {
+			retJson.put("ctrl_id", ctrlId);
+		}
+		retJson.put("levels", levelArr);
+		JSONArray queryArr = new JSONArray(), ctem = null;
+		ObjectNode node = ObjectManager.getObject(objectId);
+		for (ObjectNode n : node.upTo(ObjectType.SYSTEM).findAllChildsByType(
+				ObjectType.QUERY)) {
+			ctem = new JSONArray();
+			ctem.put(n.getName());
+			ctem.put(n.getId());
+			queryArr.put(ctem);
+		}
+		retJson.put("query", queryArr);
+		return retJson;
+	}
+
+	private JSONValue getItems(String type, String id, Connection conPlat) {
+		String[][] rs = null;
+		if (!type.equals("2")) {
+			MetaTable mt = MetaFactory.getObject(id);
+			if (mt != null) {
+				rs = new String[mt.getColumnCount()][2];
+				int i = 0;
+				for (MetaColumn mc : mt.getColumns()) {
+					rs[i][0] = mc.getLname();
+					rs[i++][1] = mc.getPname();
+				}
+			}
+		} else {
+			QueryExtendFactory queryEF = QueryExtendFactory.getInstance();
+			QueryExtend QE = queryEF
+					.getQueryExtend(conPlat,id);
+			Query query = QE.getQuery();
+			String[] title = query.getCells();
+			rs = new String[title.length][2];
+			for (int i = 0; i < rs.length; i++) {
+				rs[i][0] = rs[i][1] = title[i];
+			}
+		}
+		return (rs == null) ? new JSONValue("{}") : CoreUtils.table2Json(rs,
+				null);
+	}
+
+	//中文拼音排序，性能很差，以后有时间工具类里重写
+	public ArrayList<String[]> order(ArrayList<String[]> al) {
+		Comparator cmp = Collator.getInstance(java.util.Locale.CHINA);
+		String cur, t;
+		int pos = 0;
+		String[] tmp = null;
+		for (int i = 0; i < al.size() - 1; i++) {
+			cur = al.get(i)[1];
+			pos = i;
+			for (int j = i + 1; j < al.size(); j++) {
+				t = al.get(j)[1];
+				if (cmp.compare(t,cur)<0) {
+					cur = t;
+					pos = j;
+				}
+			}
+			if (pos != i) {
+				tmp = al.get(i);
+				al.set(i, al.get(pos));
+				al.set(pos, tmp);
+			}
+		}
+		return al;
+	}
+
+}

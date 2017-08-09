@@ -1,0 +1,87 @@
+
+
+import com.kinglib.*;
+
+import com.kinglib.util.json.*;
+import com.kinglib.database.*;
+
+@class{
+	public void doGet(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		String objectId=jacper.getStr("objectId");
+
+		String[][] conditionArray=conPlat.get("select c.tab_id,c.tabitem_id,c.condition_type,c.widget_id from $[plat].ctrl_condition c   where c.object_id=?",new String[]{objectId});
+
+		jacper.getResponse().setContentType("application/x-json");		
+		try{
+				JSONObject conditionJSON = new JSONObject("{}");
+				JSONArray conditionJSONArray=new JSONArray();
+				String[] onecondition;
+				for(int i=0;i<conditionArray.length;i++){
+					JSONObject tempJSON = new JSONObject("{}");
+					onecondition=conditionArray[i];
+					MetaTable mt = MetaFactory.getObject(onecondition[0]);
+					MetaColumn MCA= mt.getColumn(Integer.parseInt(onecondition[1]));
+					tempJSON.put("tab_id",onecondition[0]);
+					tempJSON.put("tab_lname",mt.getLname());
+					tempJSON.put("tabitem_id",onecondition[1]);
+					tempJSON.put("tabitem_lname",MCA.getLname());
+					tempJSON.put("condition_type",onecondition[2]);
+					tempJSON.put("widget_id",onecondition[3]);
+					conditionJSONArray.put(tempJSON);
+				}
+				conditionJSON.put("columnArray",conditionJSONArray);
+				jacper.print(conditionJSON.toString());
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+}
+public void doPost(Jacper jacper){	
+	Connection conPlat = jacper.getConnection("plat");
+	String objectId=jacper.getStr("objectId");
+	String[] tabs = jacper.getArray("tabs");
+	String[][] values=new String[tabs.length][6];  
+
+	String[] columns = jacper.getArray("columns");
+	String[] titles = jacper.getArray("titles");
+	String[] types = jacper.getArray("types");
+	String[] widgets = jacper.getArray("widgets");
+
+	if(tabs.length==0){ 
+		conPlat.exec("delete from $[plat].ctrl_condition where object_id=?",new String[]{objectId});
+		<?{success:true}?>;
+		return;
+	}
+
+	for(int i=0;i<tabs.length;i++){
+		values[i][0]=objectId;
+		values[i][1]=tabs[i];
+		values[i][2]=columns[i];
+		values[i][3]=titles[i];
+		values[i][4]=types[i];
+		values[i][5]=widgets[i];
+	}
+	try{	
+		conPlat.setAutoCommit(false);
+		conPlat.exec("delete from $[plat].ctrl_condition where object_id=?",new String[]{objectId});
+		conPlat.exec("insert into $[plat].ctrl_condition(object_id,tab_id,tabitem_id,title,condition_type,widget_id) values(?,?,?,?,?,?)",values);
+		//workflow.instanceconditionClear(instanceId);
+		//workflow.instanceconditionInit(values);
+		conPlat.commit();
+		<?{success:true}?>;
+	}catch(Exception e){
+		try {
+			conPlat.rollback();
+		}catch(Exception e1) {}
+		String msg=e.toString().replaceAll("\\'","\\\\'");
+		<?{success:false,message:"?>jacper.trans("错误:")+msg<?"}?>;
+	}finally {
+		try {
+			conPlat.setAutoCommit(true);
+		}catch(Exception e2) {}
+		conPlat.close();
+	}
+}	
+}

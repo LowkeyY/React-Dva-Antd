@@ -1,0 +1,132 @@
+
+
+import java.util.UUID;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.integrate.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String id = jacper.getString("instanceId","0");
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+			JSONObject instanceJSON = new JSONObject("{}");
+			String[] rs = conPlat.getRow("select integrate_id,instance_id,instance_name,host,hostport,username,password,program,args,status,note,entry_name,$date_str(entry_date,111) from $[plat].integrate_instance where instance_id=?",new String[]{""+id});      
+			if(rs!=null){
+				instanceJSON.put("integrateId",rs[0]);
+				instanceJSON.put("instanceId",rs[1]);
+				instanceJSON.put("instanceName",rs[2]);
+				instanceJSON.put("host",rs[3]);
+				instanceJSON.put("hostPort",rs[4]);
+				instanceJSON.put("userName",rs[5]);
+				instanceJSON.put("password",rs[6]);
+				instanceJSON.put("program",rs[7]);
+				instanceJSON.put("args",rs[8]);
+				instanceJSON.put("status",rs[9]);
+				instanceJSON.put("note",rs[10]);
+				instanceJSON.put("entryName",rs[11]);
+				instanceJSON.put("entryDate",rs[12]);
+			}
+		  <?{success:true,data:?>instanceJSON.toString()<?}?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+
+		String integrateId=jacper.getStr("parent_id");
+		String instanceName=jacper.getStr("instanceName");
+		String host=jacper.getStr("host");
+		String userName=jacper.getStr("userName");
+		String password=jacper.getStr("password");
+		String program=jacper.getStr("program");
+		String args=jacper.getStr("args");
+		String note=jacper.getStr("note");
+		String status=jacper.getStr("status");
+		String hostPort=jacper.getStr("hostPort");
+
+		String type=jacper.getStr("type");		
+
+		IntegrateFactory IFactory=IntegrateFactory.getInstance();
+		
+		if(type.equals("save")){
+			String instanceId  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				instanceId = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				instanceId =UUID.randomUUID().toString();
+			}
+			String[] insed = conPlat.getRow("select count(instance_name) from $[plat].integrate_instance where instance_name=?",new String[]{instanceName});
+			if(insed[0].equals("0")){
+				try{	
+					conPlat.exec("insert into $[plat].integrate_instance (integrate_id,instance_id,instance_name,host,hostport,username,password,program,args,status,note,entry_name,entry_date) values (?,?,?,?,?,?,?,?,?,'true',?,?,$getdate())",new String[]{integrateId,instanceId+"",instanceName,host,hostPort,userName,password,program,args,note,user_id+""});
+					IFactory.clear();
+					<?{success:true,instanceId:'?>instanceId<?'}?>;
+				}catch(Exception e){
+					<?{success:false,message:"?>e.toString()<?"}?>;
+				}finally{
+					conPlat.close();
+				}
+			}else{
+				<?{success:false,message:"?>jacper.trans("实例名与已有的实例重名,请选择其他名称")<?"}?>;
+			}
+		}else if(type.equals("updatesave")){
+			try{	
+			    String instanceId=jacper.getStr("instanceId");
+				conPlat.exec("update $[plat].integrate_instance set instance_name=?,host=?,hostport=?,username=?,password=?,program=?,args=?,note=? where instance_id=?",new String[]{instanceName,host,hostPort,userName,password,program,args,note,instanceId+""});
+				IFactory.clear();
+				<?{success:true,instanceId:'?>instanceId<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(type.equals("delete")){
+			try{	
+				String instanceId=jacper.getStr("instanceId");
+				conPlat.exec("delete from $[plat].integrate_instance where instance_id=?",new String[]{instanceId+""});
+				conPlat.exec("delete from $[plat].integrate_auth where instance_id=?",new String[]{instanceId+""});
+				IFactory.clear();
+				<?{success:true,instanceId:'?>instanceId<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(type.equals("lock")){
+			try{	
+				String instanceId=jacper.getStr("instanceId");
+				String[] statusArray = conPlat.getRow("select status from $[plat].integrate_instance where instance_id=?",new String[]{instanceId});
+				if(statusArray[0].equals("true")){
+					conPlat.exec("update $[plat].integrate_instance set status='false' where instance_id=?",new String[]{instanceId+""});
+				}else{
+					conPlat.exec("update $[plat].integrate_instance set status='true' where instance_id=?",new String[]{instanceId+""});
+				}
+				IFactory.clear();
+				<?{success:true,instanceId:'?>instanceId<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}
+	}
+}

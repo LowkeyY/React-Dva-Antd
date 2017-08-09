@@ -1,0 +1,136 @@
+
+import java.util.*;
+
+import com.kinglib.*;
+import com.kinglib.bi.*;
+import com.kinglib.gis.*;
+import com.kinglibx.query.*;
+import com.kinglib.util.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.program.*;
+import oracle.spatial.geometry.JGeometry;
+import oracle.sql.STRUCT;
+import com.kinglib.util.json.*;
+import com.kinglib.util.RandomStr;
+import com.kinglib.workbench.search.*;
+
+@class{
+	public void doGet(Jacper jacper){
+	boolean isLogin = jacper.setSession();   
+	HttpSession hs = jacper.getSession();
+
+	String mapId=jacper.getString("mapId","0");
+	String exportData = jacper.getStr("exportData");
+	String searchType = jacper.getStr("searchId");
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	try{
+		    JSONObject searchJSON = new JSONObject();	
+			searchJSON.put("success",true);
+			String[] exportArray=exportData.split(",");
+			String paramString="";
+
+			SearchIndexFactory SIF=SearchIndexFactory.getInstance();
+			//String [][] results=SIF.getIndexSearch(conPlat,searchType);
+			ArrayList<String[]>  results=SIF.getIndexSearch(conPlat,searchType);
+			ArrayList resultList=new ArrayList();
+
+			for(int k=0;k<exportArray.length;k++){
+				for(int i=0;i<results.size();i++){
+					String[] tmp=results.get(i);
+					if(tmp[9].equals(exportArray[k])){
+						resultList.add(tmp);
+					}
+				}
+			}
+			String[][] searchResults=new String[resultList.size()][9];
+			resultList.toArray(searchResults);
+
+			JSONArray jarr=new JSONArray();
+			if(searchResults.length>0){
+				JSONObject titleJSON = new JSONObject();
+				RandomStr.setCharset("A-Z");
+				RandomStr.setLength(8+"");
+				try {
+					RandomStr.generateRandomObject();
+				}catch(Exception e) {
+					e.printStackTrace();
+				}
+				String catId=RandomStr.getRandom();
+				String subCategory=searchResults[0][2];
+				titleJSON = new JSONObject();
+				titleJSON.put("menuName",subCategory);
+				titleJSON.put("menuId",catId);
+				titleJSON.put("_parent","");
+				titleJSON.put("_level",1);
+				titleJSON.put("_is_loaded",true);
+				titleJSON.put("_is_leaf",false);
+				titleJSON.put("searchId","");
+				jarr.put(titleJSON);
+				for(int i=0;i<searchResults.length;i++){
+					if(!searchResults[i][2].equals(subCategory)){
+						try {
+							RandomStr.generateRandomObject();
+						}catch(Exception e) {
+							e.printStackTrace();
+						}
+						catId=RandomStr.getRandom();
+						subCategory=searchResults[i][2];
+						titleJSON = new JSONObject();
+						titleJSON.put("menuName",subCategory);
+						titleJSON.put("menuId",catId);
+						titleJSON.put("_parent","");
+						titleJSON.put("_level",1);
+						titleJSON.put("searchId","");
+						jarr.put(titleJSON);
+					}
+					try {
+						RandomStr.generateRandomObject();
+					}catch(Exception e) {
+						e.printStackTrace();
+					}
+					String searchId=searchResults[i][8];
+					IndexSearch indexSearch =SearchFactory.getInstance().getIndexSearch(conPlat,searchId);
+					String queryId=indexSearch.getQueryId();
+					QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+					QueryExtend QE=queryEF.getQueryExtend(conPlat,queryId);
+					String expTab="";
+					String expItem="";
+					String exportItemString=indexSearch.getExpItem();
+					String[] exportItem=exportItemString.split(",");
+					for(int j=0;j<exportItem.length;j++){
+						String finalItem=QE.getFinalItem(conPlat,queryId,exportItem[j]);
+						int lastDot=finalItem.lastIndexOf(".");
+						String tabName=finalItem.substring(0,lastDot);
+						MetaTable mt=MetaFactory.getObjectWithFullName(tabName);
+						expTab=mt.getObjectId()+"";
+						String tabItem=finalItem.substring(lastDot+1);
+						expItem=","+tabItem;		
+					}
+					expItem=expItem.substring(1);
+					String itemId=RandomStr.getRandom();
+
+					titleJSON = new JSONObject();
+					titleJSON.put("menuName",searchResults[i][1]);
+					titleJSON.put("menuId",itemId);
+					titleJSON.put("_parent",catId);
+					titleJSON.put("_level",2);
+					titleJSON.put("exportData",searchResults[i][3]);
+					titleJSON.put("searchId",searchResults[i][8]);
+					titleJSON.put("exportTab",expTab);
+					titleJSON.put("exportItem",expItem);
+					jarr.put(titleJSON);
+				}			
+			}
+			jacper.getResponse().setContentType("application/x-json");
+			searchJSON.put("menuArray",jarr);
+			jacper.print(searchJSON);
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}}
+
+

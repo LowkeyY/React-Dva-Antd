@@ -1,0 +1,11 @@
+import java.io.IOException;      
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+
+@class{
+public void doPost(Jacper jacper){
+	<?[{'text':'My Folders','id':'20393','type':1,'iconCls':'db-ft-root-small','allowDrag':false,'children':[{'text':'My Documents','id':'20396','type':4,'iconCls':'db-ft-folder-small','children':[{'text':'test','id':'20541','type':4,'children':[],'expanded':true,'iconCls':'db-ft-folder-small'},{'text':'uuuu','id':'44328','type':4,'iconCls':'db-ft-folder-small','children':[{'text':'rtrt','id':'44329','type':4,'children':[],'expanded':true,'iconCls':'db-ft-folder-small'}],'expanded':true},{'text':'广告歌','id':'44325','type':4,'children':[],'expanded':true,'iconCls':'db-ft-folder-small'},{'text':'忍忍忍','id':'44327','type':4,'children':[],'expanded':true,'iconCls':'db-ft-folder-small'}],'expanded':true},{'text':'My Videos','id':'20397','type':4,'children':[],'expanded':true,'iconCls':'db-ft-folder-small'}],'expanded':true},{'text':'My Photo Gallery','id':'20394','type':3,'iconCls':'db-ft-gallery-small','allowDrag':false,'children':[{'text':'My Album','id':'20399','type':5,'children':[],'expanded':true,'iconCls':'db-ft-album-small'}],'expanded':true},{'text':'Published','id':'PublishedItems','type':12,'iconCls':'db-ft-published-small','allowDrag':false,'allowDrop':false,'children':[{'text':'Files','id':'PublishedFiles','type':13,'children':[],'expanded':true,'iconCls':'db-ft-published-files-small','allowDrag':false,'allowDrop':false},{'text':'Folders','id':'PublishedFolders','type':14,'children':[],'expanded':true,'iconCls':'db-ft-published-folders-small','allowDrag':false,'allowDrop':false}],'expanded':true},{'text':'My Network','id':'MyNetwork','type':6,'children':[],'expanded':true,'iconCls':'db-ft-network-small','allowDrag':false,'allowDrop':false},{'text':'Recycle Bin','id':'20395','type':2,'children':[],'expanded':true,'iconCls':'db-ft-recyclebin-small','allowDrag':false}]?>;
+}
+}

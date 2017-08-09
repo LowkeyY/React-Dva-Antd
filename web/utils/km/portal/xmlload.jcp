@@ -1,0 +1,118 @@
+
+
+import com.kinglib.*;
+
+@class{
+
+	public void doGet(Jacper jacper){
+		
+		Connection conUtils = jacper.getConnection("utils");
+		Connection conTmp = null;
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+
+
+		//画表
+        
+		String[][] rs = conUtils.get("select count(portal_id) from $[utils].portal",new String[]{},0);
+		String haveChild=rs[0][0];
+
+		<?<html>
+		<head><title>navigator</title>
+		<link rel='stylesheet' type='text/css' href='/themes/css/standard.css'>
+		<meta http-equiv="Content-Type" content="text/html;">
+		<yacus style="behavior:url(#default#userdata);" id="__YACUS_CACHE"/>
+		<SCRIPT SRC="/JavaScript">
+		ClientInit();
+		</SCRIPT>
+		<script>
+		susing("MButton","Menu","MenuTree");  
+		var event1 = new Object();
+
+		event1.title_click = function(){
+			if ( this.prop.herfs1 == undefined ) 
+				return false;
+				
+			if (this.prop.framenum!=0&&this.prop.framenum==1){
+				window.open(encodeURI(this.prop.herfs1)+"&ran="+Math.random(),this.prop.target1,"");
+			}
+		}
+
+  
+		function main()
+		{  
+			var sourceTable,closeLeft,leftwin,btEditor,btExport,btImport;
+			var menuTree = null;
+			menuTree = new MenuTree(Tool.parseXML('<root _id="root"><forder _hasChild="?>haveChild<?"><e _id="top" _parent="root" title="?>jacper.trans("门户系统")<?" url="tree.jcp?level=1"  href="create.jcp?type=new" target="centermid1" icon0="/themes/icon/xp/axx.gif" icon1="/themes/icon/xp/axx.gif"/></forder></root>'));
+			menuTree.setEvent("event1",event1);
+			
+			menuTree.finish(TreeDemo);
+			function fcloseLeft()
+			{	
+				if(_LEFTWIN_.style.display == 'none')
+				{ 
+					_LEFTWIN_.style.display = '';
+					parent.rightFrame.cols="20%,80%";
+				}
+				else
+				{
+					_LEFTWIN_.style.display = 'none';
+					parent.rightFrame.cols="0,*";
+				}
+			}
+
+			closeLeft= new MButton("?>jacper.trans("关闭")<?",null,18,18,"<center style='font-size:16px'>ｘ</center>");
+			closeLeft.click=fcloseLeft;
+			
+			closeLeft.finish(closeleft);
+		}
+		</SCRIPT>
+
+		<body bottomMargin="0" rightMargin="0" topMargin="0" leftMargin="0" style="overflow:auto"   >
+		<table width="100%" height=100% cellspacing="0" cellpadding="0">
+				<tr><td>
+				<table width="100%" height=100% cellspacing="0" cellpadding="0">
+				<tr>
+				<table width="100%" height="100%" cellspacing="0" cellpadding="0" id=_LEFTWIN_>
+										<tr>
+											<td bgcolor="#C4DAFA" width="3" rowspan="4"></td>
+											<td bgcolor="#C4DAFA" height="3"></td>
+										</tr>
+										<tr>
+											<td height="25">
+											<table width="100%" cellspacing="0" cellpadding="0" background="/themes/images/frame/bg1.gif">
+												<tr>
+													<td width=7><img src="/themes/images/frame/t1.gif"></td>
+													<td>&nbsp;<b>?>jacper.trans("门户系统")<?</b></td>
+													<td id=leftbar width=30></td>
+													<td width=20 id=closeleft></td>
+												</tr>
+											</table>
+											</td>
+										</tr>
+										
+										<tr>
+											<td style="FILTER:progid:DXImageTransform.Microsoft.Gradient(gradientType=0,startColorStr=#E9F2FE,endColorStr=#4B7AC9);padding:5">
+
+											<table width="100%" height="100%" cellspacing="0" cellpadding="0" valign="top">
+													<tr height=10><td>&nbsp</td></tr>	
+													<tr height="100%">
+														<td bgcolor=white id=TreeDemo style="border:1 solid #7F9DB9" valign="top"><div style="width:100%;height:100%;overflow:auto"><div id=resource_table>	
+														</head>
+														</div></div></td>
+													</tr>
+													<tr height=10><td></td></tr>
+											</table>
+											</td>
+										</tr>
+								</table>
+							</tr>
+						</table>
+				</td></tr>
+		</body></html>
+		?>;
+	}
+}
+

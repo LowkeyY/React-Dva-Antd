@@ -1,0 +1,11 @@
+
+import com.kinglib.*;
+import com.kinglib.ui.menu.MenuFactory;
+@class{
+	public void doGet(Jacper jacper){ 
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String id=jacper.getString("id");
+		jacper.print(MenuFactory.getInstance().getNoAuthTopMenuJson(id,String.valueOf(hs.uid)));
+	}
+} 

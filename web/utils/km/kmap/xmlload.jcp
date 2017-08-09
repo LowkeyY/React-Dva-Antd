@@ -1,0 +1,147 @@
+//更改日期06/3/16
+import java.io.IOException;
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import java.util.Vector;
+import java.util.Calendar;
+   
+@class{
+
+
+	public void doGet(Jacper jacper){
+		
+		Connection conUtils = jacper.getConnection("utils");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+
+	
+		String view=jacper.getStr("view");
+
+		String par = "0";
+		String href = "";
+		String dept_id = "0";
+		String target = "";
+		String hasChild = "0";
+
+		String dept = jacper.trans("知识目录");
+
+		String ss[]=conUtils.getRow("select son from $[utils].kmap_category where parent_id=? ",new String[]{par});
+		if(ss!=null){
+			if(Integer.parseInt(ss[0])>0)
+				hasChild="1";
+		}
+		if(user_id==1||user_id==0){
+			href = "categorycreate.jcp?parent_id="+par+"&amp;ran="+Math.random();
+		}else{
+			href = "categorycreate.jcp?type=view&amp;parent_id=-999&amp;ran="+Math.random();
+		}
+		target =  "centermid1";
+
+		int dbType=conUtils.getType();
+
+		<?<html>
+		<head><title>navigator</title>
+		<link rel='stylesheet' type='text/css' href='/themes/css/standard.css'>
+		<meta http-equiv="Content-Type" content="text/html;">
+		<yacus style="behavior:url(#default#userdata);" id="__YACUS_CACHE"/>
+		<SCRIPT SRC="/JavaScript">
+		ClientInit();
+		</SCRIPT>
+		<script>
+		
+		susing("MButton","MenuTree");  
+		var event1 = new Object();
+	
+		function main()
+		{  
+			var sourceTable,closeLeft,leftwin,btEditor,btExport,btImport;
+			var menuTree = new MenuTree(Tool.parseXML('<root _id="root"><forder _hasChild="1"><e _id="?>par<?" _parent="root" title="?>dept<?" target="?>target<?" href="?>href<?" url="categorytree.jcp?id=?>par<?&amp;view=?>view<?"/></forder></root>'));
+			menuTree.setEvent("event1",event1);			
+			menuTree.finish(TreeDemo);
+			function fcloseLeft()
+			{	
+				if(_LEFTWIN_.style.display == 'none')
+				{ 
+					_LEFTWIN_.style.display = '';
+					parent.rightFrame.cols="20%,80%";
+				}
+				else
+				{
+					_LEFTWIN_.style.display = 'none';
+					parent.rightFrame.cols="0,*";
+				}
+			}
+			closeLeft= new MButton("?>jacper.trans("关闭")<?",null,18,18,"<center style='font-size:16px'>ｘ</center>");
+			closeLeft.click=fcloseLeft;
+			
+			closeLeft.finish(closeleft);
+		}
+		</SCRIPT>
+
+		<body bottomMargin="0" rightMargin="0" topMargin="0" leftMargin="0" style="overflow:auto"   >
+		<table width="100%" height=100% cellspacing="0" cellpadding="0">
+				<tr><td>
+				<table width="100%" height=100% cellspacing="0" cellpadding="0">
+				<tr>
+				<table width="100%" height="100%" cellspacing="0" cellpadding="0" id=_LEFTWIN_>
+										<tr>
+											<td bgcolor="#C4DAFA" width="3" rowspan="4"></td>
+											<td bgcolor="#C4DAFA" height="3"></td>
+										</tr>
+										<tr>
+											<td height="25">
+											<table width="100%" cellspacing="0" cellpadding="0" background="/themes/images/frame/bg1.gif">
+												<tr>
+													<td width=7><img src="/themes/images/frame/t1.gif"></td>
+													<td>&nbsp;<b>?>jacper.trans("知识管理")<?</b></td>
+													<td id=leftbar width=30></td>
+													<td width=20 id=closeleft></td>
+												</tr>
+											</table>
+											<table width="100%" cellspacing cellpadding background="/themes/images/bg3.gif" height="10%">
+													<tr><td width="100%">
+														<table style="color: #000000" width="100%"><form name=search action="categorycreate.jcp" target=centermid1 method=get>
+														<tr><td>?>jacper.trans("搜索")<?:?>;
+														if(dbType==com.susing.EasyConnection.ORACLE){
+															<?<input type="radio" name="seatype" value="0" checked>?>jacper.trans("内容")<??>;	
+														}else{
+															<?<input type="radio" name="seatype" value="2" checked>?>jacper.trans("标题")<??>;	
+														}
+														<?<input type="radio" name="seatype" value="1" >?>jacper.trans("附件名")<?</td></tr><tr>
+														<td>		
+														<input type="text" name=key size="12">&nbsp;
+														<button type="submit" ><img src="/themes/icon/common/search.gif" align='absmiddle'>&nbsp;?>jacper.trans("搜索")<?</button>	
+														<input type=hidden name=type value=search>
+														</td>
+														</tr>
+														</form>
+												   </table>
+											</td></tr>
+											</tr>
+											</table>
+										</td>
+										</tr>
+										<tr>
+											<td style="FILTER:progid:DXImageTransform.Microsoft.Gradient(gradientType=0,startColorStr=#E9F2FE,endColorStr=#4B7AC9);padding:5">
+											<table width="100%" height="100%" cellspacing="0" cellpadding="0" valign="top">
+												<tr height=10><td>&nbsp</td></tr>	
+												<tr>
+													<td bgcolor=white id=TreeDemo style="border:1 solid #7F9DB9" valign="top"><div style="width:100%;height:100%;overflow:auto"><div id=resource_table>	
+													</head>
+													</div></div></td>
+												</tr>
+												<tr height=10><td></td></tr>
+											</table>
+											</td>
+										</tr>
+								</table>
+							</tr>
+						</table>
+				</td></tr>
+		</body></html>
+		?>;
+	}
+}

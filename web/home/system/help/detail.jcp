@@ -1,0 +1,68 @@
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.*;
+import com.kinglib.util.json.*;
+import java.util.*;
+
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id = hs.uid;
+	
+
+	String type = jacper.getStr("type");
+	String help_id = jacper.getString("help_id","error");
+
+	String help_name=null;
+	String seq=null;
+	String help_detail=null;
+	String pos = "";		   
+    String[] rs2 = conPlat.getRow("select url,parent_id from $[plat].help_content where help_id=?",new String[]{help_id+""});
+	pos=rs2[0];
+
+	Object[] rs1 = conPlat.getLarge(
+	"select help_name,help_detail from $[plat].help_content where help_id=?",
+	new String[]{help_id+""});
+	help_name=rs1[0].toString();
+	help_detail=rs1[1].toString();
+	help_detail = help_detail.replaceAll("'","' ");
+	String attach_file="";
+	
+	String[] rss=null;		
+	jacper.getResponse().setContentType("application/x-json");
+	try{
+		StringBuffer sbf=new StringBuffer(1000);
+		String[][]  rs0 = conPlat.get("select help_id from $[plat].help_content where parent_id=?",	new String[]{help_id+""},0);
+		for(int i=0;i<rs0.length;i++){
+			Object [] rs = conPlat.getLarge("select help_name,seq,help_detail from $[plat].help_content where help_id=?",
+			new String[]{rs0[i][0]+""});
+			help_name=rs[0].toString();
+			seq=rs[1].toString();
+			help_detail=rs[2].toString();
+			help_detail = help_detail.replaceAll("'","' ");
+			attach_file="";
+			
+			if(user_id==1||user_id==0){
+				sbf.append("<table cellspacing cellpadding  width=95% ><H1 STYLE='margin-top: 1px;'><strong><font size=3 color='#005D9C'>&nbsp;&nbsp;&nbsp;&nbsp;"+help_name+"</font></strong><a href='detail.jcp?type=del&help_id="+rs0[i][0]+" style='color:#ffffff'><IMG SRC='/themes/icon/common/delete.gif' WIDTH='16' HEIGHT='16' BORDER='0' ALT='删除'></a></H1><table align=center width='95%'><tr><td><table><tr><td>"+help_detail+"</td></tr><tr><td>"+attach_file+"</td></tr></table></td></tr></table>");
+		
+			}else{
+				sbf.append("<table cellspacing cellpadding  width=95% ><H1 STYLE='margin-top: 1px;'><strong><font size=3 color='#005D9C'>&nbsp;&nbsp;&nbsp;&nbsp;"+help_name+"</font></strong></H1><table align=center width='95%'><tr><td><table><tr><td>"+help_detail+"</td></tr><tr><td>"+attach_file+"</td></tr></table></td></tr></table>");
+			}
+		}
+		jacper.print(sbf);
+
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+
+}
+
+}

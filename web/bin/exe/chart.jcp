@@ -1,0 +1,124 @@
+               
+
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.bi.chart.*;  
+import com.kinglib.workbench.program.*;
+import java.io.*;
+import java.awt.*;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import com.kinglib.bi.*;
+
+@class{
+
+
+	//获取chart
+	public void doGet(Jacper jacper){
+
+		HttpSession hs = jacper.getSession();
+		String userId= String.valueOf(hs.uid);
+		Connection conPlat = jacper.getConnection("plat");
+		String objectId=jacper.getString("objectId","-1");
+		
+		
+		String renderType=jacper.getString("renderType");
+		if(renderType==null){
+			renderType="chartfx";
+		}
+		
+		
+		String chartId=jacper.getStr("chartId");
+
+		if(chartId.length()==0){
+			Program prg =ProgramFactory.getInstance().getProgram(conPlat,objectId);
+			
+			chartId=String.valueOf(prg.getChartId());
+		}
+		
+		try{
+			int width = jacper.getInt("width",800);  
+			int height = jacper.getInt("height",600);
+			String oid=objectId;
+			Chart c=null;
+			if(!objectId.equals("-1") && UserDefineChart.getInstance().hasDefined(userId,oid)){
+				c=UserDefineChart.getInstance().getChart(jacper.getConnection("cert"),oid,userId,renderType);
+			}else{
+				c=ChartFactory.getInstance().getChart(conPlat,chartId,renderType);
+			}
+			Object result=c.build(jacper,conPlat,width,height);
+			
+			if(renderType.equals("chartfx")){
+				ImageIO.write((BufferedImage)result, "PNG", jacper.getOutputStream());
+			}else{
+				if(result instanceof JSONPart){
+					JSONPart ret=(JSONPart)result;
+					String queryId = c.get("queryId");
+					QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+					QueryExtend QE=queryEF.getQueryExtend(conPlat,queryId);
+					QuerySearch qs=null;
+					
+					if(!objectId.equals("-1")){
+						qs= QE.getQuerySearch(conPlat);
+						JSONValue jval=ButtonFactory.getJson(conPlat, objectId,userId);
+						if(jval!=null){
+							ret.join("buttonArray", jval);
+						}
+					}else{
+						qs= QE.getFullQuerySearch(conPlat);
+					}
+					if (JSExtend.getInstance().hasDefined(oid)) {
+						Object[][] enventBody = conPlat.getLarges(
+								"select field_name,event_name,event_body,tab_id from $[plat].prg_jsext where object_id=?",
+								new String[] { oid });
+						JSONObject formEvent = new JSONObject();
+						for (int i = 0; i < enventBody.length; i++) {
+							CtrlEvent.parseEventBody(enventBody[i], CtrlEvent.isUserDefine("FormPanel",
+									(String) enventBody[i][1]), CtrlEvent.getEvent("FormPanel", (String) enventBody[i][1]),
+									formEvent);
+						}
+						if (formEvent.length() > 0) {
+							ret.join("events", formEvent);
+						}
+					}
+					JSONObject searchEditor=qs.getSearchEditor(jacper,conPlat);
+					ret.join("searchEditor",searchEditor);	
+					jacper.print(ret);
+				}else{
+					jacper.print(result);
+				}
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+	
+
+	//获取动态数据
+	public void doPost(Jacper jacper){
+
+		boolean isLogin = jacper.setSession();
+		Connection conPlat = jacper.getConnection("plat");
+		String objectId=jacper.getStr("objectId");
+		String renderType=jacper.getStr("renderType");
+		try{
+			Program prg =ProgramFactory.getInstance().getProgram(conPlat,objectId);
+			String chartId=String.valueOf(prg.getChartId());
+
+			DynamicMonitor dm=ChartFactory.getInstance().getDynamicMonitor(chartId,renderType);
+			if(dm!=null)
+				jacper.print(dm.getLatestData(jacper,conPlat));
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+
+}
+ 

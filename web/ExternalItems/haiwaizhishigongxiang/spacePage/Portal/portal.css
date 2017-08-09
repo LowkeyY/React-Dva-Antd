@@ -1,0 +1,81 @@
+/*
+ * Ext JS Library 2.3.0
+ * Copyright(c) 2006-2009, Ext JS, LLC.
+ * licensing@extjs.com
+ * 
+ * http://extjs.com/license
+ */
+
+.x-portal .x-panel-dd-spacer {
+    margin-bottom:10px;
+}
+
+.x-portlet {
+    margin-bottom:10px;
+}
+
+/* Clean up the look of the portlets */
+.x-portlet .x-panel-ml {
+    padding-left:2px;
+}
+.x-portlet .x-panel-mr {
+    padding-right:2px;
+}
+.x-portlet .x-panel-bl {
+    padding-left:2px;
+}
+
+.x-portlet .x-panel-br {
+    padding-right:2px;
+}
+.x-portlet .x-panel-body {
+    background:white;
+}
+.x-portlet .x-panel-mc {
+	background:white;
+    padding-top:0px;
+}
+.x-portlet .x-panel-bc .x-panel-footer {
+    padding-bottom:2px;
+}
+.x-portlet .x-panel-nofooter .x-panel-bc {
+    height:2px;
+}
+.x-portlet .x-panel-tl .x-panel-header{
+padding:8px 0;
+}
+.x-portlet .x-panel-tl{
+border:none;
+}
+.x-portlet .x-panel-tl .x-panel-icon,.x-window-tl .x-panel-icon{
+background-position:0 8px;
+}
+.x-portlet .x-panel-header-text{
+font-weight:bold;
+}
+.x-portlet .x-panel-tl,.x-portlet .x-panel-tr,.x-portlet .x-panel-bl,.x-portlet .x-panel-br{
+background-image:url(/ExternalItems/haiwaizhishigongxiang/spacePage/images/portlet/corners-sprite.gif);
+}
+.x-portlet .x-panel-tc,.x-portlet .x-panel-bc{
+background-image:url(/ExternalItems/haiwaizhishigongxiang/spacePage/images/portlet/top-bottom.gif);
+}
+.x-portlet .x-panel-ml,.x-portlet .x-panel-mr{
+background-image:url(/ExternalItems/haiwaizhishigongxiang/spacePage/images/portlet/left-right.gif);
+}
+.x-portlet  .x-grid3 .x-grid3-row-over {
+	cursor:pointer;
+}
+
+/*图标*/
+.iportal-icon-btn-save{background-image:url(/ExternalItems/haiwaizhishigongxiang/spacePage/images/icons/save.gif)!important;}
+.iportal-icon-btn-desktopList{background-image:url(/ExternalItems/haiwaizhishigongxiang/spacePage/images/icons/icon-desktop-list.png)!important;}
+.iportal-icon-rss-1{background-image:url(/ExternalItems/haiwaizhishigongxiang/spacePage/images/icons/icon-rss-1.png)!important;}
+.iportal-icon-system-notice{background-image:url(/ExternalItems/haiwaizhishigongxiang/spacePage/images/icons/system-notice.gif)!important;}
+.iportal-icon-weather{background-image:url(/ExternalItems/haiwaizhishigongxiang/spacePage/images/icons/weather.png)!important;}
+.iportal-icon-order-s-accept{background-image:url(/ExternalItems/haiwaizhishigongxiang/spacePage/images/icons/accept.png)!important;}
+.iportal-icon-dialog-cancel{background-image:url(/ExternalItems/haiwaizhishigongxiang/spacePage/images/icons/dialog_cancel.png)!important;}
+.iportal-icon-mail{background-image:url(../themes/icon/all/email.gif)!important;}
+
+.iportal-icon-upload{background-image:url(/themes/icon/xp/upload.gif)!important;}
+.iportal-icon-download{background-image:url(/themes/icon/xp/download.gif)!important;}
+.iportal-icon-chart{background-image:url(/themes/icon/xp/chart.gif)!important;}

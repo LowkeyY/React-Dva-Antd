@@ -1,0 +1,35 @@
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+      public void doPost(Jacper jacper){
+      	Connection conPlat = jacper.getConnection("plat");
+      	
+      	String objectId=jacper.getString("objectId");
+      	String htmlData=jacper.getString("htmlData");
+      	HttpSession hs = jacper.getSession();
+      	long user_id = hs.uid;
+      	
+      	if (!("".equals(objectId))) {
+      			try{
+      			String category_id = SQLUtils.getNextVal(conPlat,"13");
+      			String[][] rsObjectName = conPlat.get("select object_name from object_base where object_id=?",new String[]{objectId});
+      			String[][] rsObjectId = conPlat.get("select category_id from help_category where object_id=?",new String[]{objectId});
+      			if (rsObjectId.length==1){
+      					conPlat.execLarge("update $[plat].help_category set note=?,update_time=$getdate(),update_user=? where category_id=?",new String[]{htmlData,user_id+"",rsObjectId[0][0]});
+      					jacper.print("{success:true}");
+      			} else if (rsObjectId.length==0){
+						conPlat.execLarge("insert into $[plat].help_category (category_id,object_id,category_name,note,parent_id,create_user,son,create_time,update_time) values (?,?,?,?,0,?,0,$getdate(),$getdate())",new String[]{category_id,objectId,rsObjectName[0][0],htmlData,user_id+""});
+						jacper.print("{success:true}");      					
+      			}
+      			} 
+      				catch(Exception e){
+      							e.printStackTrace();
+								jacper.print(jacper.trans("未找到请求的页面,错误为")+e.getMessage());
+      			}
+      	} else {
+      			jacper.print("{success:flase}");
+      	}
+      }
+}

@@ -1,0 +1,84 @@
+
+SPAN .unit{
+	background:transparent url(/Ext/resources/images/default/toolbar/btn-arrow.gif) no-repeat scroll right 3px;
+	display:block;
+}
+.tree_viewer{
+	padding:0px 0px;
+	font-size:12px;
+	width:100%;
+	height:100%;
+	overflow:auto;
+}
+.tree_viewer SPAN{
+	padding:3 2 0 2;
+}
+.tree_viewer IMG.icon{
+	margin:2 5 0 0;
+	width:16;
+}
+.tree_viewer IMG{
+	margin:2px 0 0 0;
+	width:21;
+	height:16;
+	border:0;
+}
+.tree_viewer A{
+	text-decoration:none;
+	color:#000080
+}
+.tree_viewer A SPAN.focus{
+	text-decoration:none;
+	color:highlighttext
+}
+.tree_viewer A:hover{
+	text-decoration:underline;
+	color: red;
+}
+.tree_viewer DIV.line,.tree_viewer DIV.bottom{
+	background-repeat: no-repeat;
+	background-position: left top
+}
+.tree_viewer DIV.middle{
+	background-repeat: repeat-y;
+	background-position: left top
+}
+.tree_viewer SPAN.focus{
+	background-color:highlight;
+}
+.tree_viewer DIV.hide{display:none;}
+.tree_viewer DIV.show{
+	display:block;
+	margin-left:21px;
+}
+.tree_viewer DIV.middle{background-image: url('/themes/jsvm/system/img/menutree/middle.gif');}
+.tree_viewer DIV.bottom{background-image: url('/themes/jsvm/system/img/menutree/bottom.gif');}
+.tree_viewer DIV.line{background-image: url('/themes/jsvm/system/img/menutree/line.gif');}
+
+
+.x-panel-header-text {
+	font-size: 13px !important;
+	font-family : 'Microsoft Yahei' , arial, tahoma, helvetica, sans-serif;
+}
+.tree_viewer IMG {
+	margin: 4px 0 0 0 !important;
+}
+.tree_viewer {
+	font-size: 14px !important;
+	font-family : 'Microsoft Yahei' , arial, tahoma, helvetica, sans-serif;
+}
+.x-toolbar .x-btn button {
+	font-size: 14px !important;
+	font-family : 'Microsoft Yahei' , arial, tahoma, helvetica, sans-serif;
+}
+.x-tab-strip span.x-tab-strip-text{
+	font-size: 13px !important;
+	font-family : 'Microsoft Yahei' , arial, tahoma, helvetica, sans-serif;
+}
+.x-grid3-row td, .x-grid3-summary-row td {
+    font: 14px/18px 'Microsoft Yahei' , arial, tahoma, helvetica, sans-serif !important;
+}
+.x-window-header-text{
+	font-size: 13px !important;
+	font-family : 'Microsoft Yahei' , arial, tahoma, helvetica, sans-serif;
+}

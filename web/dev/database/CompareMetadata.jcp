@@ -1,0 +1,167 @@
+
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.HashMap;
+import com.kinglib.database.MetaTable;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.SQLUtils;
+import com.kinglib.database.*;
+
+import com.kinglib.ui.core.utils.CoreUtils;
+import com.kinglib.unit.Unit;
+import com.kinglib.unit.UnitFactory;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+
+
+@class{
+	public void doPost(Jacper jacper) {
+		String object_id = jacper.getString("object_id", "-1");//合法性判断
+		if(object_id.equals("-1")){
+			return;
+		}
+		StringBuilder sql = new StringBuilder(200);
+		MetaTable mt = MetaFactory.getObject(object_id);
+		if(mt==null){
+			jacper.print("{success:false,message:'"+jacper.trans("系统中没有此表.")+"'}");
+			return;
+		}
+		Connection conLocal=jacper.getConnection(mt.getDblink());
+
+
+		JSONObject gridJSON = null;
+
+		try{	
+				String sqlStr =  "select * from " + mt.getName() + " where 1=0";
+				ResultSet rs =null;
+				int rows=0;
+				gridJSON = new JSONObject("{}");
+				gridJSON.put("id", "errorDesc");
+
+				JSONArray JSONArray1 = new JSONArray();
+				JSONArray JSONTitleArray = new JSONArray();
+				
+				String[] data;
+				JSONTitleArray.put("errorType");
+				JSONTitleArray.put("errorDesc");
+				JSONTitleArray.put("Operation");
+
+				JSONObject dataJSON = new JSONObject("{}");
+				JSONArray JSONArray = new JSONArray();
+
+				try{
+					rs= conLocal.createStatement().executeQuery(conLocal.parseSql(sqlStr));
+				}catch( Exception e){
+					rows++;
+					JSONArray.put(jacper.trans("物理数据表没有找到"));
+					JSONArray.put(mt.getName()+jacper.trans("在数据库中没有找到对应的物理数据表"));
+					JSONArray.put(jacper.trans("新建数据表"));
+					dataJSON = JSONArray.toJSONObject(JSONTitleArray);
+				    JSONArray1.put(dataJSON);
+					return ;
+				}
+				ResultSetMetaData rsmd = rs.getMetaData();
+				int numberOfColumns  = rsmd.getColumnCount();
+
+				if(rs!=null){
+					JSONObject returnJSON =new JSONObject();
+					HashMap<String,MetaColumn> hmap = new HashMap<String, MetaColumn>();//取出元数据
+					for(MetaColumn mc:mt.getColumns()){
+						hmap.put(mc.getPname().toLowerCase(),mc);
+					}
+					for(int i=1;i<numberOfColumns+1; i++){   //取出实体数据并与元数据比较
+						MetaColumn mc=hmap.get(rsmd.getColumnName(i).toLowerCase());
+						if(mc==null){	
+						    	rows++;
+								dataJSON = new JSONObject("{}");
+								JSONArray = new JSONArray();
+								JSONArray.put(jacper.trans("描述数据不存在"));
+								JSONArray.put(jacper.trans("列")+rsmd.getColumnName(i)+""+jacper.trans("没有在描述数据表中进行描述"));
+								JSONArray.put(jacper.trans("更新描述数据"));
+								dataJSON = JSONArray.toJSONObject(JSONTitleArray);
+								JSONArray1.put(dataJSON);							
+						}else{
+							if(mc.getDataType().getValue()!=rsmd.getColumnType(i)){
+								if(rsmd.getScale(i)==0 &&  mc.getDataType()==DataType.INT && rsmd.getColumnType(i)==2 ){
+									sql.append("");
+									
+								}else if(mc.getDataType()==DataType.GEOMETRY && rsmd.getColumnType(i)==2002 ){
+									
+								}else{
+									rows++;
+									dataJSON = new JSONObject("{}");
+									JSONArray = new JSONArray();
+									JSONArray.put(jacper.trans("字段类型不匹配"));
+									JSONArray.put(jacper.trans("列")+mc.getLname()+"("+rsmd.getColumnName(i)+")"+jacper.trans("类型不匹配")+jacper.trans("物理数据类型为")+rsmd.getColumnTypeName(i)+jacper.trans(",描述数据类型为")+mc.getDataType()+"");
+									JSONArray.put("更新描述数据");
+									dataJSON = JSONArray.toJSONObject(JSONTitleArray);
+									JSONArray1.put(dataJSON);	
+								}
+							}
+							if((mc.getDataType()==DataType.VARCHAR || mc.getDataType()==DataType.INT || mc.getDataType()==DataType.FLOAT )&&mc.getLength()!=rsmd.getPrecision(i)){
+									rows++;
+									dataJSON = new JSONObject("{}");
+									JSONArray = new JSONArray();
+									JSONArray.put(jacper.trans("字段宽度不匹配"));
+									JSONArray.put(jacper.trans("列")+mc.getLname()+"("+rsmd.getColumnName(i)+")"+jacper.trans("宽度不匹配:")+jacper.trans("物理字段宽度为")+rsmd.getPrecision(i)+jacper.trans(",描述字段宽度为")+mc.getLength()+"");
+									JSONArray.put(jacper.trans("更新描述数据"));
+									dataJSON = JSONArray.toJSONObject(JSONTitleArray);
+									JSONArray1.put(dataJSON);								
+							}
+							if((mc.getDataType()==DataType.FLOAT)&&mc.getDecimalDigits()!=rsmd.getScale(i)){
+									rows++;
+									dataJSON = new JSONObject("{}");
+									JSONArray = new JSONArray();
+									JSONArray.put(jacper.trans("小数位不匹配"));
+									JSONArray.put(jacper.trans("列")+mc.getLname()+"("+rsmd.getColumnName(i)+")"+jacper.trans("小数位不匹配:")+jacper.trans("物理数据小数位为")+rsmd.getScale(i)+jacper.trans(",描述数据小数位为")+mc.getDecimalDigits()+"");
+									JSONArray.put(jacper.trans("更新描述数据"));
+									dataJSON = JSONArray.toJSONObject(JSONTitleArray);
+									JSONArray1.put(dataJSON);	
+							}
+							boolean isNull=mc.isNotNull();
+							if(isNull== (rsmd.isNullable(i)==ResultSetMetaData.columnNullable)){
+									rows++;
+									dataJSON = new JSONObject("{}");
+									JSONArray = new JSONArray();
+									JSONArray.put(jacper.trans("空值列不匹配"));
+									JSONArray.put(jacper.trans("列")+mc.getLname()+"("+rsmd.getColumnName(i)+")"+jacper.trans("空值列不匹配:")+jacper.trans("物理数据空键值为")+(rsmd.isNullable(i)==0)+jacper.trans(",描述数据空键值为")+mc.isNotNull()+"");
+									JSONArray.put(jacper.trans("更新描述数据"));
+									dataJSON = JSONArray.toJSONObject(JSONTitleArray);
+									JSONArray1.put(dataJSON);
+							}
+							hmap.remove(mc.getPname().toLowerCase());
+					  }
+					}
+					if(hmap.size()>0){
+						for(String key:hmap.keySet()){    
+								rows++;
+								dataJSON = new JSONObject("{}");
+								JSONArray = new JSONArray();
+								JSONArray.put(jacper.trans("物理字段不存在"));
+								JSONArray.put(jacper.trans("列")+key+""+jacper.trans("的物理字段不存在"));
+								JSONArray.put(jacper.trans("更新描述数据"));
+								dataJSON = JSONArray.toJSONObject(JSONTitleArray);
+								JSONArray1.put(dataJSON);
+						} 	
+					}
+					gridJSON.put("totalCount", rows);
+					gridJSON.put("dataItem", JSONArray1);
+					jacper.print(gridJSON);
+				}	
+			}catch(Exception e){
+				e.printStackTrace();
+				jacper.print("{success:false,message:'"+jacper.trans("没有取到数据")+"'}");
+			}finally{
+					conLocal.close();
+			}	
+		}
+		public void doGet(Jacper jacper) {
+			 doPost(jacper);
+		}
+	}

@@ -1,0 +1,86 @@
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import com.kinglib.*;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.space.HWSpaceFactory;
+import gpra.filesystem.space.HWSpaceFactory.HWSessions;
+
+//public class FilePushOrMoveBeforeInit{
+@class{
+	public void doPost(Jacper jacper) {
+		String types = jacper.getString("types","");
+		HttpSession hs = jacper.getSession();
+		jacper.getSession().get(HWSessions.HW_BASE_SPACEID.name());
+		String[][] rs = null;
+		String[][] bRs = null;
+		
+		
+		Connection con = jacper.getConnection(HWUnits.HW_DBLINK);
+		boolean isSpace = "SELECT_SPACE".equals(types) , isNode = "NODE_ID".equals(types);
+		String currentSpaceId = String.valueOf(hs.get(HWSessions.HW_BASE_SPACEID.name())) ,
+				currentNodeId = jacper.getString("dataId", String.valueOf(hs.get(HWSessions.HW_BASE_DIRID.name())));
+		
+		if(HWSpaceFactory.getSpaceById(currentSpaceId) == null){
+			jacper.print("[{'text':'未知空间','id':'-9999'}]");
+			return;
+		}
+		
+		try {
+			JSONArray datas = new JSONArray();
+				bRs = con.get("select b.dir_id , b.dir_name , b.space_id from DIR_NODE_BASE b where b.space_id is not null order by b.sort_seq");
+				rs = con.get("select i.node_id , i.node_value , i.p_node_id , b.dir_id  , b.space_id , i.node_icon from DIR_NODE_INFO i left outer join DIR_NODE_BASE b on i.dir_id = b.dir_id order by i.sort_seq");
+			
+			if(rs != null && rs.length > 0){
+				ArrayList<JSONObject> base = new ArrayList<JSONObject>();
+				HashMap<String , JSONArray> map = new HashMap<String , JSONArray>();
+				
+					if(bRs != null && bRs.length >0){
+						for(String[] crs : bRs)
+							base.add(new JSONObject().put("text", crs[1]).put("id", crs[0]).put("allowSelect", !currentNodeId.equals(crs[0])).put("relationId", crs[2] ).put("expanded" , true));
+						for(String[] crs : rs)
+							add2Map(map , "".equals(crs[2]) ? crs[3] : crs[2] , 
+									new JSONObject().put("text", crs[1]).put("id", crs[0]).put("allowSelect", !(currentNodeId.equals(crs[0]))).put("relationId",  crs[4]).put("icon", crs[5]));
+						for(JSONObject obj : base){
+							setJSONObject(obj , map);
+							datas.put(obj);
+						}
+					}
+				
+				
+			}
+			jacper.print(datas);
+			return;
+		} catch (Exception e) {
+			//e.printStackTrace();
+		} finally {
+			con.close();
+		}
+		jacper.print("[{'text':'未知空间','id':'-9999'}]");
+	}
+	public void relationChildren(HashMap<String , JSONArray> map , JSONArray datas) throws JSONException{
+		for(int i = 0 ; i < datas.length() ; i ++)
+			setJSONObject(datas.getJSONObject(i) , map);
+	}
+	public void setJSONObject(JSONObject data , HashMap<String , JSONArray> map) throws JSONException{
+		String key = data.getString("id");
+		boolean hasChild = map.containsKey(key);
+		data.put("leaf", !hasChild);
+		if(map.containsKey(key)){
+			relationChildren(map , map.get(key));
+			data.put("children" ,  map.get(key));
+		}
+	}
+	public void add2Map(HashMap<String , JSONArray> map , String key , JSONObject obj){
+		if(!map.containsKey(key))
+			map.put(key, new JSONArray());
+		map.get(key).put(obj);
+	}
+	public void doGet(Jacper jacper) {
+		doPost(jacper);
+	}
+}

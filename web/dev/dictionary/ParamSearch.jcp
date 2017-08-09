@@ -1,0 +1,57 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.utils.*;
+import com.susing.sql.DataSourceFactory;
+import com.kinglib.bi.*;
+import java.util.ArrayList;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectType;
+import com.kinglib.workbench.ObjectNode;
+
+@class{
+	public void doPost(Jacper jacper){
+		Connection conLocal=jacper.getConnection("plat");
+		String text = jacper.getStr("text").trim();
+		try{
+			JSONObject relJSON = new JSONObject();
+			
+			StringBuilder sql = new StringBuilder(200);
+			sql.append("select fd.option_name,fd.option_id,fd.kind_id,dk.application_obj_id from $[plat].first_dict fd,$[plat].dict_kind dk  where option_name like '%").append(text).append("%' and fd.kind_id=dk.kind_id");
+
+			String[][] rs =conLocal.get(sql.toString().trim());
+			if(rs!=null){
+				JSONArray data = new JSONArray();
+				for(int i=0;i<rs.length;i++){
+					JSONObject rowJSON = new JSONObject();
+					rowJSON.put("option_name",rs[i][0]);
+					rowJSON.put("path",getPath(rs[i][1],rs[i][2],rs[i][3]));
+					data.put(rowJSON);
+				}
+				relJSON.put("data",data);
+				jacper.print(relJSON);
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+			jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+		}finally{
+				conLocal.close();
+		}
+	} 
+	public String getPath(String optionId,String kindId,String appObjId) throws Exception{
+		StringBuilder sb=new StringBuilder("top");
+		if(appObjId.equals("0")){
+			sb.append("/" + appObjId);
+			sb.append("/" + kindId);
+			sb.append("/" + optionId);
+		}else{
+			sb.append("/11078");
+			sb.append("/" + appObjId);
+			sb.append("/" + kindId);
+			sb.append("/" + optionId);
+		}
+		return sb.toString().trim();
+	}	
+
+}

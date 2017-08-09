@@ -1,0 +1,58 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.LanMu;
+
+import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.UUID;
+import com.susing.core.KingleSystem;
+
+@class{
+	public void doPost(Jacper jacper) {
+
+		HttpSession hs = jacper.getSession();
+		Connection conEdu = jacper.getConnection("education");
+		Connection mysqlEdu = jacper.getConnection("cmsmysql");
+		HashSet<String> set = new HashSet<String>();
+
+		String[] ids = jacper.getArray("pmks");
+		String text = jacper.getString("text");
+		
+		
+
+		
+		
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < ids.length; i++) {
+			if (i > 0)
+				sb.append(',');
+			sb.append('?');
+		}
+
+		try {
+			String intoGj = "";
+			if(text.equals("审核通过")){
+				 intoGj = "update gaojianpinglun set shenhezhuangtai='1' where  ";
+			}else if(text.equals("审核失败")){
+				intoGj = "update gaojianpinglun set shenhezhuangtai='2',beizhu='该评论已被禁止查看' where  ";
+			}
+			intoGj=intoGj+"id in ("+sb+")";
+			
+			conEdu.exec(intoGj,ids);		
+			mysqlEdu.exec(intoGj,ids);				
+		} catch (Exception e) {
+			try {
+				conEdu.rollback();
+			} catch (Exception e1) {
+			}
+			jacper.print("{success:false,message:'审核出错，请联系管理员。'}");
+			e.printStackTrace();
+			return;
+		}
+		
+		jacper.print("{success:true,message:'审核完成。'}");	
+		return;
+	}
+}

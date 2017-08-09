@@ -1,0 +1,134 @@
+
+
+import com.kinglib.*;
+import com.susing.core.KingleSystem;
+import java.net.*;
+import com.kinglib.workflow.loader.*;
+import org.w3c.dom.*;
+import java.io.*;
+import javax.xml.parsers.*;
+import com.kinglib.workflow.InvalidWorkflowDescriptorException;
+import com.kinglib.workflow.config.*;
+import com.kinglib.workflow.FactoryException;
+import com.kinglib.workflow.FunctionProvider;
+import com.kinglib.workbench.workflow.*;
+
+@class{
+	public void doGet(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		String parent_id = jacper.getStr("parent_id");
+		String event = jacper.getStr("event");
+		String instance_id = jacper.getStr("instanceId");
+
+		com.kinglib.workbench.workflow.WorkflowFactory WFactory=com.kinglib.workbench.workflow.WorkflowFactory.getInstance();
+		com.kinglib.workbench.workflow.Workflow workflow=WFactory.getWorkflow(conPlat,parent_id);
+
+		String difinationBody = null;
+
+
+		 if(event.equals("open")){
+			if(instance_id.equals("")){
+				difinationBody=workflow.getDifinationBody();
+			}else{
+				com.kinglib.workbench.workflow.WorkflowInstance workflowInstance=workflow.getWorkflowInstance(instance_id);
+				difinationBody=workflowInstance.getDifinationBody();
+			}
+			if(difinationBody==null||difinationBody.length() == 0){
+				<?<workflow></workflow>?>;	
+			}else{
+				<??>difinationBody<??>;	
+			}
+		}
+		conPlat.close();
+	}
+
+	public void XMLPost(JacperXML jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+
+		String event = jacper.getStr("event");
+		Document doc = null;
+
+		try{
+			doc = jacper.getXML();
+		}catch(Exception ex){
+			<?<root><success>false</success><message>?>jacper.trans("提交格式错误!原因:提交的数据不能转换为XML!")<?</message></root>?>;
+			return;
+		}
+
+		byte[] wf = new byte[0];
+		WorkflowDescriptor descriptor=null;
+
+		try{
+			wf = doc.toString().getBytes("UTF-8");
+			ByteArrayInputStream is= new ByteArrayInputStream(wf);;
+			descriptor=WorkflowLoader.load(is,true);
+		}catch (Exception e){
+			e.printStackTrace();
+			<?<root><success>false</success><message>?>e.getMessage()<?</message></root>?>;	
+			return;
+		}
+
+
+		if(event.equals("sav")){
+		
+			String parent_id = jacper.getString("parent_id");
+			String instance_id = jacper.getStr("instanceId");
+
+			com.kinglib.workbench.workflow.WorkflowFactory WFactory=com.kinglib.workbench.workflow.WorkflowFactory.getInstance();
+			com.kinglib.workbench.workflow.Workflow workflow=WFactory.getWorkflow(conPlat,parent_id);
+
+			try{				
+				descriptor.validate();	
+				try{
+					if(instance_id.equals("undefined")){
+						workflow.updateDifinationBody(conPlat,doc.toString());
+					}else{
+						com.kinglib.workbench.workflow.WorkflowInstance workflowInstance=workflow.getWorkflowInstance(instance_id);
+						workflowInstance.updateDifinationBody(conPlat,doc.toString());
+					}
+					<?<root><success>true</success><message>?>jacper.trans("保存成功")<?</message></root>?>;	
+					return;
+				}catch (Exception e){
+					e.printStackTrace();
+				}finally {
+					if(instance_id.equals("undefined")){
+						String firstInstanceId=workflow.getFirstInstance();
+						getConfiguration().updateWorkflow(firstInstanceId,descriptor);	
+					}else{
+						getConfiguration().updateWorkflow(instance_id,descriptor);					
+					}
+				}
+			}catch (Exception e){
+				String debugString=e.getMessage();
+				<?<root><success>false</success><message>?>debugString<?</message></root>?>;	
+			}			
+		}else{
+			try{
+				descriptor.validate();
+				<?<root><success>true</success><message>?>jacper.trans("工作流定义验证成功!")<?</message></root>?>;
+			}catch (InvalidWorkflowDescriptorException e){
+				String debugString=e.getMessage();
+				<?<root><success>false</success><message>?>debugString<?</message></root>?>;	
+				return;
+			}			
+		}
+}
+public Configuration getConfiguration(){
+	Configuration config = DefaultConfiguration.INSTANCE;
+	if (!config.isInitialized()) {
+		try {
+			config.load();
+		} catch (FactoryException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	return config;
+}
+}  
+

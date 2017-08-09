@@ -1,0 +1,109 @@
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+import com.kinglib.*;
+import java.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.util.RandomStr;
+import com.susing.core.KingleSystem;
+@class{
+public void doGet(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String id = jacper.getString("id","0");
+	jacper.getResponse().setContentType("application/x-json");
+	try{	
+			JSONObject userTypeJSON = new JSONObject("{}");
+			String[] rs= conPlat.getRow("select USER_TYPE_NAME,USER_TYPE_DESC from $[plat].SYS_USER_TYPE  where OBJECT_ID=?",new String[]{""+id});
+			userTypeJSON.put("object_id",id+"");
+			userTypeJSON.put("user_type_name",rs[0]);
+			userTypeJSON.put("user_type_desc",rs[1]);
+			ObjectNode node=ObjectManager.getObject(id+"");
+			if(node!=null){
+				userTypeJSON.put("lastModifyTime",node.getLastModifyTime());
+				userTypeJSON.put("lastModifyName",node.getLastModifyName());
+			}
+		   <?[?>userTypeJSON.toString()<?]?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = String.valueOf(hs.uid);
+
+	String type=jacper.getString("type");
+	String user_type_name=jacper.getString("user_type_name");		
+	String user_type_desc = jacper.getString("user_type_desc");
+
+	ObjectManager OM=ObjectManager.getInstance();
+
+	if (type.equals("save")) {
+		String system_id=jacper.getString("id");
+		try{	
+			conPlat.setAutoCommit(false);		
+			String userTypeId = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				userTypeId = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				userTypeId =RandomStr.getInt(10000000,100000000)+"";
+			}
+			ObjectNode systemNode=OM.getObject(system_id);
+			systemNode.addChild(conPlat,userTypeId,user_type_name,ObjectType.USERTYPE,hs.uid);
+			conPlat.exec("insert into $[plat].SYS_USER_TYPE ( OBJECT_ID,USER_TYPE_NAME,USER_TYPE_DESC) values (?,?,?)",new String[]{userTypeId,user_type_name,user_type_desc});
+			conPlat.commit();
+			<?{success:true,id:'?>userTypeId<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if ( type.equals("updatesave")){
+		String userTypeId = jacper.getString("id");
+		try{	
+			ObjectNode userTypeNode=OM.getObject(userTypeId);
+			userTypeNode.updateName(conPlat,user_type_name);
+			conPlat.exec("update $[plat].SYS_USER_TYPE set USER_TYPE_NAME=?,USER_TYPE_DESC=? where OBJECT_ID=?",new String[]{user_type_name,user_type_desc,userTypeId});
+			<?{success:true,id:'?>userTypeId<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}else if (type.equals("delete")) {
+		String usertype_id = jacper.getStr("id");
+		ObjectNode userTypeNode=OM.getObject(usertype_id);
+		try{	
+			conPlat.setAutoCommit(false);	
+			userTypeNode.destroy(conPlat);
+			conPlat.commit();
+			<?{success:true,id:'?>usertype_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

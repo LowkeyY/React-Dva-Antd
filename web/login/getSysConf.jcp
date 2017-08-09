@@ -1,0 +1,45 @@
+import com.kinglib.Jacper;
+import com.kinglib.sso.ticket.LoginTicketCache;
+import com.kinglib.i18n.I18n;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.util.json.JSONPart;
+
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+
+import com.susing.KingleServletRequest;
+import com.susing.core.KingleSystem;
+
+@class{
+
+	private LoginTicketCache ltCache;
+	private ServletContext app;
+
+	public void init(ServletConfig config) throws ServletException {
+		app = config.getServletContext();
+		ltCache = (LoginTicketCache) app.getAttribute("ltCache");
+	}
+
+	public void doGet(Jacper jacper) {
+		try {
+			String title = KingleSystem.getApplicationTitle();
+			String authType = KingleSystem.getAuthType();
+			String logo = KingleSystem.getApplicationLogo();
+			String lt = "";
+			lt = ltCache.addTicket();
+			JSONObject sysConfigJSON = new JSONObject();
+			sysConfigJSON.put("success", true);
+			sysConfigJSON.put("logo", logo);
+			sysConfigJSON.put("title", title);
+			sysConfigJSON.put("authType", authType);
+			sysConfigJSON.put("lt", lt);
+			if (I18n.isServiceStarted()) {
+				sysConfigJSON.put("lang", I18n.getI18nConfig(jacper.getRequest()));
+			}
+			jacper.print(sysConfigJSON);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+} 

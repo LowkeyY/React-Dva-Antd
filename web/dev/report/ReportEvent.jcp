@@ -1,0 +1,151 @@
+
+
+
+import com.kinglib.*;
+import com.kinglibx.report.*;
+import com.kinglib.util.Numbers;
+import java.util.*;
+import electric.xml.*;
+import com.kinglib.workbench.*;
+import com.kinglib.bi.*;
+
+@class{
+
+	public void doGet(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+
+		String report_id = jacper.getStr("report_id");
+		String event = jacper.getStr("event");
+
+		jacper.getResponse().setContentType("text/xml;charset=UTF-8");
+
+		if(event.equals("delete")){	
+			try{
+				ObjectManager OM=ObjectManager.getInstance();
+				ObjectNode reportNode=OM.getObject(report_id);
+				if(reportNode==null){
+					conPlat.exec("delete from $[plat].app_query_report where report_id=?",new String[]{report_id});
+				}else{
+					reportNode.destroy(conPlat);
+				}
+				<?<root><success>true</success><message>?>jacper.trans("删除成功")<?</message></root>?>;
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conPlat.close();
+				return;
+			}
+		}else if(event.equals("open")){
+			Object[] result = conPlat.getLarge("select report_id,report_name,source from $[plat].app_query_report where report_id=?",new String[]{report_id});
+			ObjectNode node=ObjectManager.getObject(report_id);
+			String modifyTime="";
+			String modifyName="";
+			if(node!=null){
+				modifyTime=node.getLastModifyTime();
+				modifyName=node.getLastModifyName();
+			}
+			if(result.length == 0){
+				<?<root><success>false</success><message>?>jacper.trans("指定的报表不存在,请确认后重试!")<?</message></root>?>;
+			}else{
+				<?<message modifyTime='?>modifyTime<?' modifyName='?>modifyName<?' name='?>result[1]<?'>?>result[2]<?</message>?>;
+			}
+			conPlat.close();
+			return;
+		}
+		conPlat.close();
+	}
+
+	public void XMLPost(JacperXML jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+
+		String event = jacper.getStr("event");
+		Document doc = null;
+		try{
+			doc = jacper.getXML();
+		}catch(Exception ex){
+			return;
+			//<?<root><success>false</success><message>?>jacper.trans("提交的数据不能转换为XML,请检查后重试")<?</message></root>?>;
+		}
+		
+		ObjectManager OM=ObjectManager.getInstance();
+
+		
+		if(event.equals("save")){
+			String report_name = jacper.getStr("report_name");
+			String forder_id = jacper.getStr("forder_id");
+			String parent_id = jacper.getStr("parent_id");
+			if(report_name.equals("") || forder_id.equals("")){
+				<?<root><success>false</success><message>?>jacper.trans("请按标准输入!")<?</message></root>?>;
+			}
+			try{	
+				conPlat.setAutoCommit(false);	
+				String object_id="";
+				String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+				if(idType==null||idType.equals("0")){
+					object_id = SQLUtils.getNextVal(conPlat,1)+"";
+				}else{
+					object_id =UUID.randomUUID().toString();
+				}
+				if(!parent_id.equals("")&&parent_id!=null){
+					ObjectNode applicationNode=OM.getObject(parent_id);
+					applicationNode.addChild(conPlat,object_id,report_name,ObjectType.REPORT,user_id);
+					conPlat.execLarge("insert into $[plat].app_query_report(forder_id,report_id,report_name,type,source,entry_date) values(?,?,?,?,?,$getdate())",new Object[]{forder_id+"",object_id+"",report_name,"1",new StringBuffer(doc.toString())});
+				}else{
+					 conPlat.execLarge("insert into $[plat].app_query_report(forder_id,report_id,report_name,type,source,entry_date) values(?,?,?,?,?,$getdate())",new Object[]{forder_id+"",object_id+"",report_name,"2",new StringBuffer(doc.toString())});
+				}
+				conPlat.commit();
+				<?<root><success>true</success><message>?>object_id<?</message></root>?>;
+			}catch(Exception e){
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				<?<root><success>false</success><message>?>e.toString()<?</message></root>?>;
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+		}else if(event.equals("updatesave")){
+			String parent_id = jacper.getStr("parent_id");
+			String report_id = jacper.getStr("report_id");
+			String[][] forder =conPlat.get("select forder_id,report_id,report_name from $[plat].app_query_report where report_id=?",new String[]{report_id});
+			String forder_id = forder[0][0];
+			String report_name =forder[0][2];
+
+			if(report_name.equals("") || report_id.equals("") || forder_id.equals("")){
+				<?<root><success>false</success><message>?>jacper.trans("请按标准输入!")<?</message></root>?>;
+			}
+
+			try{	
+				conPlat.setAutoCommit(false);	
+				conPlat.exec("delete from $[plat].app_query_report where report_id=?",new String[]{report_id});
+				if(!parent_id.equals("")&&parent_id!=null){		
+					conPlat.exec("insert into $[plat].app_query_report(forder_id,report_id,report_name,source,type,entry_date) values(?,?,?,?,?,$getdate())",new String[]{forder_id,report_id,report_name,doc.toString(),"1"});
+				}else{				
+					conPlat.exec("insert into $[plat].app_query_report(forder_id,report_id,report_name,source,type,entry_date) values(?,?,?,?,?,$getdate())",new String[]{forder_id,report_id,report_name,doc.toString(),"2"});
+				}
+				ReportFactory.getInstance().remove(report_id);
+				conPlat.commit();
+				<?<root><success>true</success><message>?>report_id<?</message></root>?>;
+			}catch(Exception e){
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				<?<root><success>false</success><message>?>e.toString()<?</message></root>?>;
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+			return;			
+		}
+	}	
+}

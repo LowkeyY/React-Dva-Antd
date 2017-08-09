@@ -1,0 +1,304 @@
+<mxEditor defaultGroup="group" defaultEdge="connector">
+	<add as="onInit"><![CDATA[
+		function ()
+		{
+			Workflow.designPanel.onInit(this);
+		}
+	]]></add>
+	<ui>
+		<add as="graph" element="graph"></add>
+		<add as="toolbar" element="toolbar"></add>
+	</ui>
+	<Array as="templates">
+		<add as="group">
+			<Group label="" href="">
+				<mxCell vertex="1" style="group" connectable="0"/>
+			</Group>
+		</add>
+		<add as="connector">
+			<Connector label="" href="">
+				<mxCell edge="1">
+					<mxGeometry as="geometry" relative="1"/>
+				</mxCell>
+			</Connector>
+		</add>
+		<add as="container">
+			<Container label="Container" href="">
+				<mxCell vertex="1" style="swimlane" connectable="0">
+					<mxGeometry as="geometry" width="200" height="200"/>
+				</mxCell>
+			</Container>
+		</add>
+		<add as="rectangle">
+			<Rect label="Rectangle" href="">
+				<mxCell vertex="1">	
+					<mxGeometry as="geometry" width="80" height="40"/>
+				</mxCell>
+			</Rect>
+		</add>
+		<add as="text">
+			<Text label="Text Here" href="">
+				<mxCell vertex="1" style="text">	
+					<mxGeometry as="geometry" width="80" height="20"/>
+				</mxCell>
+			</Text>
+		</add>
+		<add as="rounded">
+			<Roundrect label="Rounded" href="">
+				<mxCell vertex="1" style="rounded">		
+					<mxGeometry as="geometry" width="80" height="40"/>
+				</mxCell>
+			</Roundrect>
+		</add>
+		<add as="shape">
+			<Shape label="" href="">
+				<mxCell vertex="1" style="ellipse">		
+					<mxGeometry as="geometry" width="45" height="45"/>
+				</mxCell>
+			</Shape>
+		</add>
+		<add as="fork">
+			<Shape label="+" href="">
+				<mxCell vertex="1" style="ellipse">		
+					<mxGeometry as="geometry" width="45" height="45"/>
+				</mxCell>
+			</Shape>
+		</add>
+		<add as="actor">
+			<Shape label="Shape" href="">
+				<mxCell vertex="1" style="actor">		
+					<mxGeometry as="geometry" width="40" height="60"/>
+				</mxCell>
+			</Shape>
+		</add>
+		<add as="hline">
+			<Shape label="" href="">
+				<mxCell vertex="1" style="ellipse">		
+					<mxGeometry as="geometry" width="60" height="10"/>
+				</mxCell>
+			</Shape>
+		</add>
+		<add as="cloud">
+			<Shape label="Shape" href="">
+				<mxCell vertex="1" style="cloud">		
+					<mxGeometry as="geometry" width="80" height="60"/>
+				</mxCell>
+			</Shape>
+		</add>
+		<add as="symbol">
+			<symbol label="">
+				<mxCell vertex="true" style="symbol;image=wf/images/bpmn/event.png">		
+					<mxGeometry as="geometry" width="32" height="32"/>
+				</mxCell>
+			</symbol>
+		</add>
+	</Array>
+	<mxGraph as="graph" alternateEdgeStyle="verticalConnector" allowLoops="1" dropEnabled="1">
+		<add as="isAutoSizeCell"><![CDATA[
+			function(cell)
+			{
+				return mxUtils.isNode(this.model.getValue(cell), 'text');
+			}
+		]]></add>
+		<add as="isSwimlane"><![CDATA[
+			function (cell)
+			{
+				return mxUtils.isNode(this.model.getValue(cell), 'container');
+			}
+		]]></add>
+		<add as="getTooltipForCell"><![CDATA[
+			function(cell)
+			{
+				return '<b>'+cell.getAttribute('label')+'</b> ('+cell.getId()+')';
+			}
+		]]></add>
+		<add as="convertValueToString"><![CDATA[
+			function(cell)
+			{
+				return cell.getAttribute('label');
+			}
+		]]></add>
+		<mxStylesheet as="stylesheet">
+			<add as="text">
+				<add as="shape" value="rectangle"/>
+				<add as="perimeter" value="rectanglePerimeter"/>
+				<add as="fontSize" value="12"/>
+				<add as="align" value="left"/>
+				<add as="verticalAlign" value="top"/>
+				<add as="shadow" value="0"/>
+				<add as="strokeColor" value="none"/>
+				<add as="fillColor" value="none"/>
+				<add as="gradientColor" value="none"/>
+			</add>
+			<add as="defaultVertex" extend="text">
+				<add as="shape" value="rectangle"/>
+				<add as="fontSize" value="11"/>
+				<add as="align" value="center"/>
+				<add as="verticalAlign" value="middle"/>
+				<add as="shadow" value="1"/>
+				<add as="strokeColor" value="#C3D9FF"/>
+				<add as="fillColor" value="#C3D9FF"/>
+				<add as="gradientColor" value="white"/>
+			</add>
+			<add as="group">
+				<add as="shape" value="rectangle"/>
+				<add as="perimeter" value="rectanglePerimeter"/>
+				<add as="fontSize" value="10"/>
+				<add as="align" value="center"/>
+				<add as="verticalAlign" value="middle"/>
+				<add as="strokeColor" value="gray"/>
+				<add as="dashed" value="1"/>
+			</add>
+			<add as="defaultEdge">
+				<add as="shape" value="connector"/>
+				<add as="fontSize" value="10"/>
+				<add as="align" value="center"/>
+				<add as="verticalAlign" value="middle"/>
+				<add as="rounded" value="1"/>
+				<add as="labelBackgroundColor" value="white"/>
+				<add as="strokeColor" value="#36393D"/>
+				<add as="strokeWidth" value="1"/>
+				<add as="edgeStyle" value="elbowEdgeStyle"/>
+				<add as="endArrow" value="classic"/>
+			</add>
+			<add as="verticalConnector">
+				<add as="elbow" value="vertical"/>
+			</add>
+			<add as="straightConnector">
+				<add as="shape" value="connector"/>
+				<add as="endArrow" value="classic"/>
+				<add as="edgeStyle">null</add>
+			</add>
+			<add as="arrowConnector">
+				<add as="shape" value="arrow"/>
+				<add as="fillColor" value="#C3D9FF"/>
+				<add as="endSize" value="20"/>
+				<remove as="edgeStyle"/>
+			</add>
+			<add as="swimlane">
+				<add as="shape" value="swimlane"/>
+				<add as="shadow" value="0"/>
+				<add as="startSize" value="23"/>
+				<add as="align" value="center"/>
+				<add as="verticalAlign" value="top"/>
+				<add as="strokeColor" value="#EEEEEE"/>
+				<add as="fillColor" value="#D4D4D4"/>
+			</add>
+			<add as="rounded">
+				<add as="rounded" value="1"/>
+			</add>
+			<add as="ellipse">
+				<add as="shape" value="ellipse"/>
+				<add as="perimeter" value="ellipsePerimeter"/>
+				<add as="strokeColor" value="#91B720"/>
+				<add as="fillColor" value="#CDEB8B"/>
+				<add as="gradientColor" value="#FFFFFF"/>
+				<add as="strokeWidth" value="3"/>
+			</add>
+			<add as="doubleEllipse" extend="ellipse">
+				<add as="strokeColor" value="#FF6600"/>
+				<add as="fillColor" value="#FFDD00"/>
+				<add as="gradientColor" value="#FFFFFF"/>
+				<add as="shape" value="doubleEllipse"/>
+			</add>
+			<add as="rhombus">
+				<add as="shape" value="rhombus"/>
+				<add as="perimeter" value="rhombusPerimeter"/>
+				<add as="strokeColor" value="#FFCF8A"/>
+				<add as="fillColor" value="#FFCF8A"/>
+			</add>
+			<add as="fork" >
+				<add as="shape" value="rhombus"/>
+				<add as="perimeter" value="rhombusPerimeter"/>
+				<add as="strokeColor" value="#FFCF8A"/>
+				<add as="fillColor" value="#FFCF8A"/>
+				<add as="fontColor" value="#003366"/>
+				<add as="fontSize" value="36"/>
+			</add>
+			<add as="hexagon">
+				<add as="shape" value="hexagon"/>
+			</add>
+			<add as="hline">
+				<add as="shape" value="line"/>
+				<add as="strokeWidth" value="3"/>
+				<add as="perimeter" value="rectanglePerimeter"/>
+				<add as="fontColor" value="black"/>
+				<add as="fontSize" value="10"/>
+				<add as="align" value="center"/>
+				<add as="verticalAlign" value="bottom"/>
+				<add as="strokeColor" value="#36393D"/>
+			</add>
+			<add as="symbol">
+				<add as="shape" value="image"/>
+				<add as="perimeter">mxPerimeter.getRightAngleRectanglePerimeter</add>
+				<add as="fontSize" value="0"/>
+				<add as="align" value="center"/>
+				<add as="verticalAlign" value="middle"/>
+			</add>
+		</mxStylesheet>
+	</mxGraph>
+	<mxDefaultToolbar as="toolbar">
+		<add as="连接" mode="connect" icon="/dev/workflow/images/connect.gif"><![CDATA[
+			function (editor)
+			{
+				if (editor.defaultEdge != null)
+				{
+					editor.defaultEdge.style = null;
+				}
+			}
+		]]></add>
+		<add as="连接" mode="connect" icon="/dev/workflow/images/straight.gif"><![CDATA[
+			function (editor)
+			{
+				if (editor.defaultEdge != null)
+				{
+					editor.defaultEdge.style = 'straightConnector';
+				}
+			}
+		]]></add>
+		<br/><br/>
+		<add as="注释" template="text"   icon="/dev/workflow/images/text.gif"/>
+		<add as="容器" template="container"  icon="/dev/workflow/images/swimlane.gif"/>
+<!--			<add as="步骤" template="rectangle" icon="/dev/workflow/images/rectangle.gif"/>-->
+		<add as="开始" template="shape" style="ellipse" icon="/dev/workflow/images/start.gif"/>
+		<add as="步骤" template="rounded" icon="/dev/workflow/images/rounded.gif"/>
+		<add as="分支" template="shape" style="rhombus" icon="/dev/workflow/images/rhombus.gif"/>
+		<add as="聚合" template="fork" style="fork" icon="/dev/workflow/images/small_fork.gif"/>
+		<add as="结束" template="shape" style="doubleEllipse" icon="/dev/workflow/images/small_terminate.gif"/>
+<!--		<add as="聚合" template="cloud" style="hexagon" icon="/dev/workflow/images/hexagon.gif"/>-->
+		<add as="分隔线" template="hline" style="hline" icon="/dev/workflow/images/hline.gif"/>
+	</mxDefaultToolbar>
+
+	<mxDefaultPopupMenu as="popupHandler">
+		<add as="删除" action="delete" icon="/dev/workflow/images/delete.gif" if="cell"/>
+		<separator/>
+		<add as="属性" action="showProperties" icon="/dev/workflow/images/properties.gif"  if="oneCell"/>
+		<add as="设定动作" action="showActionProperties" icon="/themes/icon/all/connect.gif"  if="oneCell"/>
+	</mxDefaultPopupMenu>
+
+	<mxDefaultKeyHandler as="keyHandler">
+		<add as="8" action="collapse"/>
+		<add as="13" action="expand"/>
+		<add as="33" action="exitGroup"/>
+		<add as="34" action="enterGroup"/>
+		<add as="35" action="refresh"/>
+		<add as="36" action="home"/>
+		<add as="37" action="selectPrevious"/>
+		<add as="38" action="selectParent"/>
+		<add as="40" action="selectChild"/>
+		<add as="39" action="selectNext"/>
+		<add as="46" action="delete"/>
+		<add as="65" control="1" action="selectAll"/>
+		<add as="90" control="1" action="undo"/>
+		<add as="89" control="1" action="redo"/>
+		<add as="88" control="1" action="cut"/>
+		<add as="67" control="1" action="copy"/>
+		<add as="86" control="1" action="paste"/>
+		<add as="71" control="1" action="group"/>
+		<add as="85" control="1" action="ungroup"/>
+		<add as="113" action="edit"/>		
+		<add as="123" action="showProperties"/>
+		<add as="107" action="zoomIn"/>
+		<add as="109" action="zoomOut"/>
+	</mxDefaultKeyHandler>
+</mxEditor>

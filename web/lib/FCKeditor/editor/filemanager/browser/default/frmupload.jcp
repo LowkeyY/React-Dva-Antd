@@ -1,0 +1,105 @@
+
+
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.susing.*;
+import com.susing.upload.FileUpload;
+   
+@class{
+	public void doGet(Jacper jacper){
+	
+	String parent_id=jacper.getStr("id");
+	String type = jacper.getStr("type");
+
+<?<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+	<head>
+		<link href="browser.css" type="text/css" rel="stylesheet" />
+		<script type="text/javascript" src="js/common.js"></script>
+		<script language="javascript">
+
+function SetCurrentFolder( resourceType, folderPath )
+{
+	var sUrl = oConnector.ConnectorUrl +'Command=FileUpload' ;
+	sUrl += '&Type=' + resourceType ;
+	sUrl += '&CurrentFolder=' + folderPath ;	
+	document.getElementById('frmUploadrd').action = sUrl ;
+}
+
+function OnSubmit()
+{
+	if ( document.getElementById('NewFile').value.length == 0 )
+	{
+		alert( '?>jacper.trans("请在本地计算机中选择上传文件")<?' ) ;
+		return false ;
+	}
+	document.getElementById('eUploadMessage').innerHTML = '?>jacper.trans("上传文件到远程服务器上")<?(?>jacper.trans("正在上传,请等待...")<?)' ;
+	document.getElementById('btnUpload').disabled = true ;	
+	var fm=eval(frm.nam);
+	fm.target='fsm';
+	fm.submit();
+	return true ;
+}
+window.onload = function()
+{
+	window.top.IsLoadedUpload = true ;
+}
+</script>
+	</head>
+<body bottomMargin="0" topMargin="0">
+		<form id="frmUploadrd" action="" target="frmUploadWorker" method="post" enctype="multipart/form-data" onsubmit="return OnSubmit();">
+			<table height="100%" cellSpacing="0" cellPadding="0" width="100%" border="0">
+				<tr>
+					<td nowrap>
+						<span id="eUploadMessage">?>jacper.trans("上传新文件到工作目录")<?</span><br>
+						<table cellSpacing="0" cellPadding="0" width="100%" border="0">
+							<tr>
+								<td width="100%"><input id="NewFile" name="NewFile" style="WIDTH: 100%" type="file"></td>
+								<td nowrap>&nbsp;<input id="btnUpload" type="submit" value="上传"></td>
+								<iframe  name='fsm' style='position:relative: left:0; top:0; height:100%; width:100%'/>
+							</tr>
+						</table>
+					</td>
+				</tr>
+			</table>
+			<input type=hidden name=parent_id value=?>parent_id<?>
+		</form>
+	</body>
+</html>
+		?>;
+	}
+ public void doPost(Jacper jacper){
+	 String parent_id=jacper.getStr("id");
+	if(FileUpload.isMultipartContent(jacper.getRequest().getContentType())){
+		jacper=new JacperFile(jacper);
+		((JacperFile)jacper).action();
+	}
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id=String.valueOf(hs.uid);
+
+	 Connection conUtils = jacper.getConnection("utils");
+	 EFile uf = ((JacperFile)jacper).getFile("NewFile");
+	 String fileName="";
+	 String fileType="";
+	 String fileSize="";
+	 if ( uf != null ) {
+		String file_id =SQLUtils.getNextVal(conUtils,10)+"";
+		 fileName=uf.getAttribute("file-name");
+		 fileName=fileName.substring(fileName.lastIndexOf("\\")+1,fileName.length());
+		 fileType=uf.getAttribute("content-type");
+		 fileType=fileType.substring(fileType.lastIndexOf("/")+1,fileType.length());
+		 fileSize = (int)uf.length()+"";
+		 conUtils.execLarge("insert into $[utils].image_files (file_id,forder_id,file_name,file_type,file_size,content,entry_user)  values(?,?,?,?,?,?,?)",new 
+				Object[]{file_id,parent_id,fileName,fileType,fileSize,uf,user_id});
+	}
+
+  <?<script>
+  parent.frmUpload.frmUploadrd.btnUpload.disabled = false ;	
+  parent.frmUpload.document.all.eUploadMessage.innerHTML = '?>jacper.trans("上传完成")<?';
+      window.open("frmresourceslist.jcp?id=?>parent_id<?&ran="+Math.random(),"frmResourcesList","");
+  </script>
+  ?>;
+}
+}

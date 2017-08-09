@@ -1,0 +1,112 @@
+
+import javax.servlet.http.*;
+import com.susing.*;
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.core.jacper.*;
+import java.io.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.program.*;
+
+import com.kinglib.util.json.*;
+
+@class{
+	public void doPost(Jacper jacper){	//下载表格式
+		
+		Param  param = new Param(jacper);
+		String objectId=param.getString("objectId");
+		String tabId = ProgramFactory.getInstance().getProgram(param.getConnection("plat"),objectId).getTabId();
+
+		if(objectId==null){
+			<?<script>alert("?>jacper.trans("缺少参数")<?:object_id");</script>?>;
+			return;
+		}
+
+		MetaTable mt = MetaFactory.getObject(tabId);
+		if(mt==null){
+			<?
+			<script>
+				alert("?>jacper.trans("不存在")<?object_id=?>objectId+jacper.trans("对应的表")<?!");
+			</script>
+			?>;
+			return;
+		}else{
+			EFile ef=new EFile();
+			try{
+				OutputStream os=ef.getOutputStream();
+				StringBuilder head1=new StringBuilder();
+				StringBuilder head2=new StringBuilder();
+				StringBuilder head3=new StringBuilder();
+				int i=0;
+				for(MetaColumn mc:mt.getColumns()){
+					if(i==0){					
+					    head1.append(mt.getDblink()).append(":").append(mt.getLname()).append(":").append(mt.getPname()).append("\r\n");
+						head2.append(mc.getLname()).append(":").append(mc.getPname()).append(":").append(mc.getDataType()).append(":").append(mc.isNotNull()?1:0).append(":").append(mc.isPrimaryKey()?1:0).append(":").append(mc.getSpecialSet());
+						
+						if(mc.getDataType().equals("int")){
+							head3.append(""+mc.getLength()+"");    
+						}else if(mc.getDataType().equals("float")){
+							head3.append(""+mc.getLength()+":"+mc.getDecimalDigits()+"");
+						}else if(mc.getDataType().equals("smalldatetime")||mc.getDataType().equals("datetime")){
+							if(mc.getSpecialSet().equals("3")){
+									head3.append("yyyy");
+							}else if(mc.getSpecialSet().equals("5")){
+									head3.append("yyyy/mm");
+							}else if(mc.getSpecialSet().equals("8")){
+									head3.append("yyyy/mm/dd hh24:mi");
+							}else if(mc.getSpecialSet().equals("9")){
+									head3.append("yyyy/mm/dd hh24:mi.ss");
+							}else{
+									head3.append("yyyy/mm/dd");
+							}
+						}else{
+							head3.append(mc.getLength());
+						}
+					}else{
+						head2.append(",").append(mc.getLname()).append(":").append(mc.getPname()).append(":").append(mc.getDataType()).append(":").append(mc.isNotNull()?1:0).append(":").append(mc.isPrimaryKey()?1:0).append(":").append(mc.getSpecialSet());
+						head3.append(",");
+						if(mc.getDataType().equals("int")){
+							head3.append(""+mc.getLength()+"");
+						}else if(mc.getDataType().equals("float")){
+							head3.append(""+mc.getLength()+":"+mc.getDecimalDigits()+"");
+						}else if(mc.getDataType().equals("smalldatetime")||mc.getDataType().equals("datetime")){
+							if(mc.getSpecialSet().equals("3")){
+									head3.append("yyyy");
+							}else if(mc.getSpecialSet().equals("5")){
+									head3.append("yyyy/mm");
+							}else if(mc.getSpecialSet().equals("8")){
+									head3.append("yyyy/mm/dd hh24:mi");
+							}else if(mc.getSpecialSet().equals("9")){
+									head3.append("yyyy/mm/dd hh24:mi.ss");
+							}else{
+									head3.append("yyyy/mm/dd");
+							}
+						}else{
+							head3.append(""+mc.getLength()+"");
+						}
+					}
+					i++;      
+				}
+				os.write(head1.toString().substring(0,head1.toString().length()-1).getBytes());
+				os.write(head2.append("\r\n").toString().substring(0,head2.toString().length()-1).getBytes());
+				os.write(head3.append("\r\n").toString().getBytes());
+				os.close();
+
+				HttpServletResponse res = jacper.getResponse();
+				res.setContentType("application/csv");
+				res.setHeader("Content-Disposition", "attachment;filename="+new String("数据录入".getBytes(),"iso-8859-1")+".csv");
+				res.setHeader("Content-Length", ef.length()+"");
+				res.setHeader("Accept-ranges", "bytes");
+				Files.copyRange(ef.getInputStream(), res.getOutputStream(),1024);
+			}catch(Exception e){
+				<?
+				<script>
+				alert("?>jacper.trans("下载数据格式失败")<?!\n?>jacper.trans("原因")<?:?>e.getMessage()<?");
+				</script>
+				?>;
+			}
+		}
+	} 
+
+}

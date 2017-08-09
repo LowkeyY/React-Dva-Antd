@@ -1,0 +1,137 @@
+
+
+import java.util.UUID;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.workflow.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String id = jacper.getString("instanceId","0");
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+			JSONObject instanceJSON = new JSONObject("{}");
+			String[] rs = conPlat.getRow("select workflowid,instance_id,instance_name,status,description,ENTRY_NAME,ENTRY_date from $[plat].workflow_instance where instance_id=?",new String[]{""+id});      
+			if(rs!=null){
+				instanceJSON.put("workflowid",rs[0]);
+				instanceJSON.put("instanceId",rs[1]);
+				instanceJSON.put("instance_name",rs[2]);
+				instanceJSON.put("status",rs[3]);
+				instanceJSON.put("description",rs[4]);
+				instanceJSON.put("ENTRY_NAME",rs[5]);
+				if(rs[6].equals("")){
+					instanceJSON.put("ENTRY_date","");
+				}else{
+					instanceJSON.put("ENTRY_date",rs[6].substring(0,11));
+				}
+				
+			}
+		   <?[?>instanceJSON.toString()<?]?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+
+		String instance_name=jacper.getStr("instance_name");
+		String WorkflowID=jacper.getStr("parent_id");
+		String status=jacper.getStr("status");
+		String description=jacper.getStr("description");
+
+		String type=jacper.getStr("type");		
+		WorkflowFactory WFactory=WorkflowFactory.getInstance();
+		Workflow workflow=WFactory.getWorkflow(conPlat,WorkflowID);
+
+		if(type.equals("save")){
+			String instanceId  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				instanceId = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				instanceId =UUID.randomUUID().toString();
+			}
+			String[] insed = conPlat.getRow("select count(instance_name) from $[plat].workflow_instance where instance_name=?",new String[]{instance_name});
+			if(insed[0].equals("0")){
+				try{	
+					conPlat.exec("insert into $[plat].workflow_instance (workflowid,instance_id,instance_name,entry_name,status,entry_date,description) values (?,?,?,?,?,$getdate(),?)",new String[]{WorkflowID,instanceId+"",instance_name,user_id+"",status,description});
+					WorkflowInstance workflowInstance=new WorkflowInstance(WorkflowID,instanceId,instance_name,"",description);
+					workflow.addInstance(instanceId,workflowInstance);
+					if(!workflow.getDifinationBody().equals("")){
+						workflowInstance.setDifinationBody(workflow.getDifinationBody());
+						conPlat.exec("update $[plat].workflow_instance set difination_body=(select difination_body from $[plat].workflow_base where object_id=?) where instance_id=?",new String[]{WorkflowID,instanceId+""});
+					}
+					<?{success:true,instanceId:'?>instanceId<?'}?>;
+				}catch(Exception e){
+					<?{success:false,message:"?>e.toString()<?"}?>;
+				}finally{
+					conPlat.close();
+				}
+			}else{
+				<?{success:false,message:"?>jacper.trans("实例名与已有的实例重名,请选择其他名称")<?"}?>;
+			}
+		}else if(type.equals("updatesave")){
+			try{	
+				String instanceId=jacper.getStr("instanceId");
+				conPlat.exec("update $[plat].workflow_instance set instance_name=?,description=?,status=? where instance_id=?",new String[]{instance_name,description,status,instanceId+""});
+				workflow.removeInstance(instanceId);
+			    WorkflowInstance workflowInstance=new WorkflowInstance(WorkflowID,instanceId,instance_name,"",description);
+				workflow.addInstance(instanceId,workflowInstance);
+
+				Object[] rs = conPlat.getLarge("select difination_body from $[plat].workflow_instance where instance_id=?",new String[]{""+instanceId});      
+				if(rs!=null&&rs.length>0){
+					workflowInstance.setDifinationBody(rs[0].toString());
+				}
+				<?{success:true,instanceId:'?>instanceId<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(type.equals("delete")){
+			try{	
+				String instanceId=jacper.getStr("instanceId");
+				conPlat.exec("delete from $[plat].workflow_instance where instance_id=?",new String[]{instanceId+""});
+				conPlat.exec("delete from $[plat].WorkflowAuth where instance_id=?",new String[]{instanceId+""});
+				workflow.removeInstance(instanceId);
+				workflow.instanceAuthClear(instanceId);
+				<?{success:true,instanceId:'?>instanceId<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(type.equals("lock")){
+			try{	
+				String instanceId=jacper.getStr("instanceId");
+				String[] statusArray = conPlat.getRow("select status from $[plat].workflow_instance where instance_id=?",new String[]{instanceId});
+				if(statusArray[0].equals("true")){
+					conPlat.exec("update $[plat].workflow_instance set status='false' where instance_id=?",new String[]{instanceId+""});
+				}else{
+					conPlat.exec("update $[plat].workflow_instance set status='true' where instance_id=?",new String[]{instanceId+""});
+				}
+				<?{success:true,instanceId:'?>instanceId<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}
+	}
+}

@@ -1,0 +1,210 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONObject;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.space.HWSpaceFactory;
+import gpra.filesystem.space.HWSpaceNode;
+import gpra.filesystem.space.HWSpaceFactory.HWSessions;
+
+		//public class up{
+@class{
+	public void doPost(Jacper jacper) {
+		Connection con=jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			String date="";
+			String spaceId=jacper.getSession().getString(HWSessions.HW_BASE_SPACEID.name());
+			System.out.println("spaceId:"+spaceId);
+			
+			HWSpaceNode space = HWSpaceFactory.getSpaceById(spaceId);
+			
+			String dirId = space.getDefaultDirId();
+			System.out.println("dirId:"+dirId);
+			
+			String sql="select space_id,space_name from dir_space_base where p_space_id='8afaec81-53efdc82-0153-efdc829f-0000'";
+			
+			
+			String[][] rs = con.get(sql);
+			String extra="";
+			int i=0;
+			for (String[] strings : rs) {
+				String sql2="";
+				sql2="select count(file_id) from dir_file_base where space_id=? and att_128='1' and is_secrecy='0'";
+				
+				String[][] rs2 = con.get(sql2,new String[]{strings[0]});
+				if(!rs2[0][0].equals("0")){
+					date+="<point name=\""+strings[1]+"\" y=\""+rs2[0][0]+"\"/>";
+				}
+			}
+			
+//			String data="<anychart>"
+//		 +"<settings>"
+//		 +" <animation enabled=\"True\" /> "
+//		 +" </settings>"
+//		 +" <margin all=\"0\" /> "
+//		 +"<charts>"
+//		 +"<chart name=\"chart69087\" plot_type=\"CategorizedVertical\" leftLen=\"52\" rightLen=\"0\">"
+//		 +" <data_plot_settings /> "
+//		 +"<chart_settings>"
+//		 +"<title>"
+//		 +" <text>空间目录资料统计</text> "
+//		 +" </title>"
+//		 +"<chart_background>"
+//		 +" <fill enabled=\"true\" type=\"Solid\" color=\"#FFFFFF\" /> "
+//		 +" <border enabled=\"False\" /> "
+//		 +" <inside_margin all=\"8\" /> "
+//		 +" </chart_background>"
+//		 +" <legend enabled=\"True\" position=\"Top\" align=\"Far\" inside_dataplot=\"false\" align_by=\"Chart\" Columns=\"1\">"
+//		 +"  <title enabled=\"false\" /> "
+//		 +" </legend>"
+//		 +"<data_plot_background>"
+//		 +" <border enabled=\"False\" /> "
+//		 +" <fill type=\"Solid\" color=\"#FFFFFF\" /> "
+//		 +" </data_plot_background>"
+//		 +"<axes>"
+//		 +"<x_axis>"
+//		 +" <zero_line enabled=\"False\" /> "
+//		 +" <labels rotation=\"45\">"
+//		 +"<format>{%Value}{numDecimals:0,thousandsSeparator:}</format> "
+//		 +" </labels>"
+//		 +"<title>"
+//		 +" <text>空间</text> "
+//		 +" </title>"
+//		 +" <scale /> "
+//		 +"<major_grid>"
+//		 +" <line color=\"#C0C0C0\" /> "
+//		 +" </major_grid>"
+//		 +"<minor_grid>"
+//		 +" <line color=\"#C0C0C0\" opacity=\"0.5\" /> "
+//		 +" </minor_grid>"
+//		 +" </x_axis>"
+//		 +"<y_axis name=\"yaxis69087-0\" position=\"Normal\">"
+//		 +"  <zero_line enabled=\"False\" /> "
+//		 +" <title>"
+//		 +"  <font bold=\"True\" /> "
+//		 +" <text>文件数量</text> "
+//		 +" </title>"
+//		 +"<labels>"
+//		 +" <format>{%Value}{numDecimals:0,thousandsSeparator:}</format> "
+//		 +" </labels>"
+//		 +" <scale type=\"Linear\" minimum=\"0\" /> "
+//		 +"<major_grid>"
+//		 +" <line color=\"#C0C0C0\" /> "
+//		 +" </major_grid>"
+//		 +"<minor_grid>"
+//		 +" <line color=\"#C0C0C0\" opacity=\"0.5\" /> "
+//		 +" </minor_grid>"
+//		 +" </y_axis>"
+//		 +" </axes>"
+//		 +" </chart_settings>"
+//		 +"<styles>"
+//		 +"<bar_style name=\"lineColor0\">"
+//		 +" <fill color=\"#33CCCC\" opacity=\"0.8\" type=\"Solid\" /> "
+//		 +" <line color=\"#33CCCC\" /> "
+//		 +" </bar_style>"
+//		 +" </styles>"
+//		 +"<data>"
+//		 +"<series name=\"文件数量\" id=\"s0\" color=\"#33CCCC\" type=\"Bar\" y_axis=\"yaxis69087-0\" style=\"lineColor0\">"
+//		 +" <tooltip enabled=\"True\">"
+//		 +" <format>{%Name}{numDecimals:0,thousandsSeparator:} {%SeriesName}:{%YValue}{numDecimals:0,thousandsSeparator:}</format> "
+//		 +" </tooltip>"
+//		 +date
+//		 +" </series>"
+//		 +" </data>"
+//		 +"</chart>"
+//		 +" </charts>"
+//		 +" </anychart>";
+//		 
+		 
+			String results1="<anychart><settings><animation enabled=\"True\" />"+
+			"</settings>"+
+			"<margin all=\"0\" />"+
+			"<charts>"+
+			"<chart name=\"chart528aeef3-5d0f-4af9-a6d7-e2cea5baa530\" plot_type=\"CategorizedVertical\" leftLen=\"80\" rightLen=\"0\">"+
+			"<data_plot_settings enable_3d_mode=\"True\" />"+
+			"<chart_settings>"+
+			"<title>"+
+			"<text>"+
+			"办公厅目录资料统计</text>"+
+			"</title>"+
+			"<chart_background>"+
+			"<fill enabled=\"true\" type=\"Solid\" color=\"#FFFFFF\" />"+
+			"<border enabled=\"False\" />"+
+			"<inside_margin all=\"8\" />"+
+			"</chart_background>"+
+			"<data_plot_background>"+
+			"<border enabled=\"False\" />"+
+			"<fill type=\"Solid\" color=\"#FFFFFF\" />"+
+			"</data_plot_background>"+
+			"<axes>"+
+			"<x_axis>"+
+			"<zero_line enabled=\"False\" />"+
+			"<labels rotation=\"0\">"+
+			"<format>"+
+			"{%Value}{numDecimals:0,thousandsSeparator:}</format>"+
+			"</labels>"+
+			"<title>"+
+			"<text>"+
+			"空间名称</text>"+
+			"</title>"+
+			"<scale />"+
+			"<major_grid>"+
+			"<line color=\"#C0C0C0\" />"+
+			"</major_grid>"+
+			"<minor_grid>"+
+			"<line color=\"#C0C0C0\" opacity=\"0.5\" />"+
+			"</minor_grid>"+
+			"</x_axis>"+
+			"<y_axis name=\"yaxis528aeef3-5d0f-4af9-a6d7-e2cea5baa530-0\" position=\"Normal\">"+
+			"<zero_line enabled=\"False\" />"+
+			"<line color=\"#FF6600\" />"+
+			"<title>"+
+			"<font color=\"#FF6600\" bold=\"True\" />"+
+			"<text>"+
+			"资料个数</text>"+
+			"</title>"+
+			"<labels>"+
+			"<format>"+
+			"{%Value}{numDecimals:2,thousandsSeparator:}</format>"+
+			"</labels>"+
+			"<scale type=\"Linear\" minimum=\"0\" />"+
+			"<major_grid>"+
+			"<line color=\"#C0C0C0\" />"+
+			"</major_grid>"+
+			"<minor_grid>"+
+			"<line color=\"#C0C0C0\" opacity=\"0.5\" />"+
+			"</minor_grid>"+
+			"</y_axis>"+
+			"</axes>"+
+			"</chart_settings>"+
+			"<styles>"+
+			"<bar_style name=\"lineColor0\">"+
+			"<fill color=\"#FF6600\" opacity=\"0.8\" type=\"Solid\" />"+
+			"<line color=\"#FF6600\" />"+
+			"</bar_style>"+
+			"</styles>"+
+			"<data>"+
+			"<series name=\"资料个数\" id=\"s0\" color=\"#808080\" type=\"Bar\" y_axis=\"yaxis528aeef3-5d0f-4af9-a6d7-e2cea5baa530-0\" style=\"lineColor0\">"+
+			"<tooltip enabled=\"True\">"+
+			"<format>"+
+			"空间名称:{%Name}{numDecimals:0,thousandsSeparator:}\n文件共:{%YValue}{numDecimals:0,thousandsSeparator:}个</format>"+
+			"</tooltip>"+
+			date+
+			"</series>"+
+			"</data>"+
+			"</chart>"+
+			"</charts>"+
+			"</anychart>";
+
+
+			
+			JSONObject jo = new JSONObject();
+			jo.put("success", true);
+			jo.put("data", results1);
+			
+			jacper.print(jo);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

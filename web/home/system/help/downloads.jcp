@@ -1,0 +1,83 @@
+
+/*
+ * @(#)/bbs/download.jcp	1.0.0 03/04/16
+ *
+ * Copyright 2003 Bizdict Co.,Ltd. All rights reserved.
+ *
+ * 主程序作者：
+ * @author lzy
+ *
+ * 修改者：
+ *
+ * 修改日期:
+ *
+ * 修改理由:
+ *
+ */
+
+import java.io.InputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.ResultSet;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import com.kinglib.*;
+
+import com.kinglib.util.Files;
+
+@class{
+
+	public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	HttpServletResponse res = jacper.getResponse();
+	String help_id = jacper.getString("help_id",jacper.trans("discussID出错"));
+	int dispic = jacper.getInt("dispic",jacper.trans("dispic出错"));
+
+	if(jacper.checkError()) return;
+	String fileName="";
+	String ContentType="";
+
+	try{
+
+			Statement stmt = conPlat.createStatement();
+			String sqlstr="select file_type,file_name,attach_file from platform.help_attach where help_id="+help_id;
+			ResultSet rs = stmt.executeQuery(sqlstr);
+
+			rs.next();
+
+			ContentType = rs.getString(1);
+			fileName = rs.getString(2);
+			InputStream dis = rs.getBinaryStream(3);
+			if(conPlat.getType()==com.susing.EasyConnection.SQLSERVER){
+				try {fileName=new String(fileName.getBytes("GBK"),"8859_1");}
+				catch(Exception se){}
+			}
+
+			res.setContentType(ContentType);
+			res.setHeader("Content-Disposition","attachment;filename="+fileName);
+
+			Files.copyRange(dis,res.getOutputStream(),2048);
+
+			dis.close();
+			rs.close();
+			stmt.close();
+
+			//conPlat.exec("update $[plat].files set times=times+1 where file_id=?",new String[]{help_id+""});
+
+		}catch(SQLException se){
+			throw new KingleException(jacper.trans("数据库更新错误!"),se);
+		}catch(IOException oe){
+			throw new KingleException(jacper.trans("数据写入错误"),oe);
+		}
+
+	}
+
+}
+
+

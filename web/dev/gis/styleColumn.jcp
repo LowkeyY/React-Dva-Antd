@@ -1,0 +1,52 @@
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.*;
+import com.kinglib.util.json.*;
+import java.sql.Types;
+import java.util.*;
+
+
+@class{
+	public void doPost(Jacper jacper){
+		Connection conPlat=jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String type = jacper.getStr("type");
+		String object_id = jacper.getStr("object_id");
+
+		String[][] rss=null;		
+		jacper.getResponse().setContentType("application/x-json");
+		try{
+			JSONArray jarr=new JSONArray();
+			rss = conPlat.get("select seq,value,baseColor,strockcolor,icon, weight,opacity,label_font,font_size,fontColor,object_id,height,icontype, forcolor, filltype, fillimage,startvalue,endvalue from $[plat].map_style where object_id=? order by seq ",new String[]{object_id});
+			for(int z=0;z<rss.length;z++){
+				JSONObject styleJSON = new JSONObject("{}");
+				styleJSON.put("seq",rss[z][0]);
+				styleJSON.put("value",rss[z][1]);
+				styleJSON.put("baseColor",rss[z][2]);
+				styleJSON.put("strockColor",rss[z][3]);
+				styleJSON.put("icon",rss[z][4]);	
+				styleJSON.put("weight",rss[z][5]);
+				styleJSON.put("height",rss[z][11]);
+				styleJSON.put("opacity",rss[z][6]);
+				styleJSON.put("label_font",rss[z][7]);
+				styleJSON.put("font_size",rss[z][8]);
+				styleJSON.put("fontColor",rss[z][9]);
+				styleJSON.put("object_id",object_id);
+				styleJSON.put("marker_type",rss[z][12]);
+				styleJSON.put("foreColor",rss[z][13]);
+				styleJSON.put("fill_type",rss[z][14]);
+				styleJSON.put("fill_image",rss[z][15]);
+				styleJSON.put("startValue",rss[z][16]);
+				styleJSON.put("endValue",rss[z][17]);
+				jarr.put(styleJSON);
+		}
+		jacper.print("{success:true,dataItem:"+jarr+"}");
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+}

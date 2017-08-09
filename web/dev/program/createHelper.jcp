@@ -1,0 +1,65 @@
+import com.kinglib.*;
+import com.kinglib.Jacper;
+import com.kinglib.ui.core.CustomizeFactory;
+import com.kinglib.ui.core.CustomizeObject;
+import com.kinglib.ui.core.utils.HelpTemplateGeneration;
+import com.kinglib.ui.core.utils.HelpTemplateGenerator;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+import com.kinglib.workbench.ProgramNode;
+import com.kinglib.workbench.program.ProgramType;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+
+
+@class{
+	public void doGet(Jacper jacper) {
+		String objectId = jacper.getStr("objectId");
+		String viewType = jacper.getStr("viewType");
+		Connection conPlat = jacper.getConnection("plat");
+		Object[] rss=null;
+		String[][] objId = conPlat.get("select category_id from $[plat].help_category where object_id=?",new String[]{objectId});
+		if(objId.length==1 && "edit".equals(viewType)){
+			try{
+			JSONObject helpJSON = new JSONObject("{}");
+			rss = conPlat.getLarge("select note from $[plat].help_category where object_id=?",new String[]{objectId});
+			if(rss!=null&&rss.length>0){
+				helpJSON.put("forder_detail",rss[0]);
+			}
+			jacper.print("{success:true,data:"+helpJSON+"}");
+			}
+			catch(Exception e){
+				e.printStackTrace();
+			}finally{
+			conPlat.close();
+			}
+		} else {
+			ObjectNode node = ObjectManager.getObject(objectId);
+			if (node != null && node.getType() == ObjectType.PROGRAM) {
+				Param p = new Param(jacper);
+				ProgramType ptype = ((ProgramNode) node).getProgramType();
+				CustomizeObject prg = CustomizeFactory.getCustomizeObject(p, ptype.toString(), node.getId());
+				if (prg instanceof HelpTemplateGeneration) {
+					try{
+						JSONObject helpJSON = new JSONObject("{}");
+						if (!(p.getStr("override").equals("true"))){
+							helpJSON.put("forder_detail",((HelpTemplateGeneration) prg).generateHelpTemplate(p));
+						}
+						jacper.print("{success:true,data:"+helpJSON+"}");
+					}
+					catch(Exception e){
+						e.printStackTrace();
+					}
+				}
+	
+				p.closeAllConnection();
+
+			}			
+		}
+	}
+}

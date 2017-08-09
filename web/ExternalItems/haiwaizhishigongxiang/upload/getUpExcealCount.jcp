@@ -1,0 +1,22 @@
+import com.kinglib.Jacper;
+
+import gpra.filesystem.upload.HWUpExcealUnits;
+
+//public class te{
+@class{
+	public void doPost(Jacper jacper){
+		String key=jacper.getString("key");
+		try{
+			int count= HWUpExcealUnits.getKey(key);
+			int Zcount= HWUpExcealUnits.getCountKey(key);
+			int statu=HWUpExcealUnits.getStatu(key);
+			System.out.println("{'success':true,'shengyu':'"+count+"','count' : '"+Zcount+"','statu':'"+statu+"'}");
+			jacper.print("{'success':true,'shengyu':'"+count+"','count' : '"+Zcount+"','statu':'"+statu+"'}");
+		}catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	public void doGet(Jacper jacper){
+		doPost(jacper);
+	}
+}

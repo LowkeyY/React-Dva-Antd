@@ -1,0 +1,229 @@
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.i18n.I18n;
+import com.kinglib.i18n.Local;
+import com.kinglib.util.UserData;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.util.json.JSONPart;
+
+import java.util.ArrayList;
+
+import com.kinglib.portal.PotalUnits;
+
+import com.susing.core.KingleSystem;
+
+@class{
+
+	public void doGet(Jacper jacper) {
+		jacper.setSession();
+		String userId = jacper.getSession().getString("user_id");
+		JSONPart config;
+		if (UserData.has(userId, "desktopConfig", "main")||UserData.has(userId, "desktopLaunchers", "main")) {
+			JSONObject deskTopJSON = new JSONObject();
+			try {
+				JSONObject deskTopConfigJSON = new JSONObject("{}");
+				
+				JSONArray autoRunJSONArray = new JSONArray();
+				JSONArray shortCutsJSONArray = new JSONArray();
+				JSONArray quickStartJSONArray = new JSONArray();
+
+				ArrayList<String> autoRunList = new ArrayList<String>();
+				ArrayList<String> shortcutsList = new ArrayList<String>();
+				ArrayList<String> quickStartList = new ArrayList<String>();
+				
+				pankDeskTopConfig(jacper.getConnection("plat") , userId , autoRunList , shortcutsList , quickStartList , null);
+
+/*				ArrayList<Menu> al = null;
+				MenuFactory mf = MenuFactory.getInstance();
+				if (mf != null) {
+					mf.setTerminalType(0);
+					al = mf.getMenuList("0", String.valueOf(userId), true);
+					for (Menu m : al) {
+						if (m.isTopMenu()) {
+							TopMenu t = (TopMenu) m;
+							if (t.getAutoRun() == true) {
+								autoRunList.add("module_" + t.getId());
+							}
+							if (t.getShortcut() == true) {
+								shortcutsList.add("module_" + t.getId());
+							}
+							if (t.getQuickstart() == true) {
+								quickStartList.add("module_" + t.getId());
+							}
+						}
+					}
+				}*/
+
+				if (UserData.has(userId, "desktopLaunchers", "main")) {
+					JSONPart launcherPart=new JSONPart(UserData.get(userId , "desktopLaunchers", "main"));
+					JSONObject launcherJSON =launcherPart.toJSONObject();
+					
+					if(!launcherJSON.isNull("autorun")){
+						autoRunJSONArray=launcherJSON.getJSONArray("autorun");
+						//for (int i = 0; i < autoRunJSONArray.length(); i++) {
+						//	String modId=(String) autoRunJSONArray.get(i);
+						//	String menuId=modId.replaceAll("module_","");
+						//	if(mf.getMenu(menuId)!=null){
+						//		ArrayList<Menu> menuList= mf.getMenuList(menuId,userId,true);
+						//		if(menuList!=null){autoRunJSONArray.remove(i);}
+						//	}
+						//}
+					}
+					if(!launcherJSON.isNull("shortcut")){
+						shortCutsJSONArray=launcherJSON.getJSONArray("shortcut");
+						//for (int i = 0; i < shortCutsJSONArray.length(); i++) {
+						//	String modId=(String) shortCutsJSONArray.get(i);
+						//	String menuId=modId.replaceAll("module_","");
+						//	if(mf.getMenu(menuId)!=null){
+						//		ArrayList<Menu> menuList= mf.getMenuList(menuId,userId,true);
+						//		if(menuList!=null){shortCutsJSONArray.remove(i);}
+						//	}
+						//}
+					}
+					if(!launcherJSON.isNull("quickstart")){
+						quickStartJSONArray=launcherJSON.getJSONArray("quickstart");
+						//for (int i = 0; i < quickStartJSONArray.length(); i++) {
+						//	String modId=(String) quickStartJSONArray.get(i);
+						//	String menuId=modId.replaceAll("module_","");
+						//	if(mf.getMenu(menuId)!=null){
+						//		ArrayList<Menu> menuList= mf.getMenuList(menuId,userId,true);
+						//		if(menuList!=null){quickStartJSONArray.remove(i);}
+						//	}
+						//}
+					}
+				}
+
+				for (int i = 0; i < autoRunList.size(); i++) {
+					autoRunJSONArray.put((String) autoRunList.get(i));
+				}
+				deskTopConfigJSON.put("autorun", autoRunJSONArray);
+
+				for (int i = 0; i < shortcutsList.size(); i++) {
+					shortCutsJSONArray.put((String) shortcutsList.get(i));
+				}
+				deskTopConfigJSON.put("shortcuts", shortCutsJSONArray);
+
+				for (int i = 0; i < quickStartList.size(); i++) {
+					quickStartJSONArray.put((String) quickStartList.get(i));
+				}
+				deskTopConfigJSON.put("quickstart", quickStartJSONArray);
+
+				JSONArray contextMenuJSONArray = new JSONArray();
+				contextMenuJSONArray.put("preferences");
+				deskTopConfigJSON.put("contextmenu", contextMenuJSONArray);
+				if (UserData.has(userId, "desktopConfig", "main")){
+					JSONPart stylesPart=new JSONPart(UserData.get(userId+"", "desktopConfig", "main"));
+					JSONObject stylesJSON =stylesPart.toJSONObject();
+					String title = KingleSystem.getApplicationTitle();
+					String authType = KingleSystem.getAuthType();
+					stylesJSON.put("title", title);
+					stylesJSON.put("authType", authType);
+					deskTopConfigJSON.put("styles", stylesJSON);
+				}else{
+					JSONPart stylesPart=new JSONPart("{'theme':{'id':4,'name':'"+jacper.trans("标准蓝色")+"','pathtofile':'resources/themes/xtheme-windows-blue/css/windows-blue.css'},'wallpaper':{'id':74,'name':'"+jacper.trans("水天一色")+"','pathtofile':'resources/wallpapers/2017-18.jpg'},'wallpaperposition':'tile','fontcolor':'FFFFFF','backgroundcolor':'000000','transparency':true}");
+					JSONObject stylesJSON =stylesPart.toJSONObject();
+					String title = KingleSystem.getApplicationTitle();
+					String authType = KingleSystem.getAuthType();
+					stylesJSON.put("title", title);
+					stylesJSON.put("authType", authType);
+					deskTopConfigJSON.put("styles", stylesJSON);
+				}
+				deskTopJSON.put("config", deskTopConfigJSON);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			config= new JSONPart(deskTopJSON);
+		}else {
+			JSONObject deskTopJSON = new JSONObject();
+			JSONObject deskTopConfigJSON = new JSONObject();
+			try {
+				JSONArray autoRunJSONArray = new JSONArray();
+				JSONArray shortCutsJSONArray = new JSONArray();
+				JSONArray quickStartJSONArray = new JSONArray();
+
+				ArrayList<String> autoRunList = new ArrayList<String>();
+				ArrayList<String> shortcutsList = new ArrayList<String>();
+				ArrayList<String> quickStartList = new ArrayList<String>();
+
+				JSONArray contextMenuJSONArray = new JSONArray();
+				contextMenuJSONArray.put("preferences");
+				deskTopConfigJSON.put("contextmenu", contextMenuJSONArray);
+				
+				pankDeskTopConfig(jacper.getConnection("plat") , userId , autoRunList , shortcutsList , quickStartList , null);
+
+				for (int i = 0; i < autoRunList.size(); i++) {
+					autoRunJSONArray.put((String) autoRunList.get(i));
+				}
+				deskTopConfigJSON.put("autorun", autoRunJSONArray);
+
+				for (int i = 0; i < shortcutsList.size(); i++) {
+					shortCutsJSONArray.put((String) shortcutsList.get(i));
+				}
+				deskTopConfigJSON.put("shortcuts", shortCutsJSONArray);
+
+				for (int i = 0; i < quickStartList.size(); i++) {
+					quickStartJSONArray.put((String) quickStartList.get(i));
+				}
+				deskTopConfigJSON.put("quickstart", quickStartJSONArray);
+
+				JSONPart stylesPart=new JSONPart("{'theme':{'id':4,'name':'"+jacper.trans("标准蓝色")+"','pathtofile':'resources/themes/xtheme-windows-blue/css/windows-blue.css'},'wallpaper':{'id':74,'name':'"+jacper.trans("水天一色")+"','pathtofile':'resources/wallpapers/2017-18.jpg'},'wallpaperposition':'tile','fontcolor':'FFFFFF','backgroundcolor':'000000','transparency':true}");
+				JSONObject stylesJSON =stylesPart.toJSONObject();
+				String title = KingleSystem.getApplicationTitle();
+				String authType = KingleSystem.getAuthType();
+				stylesJSON.put("title", title);
+				stylesJSON.put("authType", authType);
+				deskTopConfigJSON.put("styles", stylesJSON);
+				deskTopJSON.put("config", deskTopConfigJSON);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		
+			config = new JSONPart(deskTopJSON);
+		}
+		if (I18n.isServiceStarted()) {
+			Local loc = I18n.getLocal(userId);
+			config.join(new JSONPart(loc.toJSONString()));
+		}
+		config.join("success", true);
+		jacper.getResponse().setContentType("application/x-json");
+		jacper.print(config);
+	}
+	
+	public void pankDeskTopConfig(Connection con , String userId , 
+			ArrayList<String> autoRunList , ArrayList<String> shortcutsList , ArrayList<String> quickStartList , ArrayList<String> startMenuList){
+		JSONArray menus = PotalUnits.getUserMenuByJSONArray(con , userId);
+		if(menus != null){
+			for(int i = 0 ; i < menus.length() ; i++){
+				try {
+					JSONObject menu = menus.getJSONObject(i);
+					String key = "sys_app_id" , sys_app_id = "" ;
+/*							//桌面 、快速启动、 开始菜单 、自动运行
+					String[] keys = {"show_desktop_isValid" , "show_fastlink_isValid" , "show_startmenu_isValid" , "default_autoRunRG"};*/
+					if(menu.has(key) && (sys_app_id = menu.getString(key)) != null && sys_app_id.length() > 0){
+						key = "default_autoRunRG";//自动运行
+						if(autoRunList != null && menu.has(key) && "true".equals(menu.getString(key))){
+							autoRunList.add("module_" + sys_app_id);
+						}
+						key = "show_desktop_isValid";//桌面
+						if(shortcutsList != null && menu.has(key) && "true".equals(menu.getString(key))){
+							shortcutsList.add("module_" + sys_app_id);
+						}
+						key = "show_fastlink_isValid";//快速启动
+						if(quickStartList != null && menu.has(key) && "true".equals(menu.getString(key))){
+							quickStartList.add("module_" + sys_app_id);
+						}/*
+						key = "show_startmenu_isValid";//开始菜单
+						if(startMenuList != null && menu.has(key) && "true".equals(menu.getString(key))){
+							startMenuList.add("module_" + sys_app_id);
+						}*/
+					}
+				} catch (Exception e) {
+				}
+			}
+		}
+	}
+	
+	
+} 

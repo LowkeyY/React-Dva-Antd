@@ -1,0 +1,41 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglibx.query.*;
+import com.kinglib.bi.*;
+import com.kinglib.util.json.*;
+
+@class{
+	public void doPost(Jacper jacper){
+
+		HttpSession hs = jacper.getSession();
+
+		Connection conPlat = jacper.getConnection("plat");
+
+		String reportObject_id=jacper.getString("report_id","-1");
+		String data_id=jacper.getStr("dataId");
+
+		TextReportFactory tf=TextReportFactory.getInstance();
+		TextReport rpt=tf.getTextReport(conPlat,reportObject_id);
+		rpt.init(jacper,conPlat);
+
+		try{	
+			JSONObject reportMetaJSON=new JSONObject("{}");	
+			JSONObject searchFieldJSON;
+			reportMetaJSON.put("success","true");
+			if(data_id.equals("")){
+				searchFieldJSON= rpt.getSearchEditor(jacper,conPlat,true);
+				reportMetaJSON.put("searchEditor",searchFieldJSON);	
+			}else{
+				searchFieldJSON=rpt.getSearchEditor(jacper,conPlat,false);
+				reportMetaJSON.put("searchEditor",searchFieldJSON);	
+			}
+			<??>reportMetaJSON.toString()<??>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+}

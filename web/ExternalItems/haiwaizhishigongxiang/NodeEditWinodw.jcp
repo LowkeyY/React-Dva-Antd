@@ -1,0 +1,10 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+@class{
+
+	public void doPost(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		hs.set("HW_EDIT_DIRID",jacper.getString("HW_EDIT_DIRID"));
+	}
+}

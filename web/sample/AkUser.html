@@ -1,0 +1,926 @@
+<html lang="en" class="no-js"><!--<![endif]--><!-- BEGIN HEAD --><head><link href="https://embed.doorbell.io/css/doorbell.min.css?v=1490882297" rel="stylesheet" type="text/css" id="doorbell-css-document">
+        <meta charset="utf-8">
+        <title>Aktivio</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <meta content="width=device-width, initial-scale=1.0" name="viewport">
+        <meta content="Customer relationship management" name="description">
+        <meta content="Geefu s.r.o., www.geefu.net" name="author">
+        <!-- <meta name="MobileOptimized" content="320"> -->
+        <link rel="shortcut icon" href="/img/favicon.ico">
+        <link rel="stylesheet" type="text/css" href="/plugins/pace/themes/pace-theme-flash.css">
+
+        <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&amp;subset=all">
+
+        <link rel="stylesheet" type="text/css" href="/plugins/font-awesome/css/font-awesome.min.css">
+        <link rel="stylesheet" type="text/css" href="/plugins/simple-line-icons/simple-line-icons.min.css">
+        <link rel="stylesheet" type="text/css" href="/plugins/bootstrap/css/bootstrap.min.css">
+        <link rel="stylesheet" type="text/css" href="/plugins/uniform/css/uniform.default.css">
+        <link rel="stylesheet" type="text/css" href="/plugins/bootstrap-switch/css/bootstrap-switch.min.css">
+
+        <link rel="stylesheet" type="text/css" href="/plugins/select2/select2.css">
+        <link rel="stylesheet" type="text/css" href="/plugins/bootstrap-datepicker/css/datepicker.css">
+        <link rel="stylesheet" type="text/css" href="/plugins/bootstrap-daterangepicker/daterangepicker-bs3.css">
+        <link rel="stylesheet" type="text/css" href="/plugins/fullcalendar/fullcalendar.css">
+        <link rel="stylesheet" type="text/css" href="/plugins/bootstrap-datetimepicker/css/bootstrap-datetimepicker.css">
+
+        <link rel="stylesheet" type="text/css" href="/plugins/bootstrap-modal/css/bootstrap-modal-bs3patch.css">
+        <link rel="stylesheet" type="text/css" href="/plugins/bootstrap-toastr/toastr.min.css">
+        <link rel="stylesheet" type="text/css" href="/plugins/bootstrap-modal/css/bootstrap-modal.css">
+        <link rel="stylesheet" type="text/css" href="/plugins/jquery-file-upload/css/jquery.fileupload.css">
+        <link rel="stylesheet" type="text/css" href="/plugins/jquery-file-upload/css/jquery.fileupload-ui.css">
+
+        <link rel="stylesheet" type="text/css" href="/css/pages/tasks.css">
+        <link rel="stylesheet" type="text/css" href="/css/components.css">
+        <link rel="stylesheet" type="text/css" href="/css/plugins.css">
+        <link rel="stylesheet" type="text/css" href="/css/pages/todo.css">
+        <link rel="stylesheet" type="text/css" href="/css/pages/profile.css">
+        <link rel="stylesheet" type="text/css" href="/css/layout.css">
+        <!-- <link rel="stylesheet" type="text/css" href="/css/themes/default.css" /> -->
+        <link rel="stylesheet" type="text/css" href="/plugins/simple_sort_table/simple_sort_table.css">
+        <!-- <link rel='stylesheet' type='text/css' href="/css/custom_crm.css" /> -->
+        <link rel="stylesheet" type="text/css" href="/plugins/icheck/skins/all.css">
+        <link rel="stylesheet" type="text/css" href="/css/themes/grey.css" id="style_color">
+        <link rel="stylesheet" type="text/css" href="/css/custom.css">
+        <link rel="stylesheet" type="text/css" href="/css/aktivio.css">
+
+        <script async="" src="//www.google-analytics.com/analytics.js"></script><script>
+            (function (i, s, o, g, r, a, m) {
+                i['GoogleAnalyticsObject'] = r;
+                i[r] = i[r] || function () {
+                    (i[r].q = i[r].q || []).push(arguments)
+                }, i[r].l = 1 * new Date();
+                a = s.createElement(o),
+                        m = s.getElementsByTagName(o)[0];
+                a.async = 1;
+                a.src = g;
+                m.parentNode.insertBefore(a, m)
+            })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+            ga('create', 'UA-40623032-5', 'auto');
+            ga('send', 'pageview');
+        </script>
+
+
+
+        <script id="doorbellScript" type="text/javascript" async="" src="https://doorbell.io/button/861"></script><script type="text/javascript" async="" src="https://embed.doorbell.io/button/861/1492067739/init"></script></head>
+    <!-- END HEAD -->
+    <!-- BEGIN BODY -->
+    <body class="page-container-bg-solid page-sidebar-closed-hide-logo  pace-done modal-open page-overflow"><div class="pace  pace-inactive"><div class="pace-progress" data-progress-text="100%" data-progress="99" style="width: 100%;">
+                <div class="pace-progress-inner"></div>
+            </div>
+            <div class="pace-activity"></div></div>
+        <!-- BEGIN HEADER -->
+        <div class="page-header navbar navbar-static-top">
+            <!-- BEGIN TOP NAVIGATION BAR -->
+            <div class="page-header-inner">
+                <!-- BEGIN LOGO -->
+                <div class="page-logo">					
+                    <img src="img/logo-big.png" alt="logo" class="logo-default">
+                    <div class="menu-toggler sidebar-toggler">
+                        <!-- DOC: Remove the above "hide" to enable the sidebar toggler button on header -->
+                    </div>
+                </div>
+                <!-- END LOGO -->
+                <!-- BEGIN RESPONSIVEMENU TOGGLER -->
+                <a href="javascript:;" class="menu-toggler responsive-toggler" data-toggle="collapse" data-target=".navbar-collapse"></a>
+                <!-- END RESPONSIVE MENU TOGGLER -->
+                <!-- BEGIN TOP NAVIGATION MENU -->
+                <!-- BEGIN PAGE TOP -->
+                <div class="page-top">
+                    <form class="search-form search-form-expanded" id="sidebar_search" action="#" novalidate="novalidate">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="search_val" name="search_val" placeholder="Search...">
+                            <span class="input-group-btn">
+                                <a href="#" type="submit" class="btn submit"><i class="icon-magnifier"></i></a>
+                            </span>
+                        </div>
+                    </form>
+
+                    <!-- END HEADER SEARCH BOX -->
+                    <!-- BEGIN TOP NAVIGATION MENU -->
+                    <div class="top-menu">
+                        <ul class="nav navbar-nav pull-right">	
+                            <!-- BEGIN USER LOGIN DROPDOWN -->
+                            <li class="dropdown dropdown-user">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true" aria-expanded="false">
+                                    <i class="fa fa-plus"></i>
+                                    <span class="username username-hide-on-mobile"> New record</span>
+                                    <i class="fa fa-angle-down"></i>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="#" onclick="javascript: loadModalPage('/leads/modal/add', 'leads_add');"><i class="icon-star"></i> Lead</a></li>
+                                    <li><a href="#" onclick="javascript: loadModalPage('/accounts/modal/add', 'accounts_add');"><i class="icon-globe"></i> Account</a></li>
+                                    <li><a href="#" onclick="javascript: loadModalPage('/persons/modal/add', 'persons_add');"><i class="icon-user"></i> Person</a></li>
+                                    <li class="divider"></li>
+                                    <li><a href="#" onclick="javascript: loadModalPage('/activities/modal/add/call', 'activity_call_add');"><i class="icon-call-end"></i> Call</a></li>
+                                    <li><a href="#" onclick="javascript: loadModalPage('/activities/modal/add/email', 'activity_email_add');"><i class="icon-envelope"></i> Email</a></li>
+                                    <li><a href="#" onclick="javascript: loadModalPage('/activities/modal/add/task', 'activity_task_add');"><i class="icon-pin"></i> Task</a></li>
+                                    <li><a href="#" onclick="javascript: loadModalPage('/activities/modal/add/appointment', 'activity_appointment_add');"><i class="icon-clock"></i> Appointment</a></li>
+                                    <li><a href="#" onclick="javascript: loadModalPage('/activities/modal/add/meeting', 'activity_meeting_add');"><i class="icon-users"></i> Meeting</a></li>
+                                    <li class="divider"></li>
+                                    <li><a href="#" onclick="javascript: loadModalPage('/opportunities/modal/add', 'opportunities_add');"><i class="icon-briefcase"></i> Opportunity</a></li>
+                                    <li><a href="#" onclick="javascript: loadModalPage('/quotes/modal/add', 'quotes_add');"><i class="icon-list"></i> Quote</a></li>
+                                    <li><a href="#" onclick="javascript: loadModalPage('/orders/modal/add', 'orders_add');"><i class="icon-note"></i> Order</a></li>
+                                    <li><a href="#" onclick="javascript: loadModalPage('/products/modal/add', 'products_add');"><i class="icon-puzzle"></i> Product</a></li>
+                                    <li><a href="#" onclick="javascript: loadModalPage('/wallets/modal/add', 'wallets_add');"><i class="icon-wallet"></i> Wallet</a></li>
+                                </ul>
+                            </li>
+                            <!-- END USER LOGIN DROPDOWN -->
+
+                            <!-- BEGIN USER LOGIN DROPDOWN -->
+                            <li class="dropdown dropdown-user">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
+                                    <i class="fa fa-user"></i>
+                                    <span class="username username-hide-on-mobile ">272923034@qq.com</span>
+                                    <i class="fa fa-angle-down"></i>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="#" onclick="javascript: loadPage('/settings');"><i class="fa fa-cogs"></i> Settings</a></li>
+
+                                    <li><a href="#" onclick="javascript: loadPage('/license');"><i class="fa fa-list-alt"></i> Users</a></li>
+                                    <li><a href="#" onclick="javascript: loadPage('/userrole');"><i class="fa fa-group"></i> User roles</a></li>
+
+                                    <li class="divider"></li>
+                                    <form name="logoutForm" method="POST" action="/logout">
+                                        <li><a href="javascript:document.logoutForm.submit()"><i class="fa fa-key"></i> Log Out</a></li>
+                                    </form>
+                                </ul>
+                            </li>
+                            <!-- END USER LOGIN DROPDOWN -->
+                        </ul>
+                        <!-- END TOP NAVIGATION MENU -->
+                    </div>					
+                </div>
+            </div>
+            <!-- END TOP NAVIGATION BAR -->
+        </div>
+        <!-- END HEADER -->
+
+        <div class="clearfix"></div>
+        <!-- BEGIN CONTAINER -->
+        <div class="page-container">
+            <!-- BEGIN SIDEBAR -->
+            <div class="page-sidebar-wrapper">
+                <div class="page-sidebar navbar-collapse collapse">
+                    <!-- BEGIN SIDEBAR MENU -->
+                    <ul class="page-sidebar-menu page-sidebar-menu-hover-submenu" data-auto-scroll="true" data-slide-speed="200">
+                        <!-- BEGIN SIDEBAR MENU -->
+                        <li class="start active">
+                            <a class="ajaxify" href="/dashboard">
+                                <i class="icon-speedometer"></i>
+                                <span class="title">Dashboard</span>
+                                <span class="selected"></span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="ajaxify" href="/calendar">
+                                <i class="icon-calendar"></i>
+                                <span class="title">Calendar</span>
+                                <span class="selected"></span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="javascript:;">
+                                <i class="icon-users"></i>
+                                <span class="title">Contacts</span>	
+                                <span class="selected"></span>
+                                <span class="arrow open"></span>
+                            </a>
+                            <ul class="sub-menu">
+                                <li><a class="ajaxify" href="/leads"><i class="icon-star"></i> Leads</a></li>
+                                <li><a class="ajaxify" href="/accounts"><i class="icon-globe"></i> Accounts</a></li>
+                                <li><a class="ajaxify" href="/persons"><i class="icon-user"></i> Persons</a></li>
+                            </ul>
+                        </li>
+                        <li>
+                            <a class="ajaxify" href="/activities/all">
+                                <i class="icon-energy"></i>
+                                <span class="title">Activities</span>
+                                <span class="selected"></span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="javascript:;">
+                                <i class="icon-basket"></i>
+                                <span class="title">Sales</span>
+                                <span class="selected"></span>
+                                <span class="arrow open"></span>
+                            </a>
+                            <ul class="sub-menu">
+                                <li><a class="ajaxify" href="/opportunities"><i class="icon-briefcase"></i> Opportunities</a></li>
+                                <li><a class="ajaxify" href="/quotes"><i class="icon-list"></i> Quotes</a></li>
+                                <li><a class="ajaxify" href="/orders"><i class="icon-note"></i> Orders</a></li>
+                                <li><a class="ajaxify" href="/invoices"><i class="icon-doc"></i> Invoices</a></li>
+                                <li><a class="ajaxify" href="/products"><i class="icon-puzzle"></i> Products</a></li>
+                                <li><a class="ajaxify" href="/wallets"><i class="icon-wallet"></i> Wallets</a></li>
+                            </ul>
+                        </li>
+                        <li>
+                            <a href="javascript:;">
+                                <i class="icon-bar-chart"></i>
+                                <span class="title">Analytics</span>
+                                <span class="selected"></span>
+                                <span class="arrow open"></span>
+                            </a>
+                            <ul class="sub-menu">
+                                <li><a class="ajaxify" href="/analytics/sale_by_product">Sale by product</a></li>
+                                <li><a class="ajaxify" href="/analytics/sale_by_salesman">Sale by salesman</a></li>
+                                <li><a class="ajaxify" href="/analytics/realized_activities">Realized activities</a></li>
+                                <!-- <li><figure>Analytics #2</figure></li>
+                                <li><figure>Analytics #3</figure></li> -->
+                            </ul>
+                        </li>
+                        <li class="last">
+                            <a class="ajaxify" href="/documents">
+                                <i class="icon-folder"></i>
+                                <span class="title">Documents</span>
+                                <span class="selected"></span>
+                            </a>
+                        </li>
+                    </ul>
+                    <!-- END SIDEBAR MENU -->
+                </div>
+            </div>
+            <!-- END SIDEBAR -->
+
+            <!-- BEGIN PAGE -->
+            <div class="page-content-wrapper">
+                <div class="page-content" style="min-height:847px"><div id="dashboard_container">
+                        <!-- BEGIN PAGE HEADER-->
+                        <div class="row">
+                            <div class="col-md-12">
+                                <!-- BEGIN PAGE TITLE -->		
+                                <h3 class="page-title">
+                                    Dashboard
+                                    <small>statistics and more</small>
+                                </h3>
+                                <!-- END PAGE TITLE -->
+                            </div>
+                        </div>
+                        <!-- END PAGE HEADER-->
+                        <div id="dashboard">
+                            <!-- BEGIN DASHBOARD STATS -->
+                            <div class="row">
+                                <div class="col-lg-3 col-md-3 col-sm-6 col-sx-12">
+                                    <a class="more" href="#" onclick="javascript: loadPage('accounts');">
+                                    </a><div class="dashboard-stat dashboard-stat-light blue-soft"><a class="more" href="#" onclick="javascript: loadPage('accounts');">
+                                            <div class="visual"><i class="icon-globe"></i></div>
+                                            <div class="details">
+                                                <div class="accounts_count number">0</div>
+                                                <div class="desc">Accounts</div>
+                                            </div>					
+                                        </a>						
+                                    </div>
+                                </div>
+                                <div class="col-lg-3 col-md-3 col-sm-6 col-sx-12">
+                                    <a class="more" href="#" onclick="javascript: loadPage('opportunities');">
+                                    </a><div class="dashboard-stat dashboard-stat-light red-soft"><a class="more" href="#" onclick="javascript: loadPage('opportunities');">
+                                            <div class="visual"><i class="icon-briefcase"></i></div>
+                                            <div class="details">
+                                                <div class="opportunities_count number">0</div>
+                                                <div class="desc">Opportunities</div>
+                                            </div>						
+                                        </a>						
+                                    </div>
+                                </div>
+                                <div class="col-lg-3 col-md-3 col-sm-6 col-sx-12">
+                                    <a class="more" href="#" onclick="javascript: loadPage('products');">
+                                    </a><div class="dashboard-stat dashboard-stat-light green-soft"><a class="more" href="#" onclick="javascript: loadPage('products');">
+                                            <div class="visual"><i class="icon-puzzle"></i></div>
+                                            <div class="details">
+                                                <div class="products_count number">0</div>
+                                                <div class="desc">Products</div>
+                                            </div>
+                                        </a>						
+                                    </div>
+                                </div>
+                                <div class="col-lg-3 col-md-3 col-sm-6 col-sx-12">
+                                    <a class="more" href="#" onclick="javascript: loadPage('activities/all');">
+                                    </a><div class="dashboard-stat dashboard-stat-light purple-soft"><a class="more" href="#" onclick="javascript: loadPage('activities/all');">
+                                            <div class="visual"><i class="icon-energy"></i></div>
+                                            <div class="details">
+                                                <div class="activities_count number">0</div>
+                                                <div class="desc">Planned activities</div>
+                                            </div>
+                                        </a>						
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- END DASHBOARD STATS -->
+                            <div class="clearfix"></div>
+                            <div class="row">
+
+                                <div class="col-md-6 col-sm-6" id="calendar_portlet" style="opacity: 1;">    <!-- BEGIN PORTLET-->
+                                    <div class="portlet light calendar" id="portlet_calendar">
+                                        <div class="portlet-title">
+                                            <div class="caption"><i class="icon-calendar font-green-sharp"></i>
+                                                <span class="caption-subject font-green-sharp bold uppercase">Calendar</span>                    
+                                            </div>
+                                        </div>
+                                        <div class="portlet-body">
+                                            <div id="calendar" class="fc fc-ltr fc-unthemed"><div class="fc-toolbar"><div class="fc-left"><h2>April 2017</h2></div><div class="fc-right"><div class="fc-button-group"><button type="button" class="fc-prev-button fc-button fc-state-default fc-corner-left"><span class="fc-icon fc-icon-left-single-arrow"></span></button><button type="button" class="fc-next-button fc-button fc-state-default"><span class="fc-icon fc-icon-right-single-arrow"></span></button><button type="button" class="fc-month-button fc-button fc-state-default fc-state-active">month</button><button type="button" class="fc-agendaWeek-button fc-button fc-state-default">week</button><button type="button" class="fc-agendaDay-button fc-button fc-state-default fc-corner-right">day</button></div></div><div class="fc-center"></div><div class="fc-clear"></div></div><div class="fc-view-container"><div class="fc-view fc-month-view fc-basic-view"><table><thead><tr><td class="fc-widget-header"><div class="fc-row fc-widget-header"><table><thead><tr><th class="fc-day-header fc-widget-header fc-mon">Mon</th><th class="fc-day-header fc-widget-header fc-tue">Tue</th><th class="fc-day-header fc-widget-header fc-wed">Wed</th><th class="fc-day-header fc-widget-header fc-thu">Thu</th><th class="fc-day-header fc-widget-header fc-fri">Fri</th><th class="fc-day-header fc-widget-header fc-sat">Sat</th><th class="fc-day-header fc-widget-header fc-sun">Sun</th></tr></thead></table></div></td></tr></thead><tbody><tr><td class="fc-widget-content"><div class="fc-day-grid-container"><div class="fc-day-grid"><div class="fc-row fc-week fc-widget-content"><div class="fc-bg"><table><tbody><tr><td class="fc-day fc-widget-content fc-mon fc-other-month fc-past" data-date="2017-03-27"></td><td class="fc-day fc-widget-content fc-tue fc-other-month fc-past" data-date="2017-03-28"></td><td class="fc-day fc-widget-content fc-wed fc-other-month fc-past" data-date="2017-03-29"></td><td class="fc-day fc-widget-content fc-thu fc-other-month fc-past" data-date="2017-03-30"></td><td class="fc-day fc-widget-content fc-fri fc-other-month fc-past" data-date="2017-03-31"></td><td class="fc-day fc-widget-content fc-sat fc-past" data-date="2017-04-01"></td><td class="fc-day fc-widget-content fc-sun fc-past" data-date="2017-04-02"></td></tr></tbody></table></div><div class="fc-content-skeleton"><table><thead><tr><td class="fc-day-number fc-mon fc-other-month fc-past" data-date="2017-03-27">27</td><td class="fc-day-number fc-tue fc-other-month fc-past" data-date="2017-03-28">28</td><td class="fc-day-number fc-wed fc-other-month fc-past" data-date="2017-03-29">29</td><td class="fc-day-number fc-thu fc-other-month fc-past" data-date="2017-03-30">30</td><td class="fc-day-number fc-fri fc-other-month fc-past" data-date="2017-03-31">31</td><td class="fc-day-number fc-sat fc-past" data-date="2017-04-01">1</td><td class="fc-day-number fc-sun fc-past" data-date="2017-04-02">2</td></tr></thead><tbody><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table></div></div><div class="fc-row fc-week fc-widget-content"><div class="fc-bg"><table><tbody><tr><td class="fc-day fc-widget-content fc-mon fc-past" data-date="2017-04-03"></td><td class="fc-day fc-widget-content fc-tue fc-past" data-date="2017-04-04"></td><td class="fc-day fc-widget-content fc-wed fc-past" data-date="2017-04-05"></td><td class="fc-day fc-widget-content fc-thu fc-past" data-date="2017-04-06"></td><td class="fc-day fc-widget-content fc-fri fc-past" data-date="2017-04-07"></td><td class="fc-day fc-widget-content fc-sat fc-past" data-date="2017-04-08"></td><td class="fc-day fc-widget-content fc-sun fc-past" data-date="2017-04-09"></td></tr></tbody></table></div><div class="fc-content-skeleton"><table><thead><tr><td class="fc-day-number fc-mon fc-past" data-date="2017-04-03">3</td><td class="fc-day-number fc-tue fc-past" data-date="2017-04-04">4</td><td class="fc-day-number fc-wed fc-past" data-date="2017-04-05">5</td><td class="fc-day-number fc-thu fc-past" data-date="2017-04-06">6</td><td class="fc-day-number fc-fri fc-past" data-date="2017-04-07">7</td><td class="fc-day-number fc-sat fc-past" data-date="2017-04-08">8</td><td class="fc-day-number fc-sun fc-past" data-date="2017-04-09">9</td></tr></thead><tbody><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table></div></div><div class="fc-row fc-week fc-widget-content"><div class="fc-bg"><table><tbody><tr><td class="fc-day fc-widget-content fc-mon fc-past" data-date="2017-04-10"></td><td class="fc-day fc-widget-content fc-tue fc-past" data-date="2017-04-11"></td><td class="fc-day fc-widget-content fc-wed fc-past" data-date="2017-04-12"></td><td class="fc-day fc-widget-content fc-thu fc-today fc-state-highlight" data-date="2017-04-13"></td><td class="fc-day fc-widget-content fc-fri fc-future" data-date="2017-04-14"></td><td class="fc-day fc-widget-content fc-sat fc-future" data-date="2017-04-15"></td><td class="fc-day fc-widget-content fc-sun fc-future" data-date="2017-04-16"></td></tr></tbody></table></div><div class="fc-content-skeleton"><table><thead><tr><td class="fc-day-number fc-mon fc-past" data-date="2017-04-10">10</td><td class="fc-day-number fc-tue fc-past" data-date="2017-04-11">11</td><td class="fc-day-number fc-wed fc-past" data-date="2017-04-12">12</td><td class="fc-day-number fc-thu fc-today fc-state-highlight" data-date="2017-04-13">13</td><td class="fc-day-number fc-fri fc-future" data-date="2017-04-14">14</td><td class="fc-day-number fc-sat fc-future" data-date="2017-04-15">15</td><td class="fc-day-number fc-sun fc-future" data-date="2017-04-16">16</td></tr></thead><tbody><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table></div></div><div class="fc-row fc-week fc-widget-content"><div class="fc-bg"><table><tbody><tr><td class="fc-day fc-widget-content fc-mon fc-future" data-date="2017-04-17"></td><td class="fc-day fc-widget-content fc-tue fc-future" data-date="2017-04-18"></td><td class="fc-day fc-widget-content fc-wed fc-future" data-date="2017-04-19"></td><td class="fc-day fc-widget-content fc-thu fc-future" data-date="2017-04-20"></td><td class="fc-day fc-widget-content fc-fri fc-future" data-date="2017-04-21"></td><td class="fc-day fc-widget-content fc-sat fc-future" data-date="2017-04-22"></td><td class="fc-day fc-widget-content fc-sun fc-future" data-date="2017-04-23"></td></tr></tbody></table></div><div class="fc-content-skeleton"><table><thead><tr><td class="fc-day-number fc-mon fc-future" data-date="2017-04-17">17</td><td class="fc-day-number fc-tue fc-future" data-date="2017-04-18">18</td><td class="fc-day-number fc-wed fc-future" data-date="2017-04-19">19</td><td class="fc-day-number fc-thu fc-future" data-date="2017-04-20">20</td><td class="fc-day-number fc-fri fc-future" data-date="2017-04-21">21</td><td class="fc-day-number fc-sat fc-future" data-date="2017-04-22">22</td><td class="fc-day-number fc-sun fc-future" data-date="2017-04-23">23</td></tr></thead><tbody><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table></div></div><div class="fc-row fc-week fc-widget-content"><div class="fc-bg"><table><tbody><tr><td class="fc-day fc-widget-content fc-mon fc-future" data-date="2017-04-24"></td><td class="fc-day fc-widget-content fc-tue fc-future" data-date="2017-04-25"></td><td class="fc-day fc-widget-content fc-wed fc-future" data-date="2017-04-26"></td><td class="fc-day fc-widget-content fc-thu fc-future" data-date="2017-04-27"></td><td class="fc-day fc-widget-content fc-fri fc-future" data-date="2017-04-28"></td><td class="fc-day fc-widget-content fc-sat fc-future" data-date="2017-04-29"></td><td class="fc-day fc-widget-content fc-sun fc-future" data-date="2017-04-30"></td></tr></tbody></table></div><div class="fc-content-skeleton"><table><thead><tr><td class="fc-day-number fc-mon fc-future" data-date="2017-04-24">24</td><td class="fc-day-number fc-tue fc-future" data-date="2017-04-25">25</td><td class="fc-day-number fc-wed fc-future" data-date="2017-04-26">26</td><td class="fc-day-number fc-thu fc-future" data-date="2017-04-27">27</td><td class="fc-day-number fc-fri fc-future" data-date="2017-04-28">28</td><td class="fc-day-number fc-sat fc-future" data-date="2017-04-29">29</td><td class="fc-day-number fc-sun fc-future" data-date="2017-04-30">30</td></tr></thead><tbody><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table></div></div><div class="fc-row fc-week fc-widget-content"><div class="fc-bg"><table><tbody><tr><td class="fc-day fc-widget-content fc-mon fc-other-month fc-future" data-date="2017-05-01"></td><td class="fc-day fc-widget-content fc-tue fc-other-month fc-future" data-date="2017-05-02"></td><td class="fc-day fc-widget-content fc-wed fc-other-month fc-future" data-date="2017-05-03"></td><td class="fc-day fc-widget-content fc-thu fc-other-month fc-future" data-date="2017-05-04"></td><td class="fc-day fc-widget-content fc-fri fc-other-month fc-future" data-date="2017-05-05"></td><td class="fc-day fc-widget-content fc-sat fc-other-month fc-future" data-date="2017-05-06"></td><td class="fc-day fc-widget-content fc-sun fc-other-month fc-future" data-date="2017-05-07"></td></tr></tbody></table></div><div class="fc-content-skeleton"><table><thead><tr><td class="fc-day-number fc-mon fc-other-month fc-future" data-date="2017-05-01">1</td><td class="fc-day-number fc-tue fc-other-month fc-future" data-date="2017-05-02">2</td><td class="fc-day-number fc-wed fc-other-month fc-future" data-date="2017-05-03">3</td><td class="fc-day-number fc-thu fc-other-month fc-future" data-date="2017-05-04">4</td><td class="fc-day-number fc-fri fc-other-month fc-future" data-date="2017-05-05">5</td><td class="fc-day-number fc-sat fc-other-month fc-future" data-date="2017-05-06">6</td><td class="fc-day-number fc-sun fc-other-month fc-future" data-date="2017-05-07">7</td></tr></thead><tbody><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table></div></div></div></div></td></tr></tbody></table></div></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- END PORTLET-->
+
+                                    <script type="text/javascript">
+
+                                        $(document).ready(function () {
+                                            buildCallendar();
+                                        });
+
+                                        function buildCallendar() {
+                                            var _date = new Date();
+                                            var h = {};
+
+                                            if ($('#portlet_calendar #calendar').width() <= 350) {
+                                                h = {
+                                                    left: 'title',
+                                                    center: '',
+                                                    right: 'prev,next'
+                                                };
+                                            } else {
+                                                h = {
+                                                    left: 'title',
+                                                    center: '',
+                                                    right: 'prev,next,month,agendaWeek,agendaDay'
+                                                };
+                                            }
+
+                                            $('#portlet_calendar #calendar').fullCalendar('destroy');
+                                            $('#portlet_calendar #calendar').fullCalendar({
+                                                disableDragging: true,
+                                                header: h,
+                                                lang: "en",
+                                                editable: false,
+                                                firstDay: 1,
+                                                selectable: true,
+                                                events: '/calendar/events/owner'
+                                            });
+                                        }
+                                    </script></div>
+
+                                <div class="col-md-6 col-sm-6" id="activities_portlet" style="opacity: 1;">          <!-- BEGIN PORTLET-->
+                                    <div class="portlet light" id="portlet_activities">
+                                        <div class="portlet-title line">
+                                            <div class="caption">
+                                                <i class="fa fa-bolt font-green-sharp"></i>
+                                                <span class="caption-subject font-green-sharp bold uppercase">Activities</span>
+                                            </div>
+                                            <div class="actions">
+                                                <a href="javascript:;" onclick="javascript: renderData();" class="btn btn-sm btn-circle btn-default easy-pie-chart-reload">
+                                                    <i class="fa fa-repeat"></i><span class="hidden-480"> Reload </span></a>
+                                            </div>
+                                        </div>
+                                        <div class="portlet-body">
+                                            <div class="scroller" style="overflow: hidden; width: auto; height: 339px;" data-always-visible="1" data-rail-visible="0" data-initialized="1">
+                                                <ul class="feeds">
+                                                    <div id="listRender" style="opacity: 1;"><script type="text/javascript">
+                                                        $(document).ready(function () {
+                                                            $("#activity_table > tbody > tr.editlink").click(function () {
+                                                                var link = $(this).attr('data-target');
+                                                                loadSubPage(link);
+                                                            });
+                                                        });
+                                                        </script>
+
+                                                        <table class="table table-striped" id="activity_table">
+                                                            <thead>
+                                                                <tr>
+
+                                                                    <th class="sortable ">
+                                                                        Type
+                                                                    </th>
+
+                                                                    <th class="sortable ">
+                                                                        Subject
+                                                                    </th>
+
+                                                                    <th class="sortable ">
+                                                                        Date
+                                                                    </th>
+
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- END PORTLET-->
+
+                                    <script type="text/javascript">
+                                        Metronic.initSlimScroll('.scroller');
+
+                                        $(document).ready(function () {
+                                            $('.detail_form a#btn_close').click(function () {
+                                                loadPage('persons');
+                                            });
+
+                                            renderData();
+                                        });
+
+                                        function renderData() {
+                                            $.ajax({
+                                                type: "GET",
+                                                url: "/activities/my/render",
+                                                success: function (data) {
+                                                    $('#portlet_activities #listRender').html(data.html);
+                                                    $("#portlet_activities #listRender").css({opacity: 1});
+                                                }
+                                            });
+                                        }
+
+                                    </script>
+                                </div>
+
+                            </div>
+                        </div>
+                        <!-- END PAGE CONTAINER-->		
+                    </div>
+                    <!-- END PAGE -->
+                    <script type="text/javascript">
+                        $(document).ready(function () {
+                            $.ajax({
+                                type: "GET",
+                                url: "/dashboard/portlet/calendar",
+                                cache: 'false',
+                                success: function (data) {
+                                    $("#dashboard #calendar_portlet").html(data.html);
+                                    $("#dashboard #calendar_portlet").css({opacity: 1});
+                                }
+                            });
+
+                            $.ajax({
+                                type: "GET",
+                                url: "/dashboard/portlet/activities",
+                                cache: 'false',
+                                success: function (data) {
+                                    $("#dashboard #activities_portlet").html(data.html);
+                                    $("#dashboard #activities_portlet").css({opacity: 1});
+                                }
+                            });
+
+                            // top 
+                            $.ajax({
+                                type: "GET",
+                                url: "/dashboard/portlet/count/accounts",
+                                cache: 'false',
+                                success: function (data) {
+                                    $('.accounts_count').text(data.accounts_count);
+                                }
+                            });
+
+                            $.ajax({
+                                type: "GET",
+                                url: "/dashboard/portlet/count/products",
+                                cache: 'false',
+                                success: function (data) {
+                                    $('.products_count').text(data.products_count);
+                                }
+                            });
+
+                            $.ajax({
+                                type: "GET",
+                                url: "/dashboard/portlet/count/opportunities",
+                                cache: 'false',
+                                success: function (data) {
+                                    $('.opportunities_count').text(data.opportunities_count);
+                                }
+                            });
+
+                            $.ajax({
+                                type: "GET",
+                                url: "/dashboard/portlet/count/activities",
+                                cache: 'false',
+                                success: function (data) {
+                                    $('.activities_count').text(data.activities_count);
+                                }
+                            });
+
+                        });
+                    </script>
+
+                </div>
+                <!-- END PAGE -->
+
+                <!-- BEGIN MODALS -->
+                <div id="thisModal">
+                    <script type="text/javascript">
+
+                        $(function () {
+                            $.fn.modalmanager.defaults.resize = true;
+
+                            $.fn.modal.defaults.maxHeight = function () {
+                                return $(window).height() - 250;
+                            }
+                        });
+
+                        $(document).ready(function () {
+
+                            $.ajax({
+                                type: "POST",
+                                url: "/list/values/countries",
+                                success: function (data_list, status) {
+                                    $("#persons_add #countries_select").select2({width: 'resolve', placeholder: "Countries", allowClear: true, data: data_list});
+                                }
+                            });
+
+                            $.ajax({
+                                type: "POST",
+                                url: "/list/values/customer_contact_accounts",
+                                success: function (data_list, status) {
+                                    $("#persons_add #accounts_select").select2({width: 'resolve', placeholder: "Account", allowClear: true, multiple: true, data: data_list});
+                                }
+                            });
+
+                            $.ajax({
+                                type: "POST",
+                                url: "/list/values/contact_types",
+                                success: function (data_list, status) {
+                                    $("#persons_add #contact_types_select").select2({width: 'resolve', placeholder: "Types", allowClear: true, data: data_list});
+                                }
+                            });
+
+                            $.ajax({
+                                type: "POST",
+                                url: "/list/values/customer_owners",
+                                data: "permission=2",
+                                success: function (data_list, status) {
+                                    $("#persons_add #customer_owners_select").select2({width: 'resolve', placeholder: "Owners", allowClear: false, multiple: true, data: data_list});
+                                    $("#persons_add #customer_owners_select").select2("val", ["user_1040"]);
+                                }
+                            });
+
+                            $('#cancel').click(function (e) {
+                                e.preventDefault();
+                                $('#persons_add').modal('hide');
+                            });
+
+                            $('#close_x').click(function (e) {
+                                e.preventDefault();
+                                $('#persons_add').modal('hide');
+                            });
+
+
+
+                            $('#person-add').validate({
+                                errorElement: 'span'
+                                , errorClass: 'validator-error-color'
+                                , focusInvalid: false
+                                , ignore: ""
+                                , rules: {
+                                    lastname: {
+                                        minlength: 2
+                                        , required: true
+                                    }
+
+                                }
+                                , messages: {
+                                    lastname: {
+                                        required: "Undefined [Enter lastname].."
+                                    }
+                                }
+                                , errorPlacement: function (error, element) {
+                                    error.insertAfter(element);
+                                }
+                                , highlight: function (element) {
+                                    $(element).closest('.form-group').addClass('error');
+                                }
+                                , success: function (label) {
+                                    label.closest('.form-group').removeClass('error');
+                                }
+                                , submitHandler: function (form) {
+                                    $.ajax({
+                                        type: "POST",
+                                        url: "/persons/modal/add/",
+                                        data: $("#person-add").serialize(),
+                                        success: function (data, status) {
+                                            $('#persons_add').modal('hide');
+                                            toastr.success("New person was created!", "Created !");
+                                        }
+                                    });
+                                }
+                            });
+
+
+
+                        });
+                    </script>
+                </div>
+                <!-- END MODALS -->
+
+                <!-- BEGIN SUBMODALS -->
+                <div id="thisSubModal">
+
+                </div>
+                <!-- END SUBMODALS -->
+            </div>
+        </div>
+        <!-- END CONTAINER -->
+        <!-- BEGIN FOOTER -->
+        <div class="page-footer">
+            <div class="page-footer-inner">
+                2013 - 2015 © Aktivio by <a href="http://www.geefu.net" target="_blank">Geefu s.r.o.</a>
+            </div>
+        </div>
+
+        <div class="scroll-to-top">
+            <i class="icon-arrow-up"></i>
+        </div>
+
+        <!-- END FOOTER -->
+        <!-- BEGIN JAVASCRIPTS -->
+        <!--[if lt IE 9]>
+        <script src="plugins/excanvas.min.js"></script>
+        <script src="plugins/respond.min.js"></script>
+        <![endif]-->
+        <!-- Load javascripts at bottom, this will reduce page load time -->
+        <script type="text/javascript" src="/plugins/jquery.min.js"></script>
+        <script type="text/javascript" src="/plugins/jquery-migrate.min.js"></script>
+        <script type="text/javascript" src="/plugins/jquery-ui/jquery-ui.min.js"></script>
+        <script type="text/javascript" src="/plugins/bootstrap/js/bootstrap.min.js"></script>
+        <script type="text/javascript" src="/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js"></script>
+        <script type="text/javascript" src="/plugins/jquery-slimscroll/jquery.slimscroll.min.js"></script>
+        <script type="text/javascript" src="/plugins/jquery.blockui.min.js"></script>
+        <script type="text/javascript" src="/plugins/jquery.cokie.min.js"></script>
+        <script type="text/javascript" src="/plugins/uniform/jquery.uniform.min.js"></script>
+        <script type="text/javascript" src="/plugins/bootstrap-switch/js/bootstrap-switch.min.js"></script>
+        <script type="text/javascript" src="/plugins/bootstrap-datepicker/js/bootstrap-datepicker.js"></script>
+        <script type="text/javascript" src="/plugins/bootstrap-datepicker/js/locales/bootstrap-datepicker.sk.js"></script>
+        <script type="text/javascript" src="/plugins/bootstrap-datepicker/js/locales/bootstrap-datepicker.cs.js"></script>
+        <script type="text/javascript" src="/plugins/bootstrap-datetimepicker/js/bootstrap-datetimepicker.js"></script>
+        <script type="text/javascript" src="/plugins/bootstrap-datetimepicker/js/locales/bootstrap-datetimepicker.sk.js" charset="UTF-8"></script>
+        <script type="text/javascript" src="/plugins/bootstrap-datetimepicker/js/locales/bootstrap-datetimepicker.cs.js" charset="UTF-8"></script>
+        <script type="text/javascript" src="/plugins/moment.min.js"></script>
+        <script type="text/javascript" src="/plugins/fullcalendar/fullcalendar.min.js"></script>
+        <script type="text/javascript" src="/plugins/fullcalendar/lang-all.js"></script>
+        <script type="text/javascript" src="/plugins/bootstrap-daterangepicker/daterangepicker.js"></script>
+        <script type="text/javascript" src="/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js"></script>
+        <script type="text/javascript" src="/plugins/jquery.maskMoney.min.js"></script>
+        <script type="text/javascript" src="/plugins/bootstrap-switch/js/bootstrap-switch.min.js"></script>
+        <script type="text/javascript" src="/plugins/bootstrap-modal/js/bootstrap-modalmanager.js"></script>
+        <script type="text/javascript" src="/plugins/bootstrap-modal/js/bootstrap-modal.js"></script>
+        <script type="text/javascript" src="/plugins/jquery-validation/js/jquery.validate.min.js"></script>
+        <script type="text/javascript" src="/plugins/jquery-validation/js/additional-methods.min.js"></script>
+        <script type="text/javascript" src="/plugins/jquery.pulsate.min.js"></script>
+        <script type="text/javascript" src="/plugins/bootstrap-touchspin/bootstrap.touchspin.js"></script>
+        <script type="text/javascript" src="/plugins/accounting/accounting.min.js"></script>
+        <script type="text/javascript" src="/plugins/icheck/icheck.min.js"></script>
+
+        <script type="text/javascript" src="/plugins/select2/select2.min.js"></script>
+        <script type="text/javascript" src="/plugins/bootstrap-toastr/toastr.min.js"></script>
+
+        <script type="text/javascript" src="/plugins/amcharts/amcharts/amcharts.js"></script>
+        <script type="text/javascript" src="/plugins/amcharts/amcharts/serial.js"></script>
+
+        <script type="text/javascript" src="/plugins/jquery-file-upload/js/vendor/jquery.ui.widget.js"></script>
+        <script type="text/javascript" src="/plugins/jquery-file-upload/js/jquery.iframe-transport.js"></script>
+        <script type="text/javascript" src="/plugins/jquery-file-upload/js/jquery.fileupload.js"></script>
+
+        <script type="text/javascript" src="/plugins/pace/pace.min.js"></script>
+
+        <script type="text/javascript" src="/scripts/metronic.js"></script>
+        <script type="text/javascript" src="/scripts/layout.js"></script>
+        <script type="text/javascript" src="/scripts/fnc.js"></script>
+        <script type="text/javascript" src="/plugins/simple_sort_table/simple_sort_table.js"></script>
+        <script>
+    $(document).ready(function () {
+        $.validator.setDefaults({
+            ignore: ":hidden:not(.selectList)",
+            errorClass: "validator-error-color"
+        });
+        Metronic.init(); // initlayout and core plugins
+        Layout.init();
+        $('#sidebar_search').validate({
+            errorElement: 'span'
+            , errorClass: 'validator-error-color'
+            , focusInvalid: false
+            , ignore: ""
+            , rules: {
+                search_val: {
+                    minlength: 2
+                    , maxlength: 20
+                    , required: true
+                }
+            }
+            , messages: {
+                subject_name: {
+                    required: "Undefined [Enter search].."
+                }
+            }
+            , errorPlacement: function (error, element) {
+                error.insertAfter(element);
+            }
+            , highlight: function (element) {
+                $(element).closest('.form-group').addClass('error');
+            }
+            , success: function (label) {
+                label.closest('.form-group').removeClass('error');
+            }
+            , submitHandler: function (form) {
+                // handle ajax links
+                Metronic.scrollTop();
+
+                var menuContainer = jQuery('.page-sidebar ul');
+                var pageContent = $('.page-content');
+
+                menuContainer.children('li.active').removeClass('active');
+                menuContainer.children('arrow.open').removeClass('open');
+
+                if (Metronic.getViewPort().width < 992 && $('.page-sidebar').hasClass("in")) { // close the menu on mobile view while laoding a page 
+                    $('.page-header .responsive-toggler').click();
+                }
+
+                $.ajax({
+                    type: "POST",
+                    cache: false,
+                    url: "/search",
+                    data: $("#sidebar_search").serialize(),
+                    success: function (data) {
+                        $(".page-content").empty();
+                        $(".page-content").html(data);
+                        $(".page-content").hide().fadeIn();
+                    },
+                    async: false
+                });
+            }
+        });
+    });
+
+    jQuery.extend(jQuery.validator.messages, {
+        required: "This field is required.",
+        remote: "Please fix this field.",
+        email: "Please enter a valid email address.",
+        url: "Please enter a valid URL.",
+        date: "Please enter a valid URL.",
+        dateISO: "Please enter a valid date (ISO).",
+        number: "Please enter a valid number.",
+        digits: "Please enter only digits.",
+        creditcard: "Please enter a valid credit card number.",
+        equalTo: "Please enter the same value again.",
+        accept: "Please enter a value with a valid extension.",
+        maxlength: jQuery.validator.format("Please enter no more than {0} characters."),
+        minlength: jQuery.validator.format("Please enter at least {0} characters."),
+        rangelength: jQuery.validator.format("Please enter a value between {0} and {1} characters long."),
+        range: jQuery.validator.format("Please enter a value between {0} and {1}."),
+        max: jQuery.validator.format("Please enter a value less than or equal to {0}."),
+        min: jQuery.validator.format("Please enter a value greater than or equal to {0}.")
+    });
+        </script>
+
+        <script type="text/javascript">
+            window.doorbellOptions = {
+                appKey: '2C2xvW3J4C2hNakVi3obfYtQQ0QkXLiOqQXcWDXVTTxd9FzU1z4w9uSOxwoLRHUe'
+            };
+            (function (d, t) {
+                var g = d.createElement(t);
+                g.id = 'doorbellScript';
+                g.type = 'text/javascript';
+                g.async = true;
+                g.src = 'https://doorbell.io/button/861';
+                (d.getElementsByTagName('head')[0] || d.getElementsByTagName('body')[0]).appendChild(g);
+            }(document, 'script'));
+        </script>
+        <!-- END JAVASCRIPTS -->
+
+        <!-- END BODY -->
+
+
+        <button id="doorbell-button" style="visibility: hidden;">Daj nám feedback</button><div id="doorbell-background" class="" style="display: none;"></div><div id="doorbell" style="display: none;"><div id="doorbell-container"><button id="doorbell-close" title="Close" class="close">×</button><form id="doorbell-form" class="">        <fieldset>            <legend>Ako sa Vám páči Aktiv.io?</legend>                                    <textarea placeholder="Povedzte nám čo Vám chýba alebo máte radi v Aktiv.io. Ak ste objavili chybu, popíšte nám ju prosím, aby sme ju mohli opraviť. Vďaka!" class="form-control" id="doorbell-feedback"></textarea>            <input type="email" id="doorbell-email" class="form-control" placeholder="Váš e-mail" value="">                                                <div class="buttons"><button class="btn btn-primary" id="doorbell-submit-button">Poslať</button></div>        </fieldset>        <a href="https://doorbell.io" target="_blank" id="doorbell-powered-by">Powered by Doorbell.io</a>            </form></div></div><div class="modal-scrollable" style="z-index: 10051;"><div class="modal fade in" tabindex="-1" id="persons_add" data-focus-on="input:first" aria-hidden="false" style="display: block; margin-top: -380px;">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" id="close_x" aria-hidden="true"></button>
+                    <h3 class="modal-title">New Person</h3>
+                </div>
+                <form action="#" class="horizontal-form" id="person-add" name="person-add" style="margin-bottom: 0px;" novalidate="novalidate">
+                    <div class="modal-body" style="overflow: auto; max-height: 698px;">
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <div class="controls">
+                                        <input type="text" class="form-control valid" id="firstname" name="firstname" placeholder="Firstname" aria-invalid="false">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group error">
+                                    <div class="controls">
+                                        <input type="text" class="form-control" id="lastname" name="lastname" placeholder="Lastname" aria-required="true" aria-invalid="true" aria-describedby="lastname-error"><span id="lastname-error" class="validator-error-color">Please enter at least 2 characters.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <div class="controls">
+                                        <input type="text" class="form-control valid" id="email" name="email" placeholder="Email" aria-invalid="false">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <div class="controls">
+                                        <input type="text" class="form-control valid" id="phone" name="phone" placeholder="Phone" aria-invalid="false">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <div class="controls">
+                                        <div class="select2-container form-control" id="s2id_contact_types_select" style="width: 100%;"><a href="javascript:void(0)" class="select2-choice select2-default" tabindex="-1">   <span class="select2-chosen" id="select2-chosen-2">Types</span><abbr class="select2-search-choice-close"></abbr>   <span class="select2-arrow" role="presentation"><b role="presentation"></b></span></a><label for="s2id_autogen2" class="select2-offscreen"></label><input class="select2-focusser select2-offscreen" type="text" aria-haspopup="true" role="button" aria-labelledby="select2-chosen-2" id="s2id_autogen2"></div><input class="form-control select2-offscreen" id="contact_types_select" name="contact_types_select" type="hidden" tabindex="-1" title="" value="">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="control-label">Owner</p>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <div class="controls">
+                                        <div class="select2-container select2-container-multi form-control" id="s2id_customer_owners_select" style="width: 100%;"><ul class="select2-choices">  <li class="select2-search-choice">    <div>272923034@qq.com</div>    <a href="#" class="select2-search-choice-close" tabindex="-1"></a></li><li class="select2-search-field">    <label for="s2id_autogen3" class="select2-offscreen"></label>    <input type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="select2-input select2-default" id="s2id_autogen3" placeholder="" style="width: 20px;">  </li></ul><div class="select2-drop select2-drop-multi select2-display-none">   <ul class="select2-results">   <li class="select2-no-results">No matches found</li><li class="select2-no-results">No matches found</li></ul></div></div><input class="form-control select2-offscreen" id="customer_owners_select" name="customer_owners_select" type="hidden" tabindex="-1" value="user_1040">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="control-label">Account</p>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <div class="controls">
+                                        <div class="select2-container select2-container-multi form-control" id="s2id_accounts_select" style="width: 100%;"><ul class="select2-choices">  <li class="select2-search-field">    <label for="s2id_autogen4" class="select2-offscreen"></label>    <input type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="select2-input select2-default" id="s2id_autogen4" placeholder="" style="width: 876px;">  </li></ul></div><input class="form-control select2-offscreen" id="accounts_select" name="accounts_select" type="hidden" tabindex="-1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="control-label" for="street">Address</p>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <div class="controls">
+                                        <input type="text" class="form-control" id="street" name="street" placeholder="Street">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <div class="controls">
+                                        <input type="text" class="form-control" id="city" name="city" placeholder="City">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <div class="controls">
+                                        <input type="text" class="form-control" id="zip" name="zip" placeholder="ZIP">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <div class="controls">
+                                        <div class="select2-container select2-allowclear form-control" id="s2id_countries_select" style="width: 100%;"><a href="javascript:void(0)" class="select2-choice" tabindex="-1">   <span class="select2-chosen" id="select2-chosen-1">American Samoa</span><abbr class="select2-search-choice-close"></abbr>   <span class="select2-arrow" role="presentation"><b role="presentation"></b></span></a><label for="s2id_autogen1" class="select2-offscreen"></label><input class="select2-focusser select2-offscreen" type="text" aria-haspopup="true" role="button" aria-labelledby="select2-chosen-1" id="s2id_autogen1"></div><input class="form-control select2-offscreen" id="countries_select" name="countries_select" type="hidden" tabindex="-1" title="" value="AS">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <div class="controls">
+                                        <textarea class="form-control valid" id="textarea" rows="3" placeholder="Description" name="description" aria-invalid="false"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <div class="row">
+                            <div class="col-md-6"><button class="btn btn-circle btn-default btn-fit-height btn-block" type="submit" id="save">Save</button></div>
+                            <div class="col-md-6"><button class="btn btn-circle btn-default btn-fit-height btn-block" type="button" id="cancel">Cancel</button></div>
+                        </div>
+                    </div>
+                </form>
+            </div></div><div class="modal-backdrop fade in" style="z-index: 10050;"></div><span role="status" aria-live="polite" class="select2-hidden-accessible">American Samoa</span><span role="status" aria-live="polite" class="select2-hidden-accessible">3 results are available, use up and down arrow keys to navigate.</span><span role="status" aria-live="polite" class="select2-hidden-accessible"></span><span role="status" aria-live="polite" class="select2-hidden-accessible">No matches found</span><div class="select2-sizer" style="position: absolute; left: -10000px; top: -10000px; display: none; font-size: 14px; font-family: sans-serif; font-style: normal; font-weight: normal; letter-spacing: normal; text-transform: none; white-space: nowrap;"></div><div class="select2-drop select2-display-none select2-with-searchbox select2-drop-active" style="left: 25.3906px; width: 889px; top: 433.469px; bottom: auto; display: none;">   <div class="select2-search">       <label for="s2id_autogen1_search" class="select2-offscreen"></label>       <input type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="select2-input" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-owns="select2-results-1" id="s2id_autogen1_search" placeholder="" aria-activedescendant="select2-result-label-272">   </div>   <ul class="select2-results" role="listbox" id="select2-results-1"></ul></div><div class="select2-drop select2-drop-multi select2-display-none select2-drop-active" style="left: 25.3906px; width: 889px; top: 492.469px; bottom: auto; display: none;">   <ul class="select2-results"></ul></div><div id="select2-drop-mask" class="select2-drop-mask" style="display: none;"></div><div class="select2-drop select2-display-none select2-with-searchbox select2-drop-active" style="left: 25.3906px; width: 889px; top: 336.469px; bottom: auto; display: none;">   <div class="select2-search">       <label for="s2id_autogen2_search" class="select2-offscreen"></label>       <input type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="select2-input" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-owns="select2-results-2" id="s2id_autogen2_search" placeholder="" aria-activedescendant="select2-result-label-517">   </div>   <ul class="select2-results" role="listbox" id="select2-results-2"></ul></div></body></html>

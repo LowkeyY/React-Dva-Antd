@@ -1,0 +1,153 @@
+
+import java.util.*;  
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.gis.*;
+import com.kinglib.workbench.*;
+
+                     
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	String type = jacper.getStr("type");
+	String parent_id = jacper.getStr("object_id");
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{
+		JSONObject mapJSON = new JSONObject("{}");
+		
+		String[] rs=conPlat.getRow("select a.title,a.database_link,a.centralx,a.centraly,a.map_size,a.mapurl,a.saturl,a.sattransurl,map_type,bound_type,minx,miny,maxx,maxy from $[plat].map_base a where a.object_id=?",new String[]{parent_id});
+
+		mapJSON.put("parent_id",parent_id);
+		mapJSON.put("mapTitle",rs[0]);
+		mapJSON.put("dataSource",rs[1]);
+		mapJSON.put("centralX",rs[2]);
+		mapJSON.put("centralY",rs[3]);
+		mapJSON.put("scale",rs[4]);
+		mapJSON.put("mapUrl",rs[5]);
+		mapJSON.put("satUrl",rs[6]);
+		mapJSON.put("satTransUrl",rs[7]);
+		mapJSON.put("map_type",rs[8]);
+		mapJSON.put("bound_type",rs[9]);
+		mapJSON.put("minX",rs[10]);
+		mapJSON.put("minY",rs[11]);
+		mapJSON.put("maxX",rs[12]);
+		mapJSON.put("maxY",rs[13]);
+		ObjectNode node=ObjectManager.getObject(parent_id);
+		if(node!=null){
+			mapJSON.put("lastModifyTime",node.getLastModifyTime());
+			mapJSON.put("lastModifyName",node.getLastModifyName());
+		}
+	   jacper.print("{success:true,data:"+mapJSON+"}");
+		
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+public void doPost(Jacper jacper) {
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = hs.uid+"";
+
+	String type = jacper.getStr("type");
+	String title = jacper.getStr("mapTitle");
+	String centralx = jacper.getStr("centralX");
+	String centraly = jacper.getStr("centralY");
+	String map_size = jacper.getStr("scale");	
+	
+	String mapUrl = jacper.getStr("mapUrl");
+	String satTransUrl = jacper.getStr("satTransUrl");
+	String satUrl = jacper.getStr("satUrl");
+
+	String dataSource = jacper.getStr("dataSource");
+	String parent_id = jacper.getStr("parent_id");
+
+	String mapType = jacper.getStr("map_type");
+	String boundType = jacper.getStr("bound_type");
+	String minX = jacper.getStr("minX");
+	String minY = jacper.getStr("minY");
+	String maxX = jacper.getStr("maxX");
+	String maxY = jacper.getStr("maxY"); 
+
+	ObjectManager OM=ObjectManager.getInstance();
+
+
+	if(type.equals("save")){
+		try{	
+			conPlat.setAutoCommit(false);	
+			String object_id  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+			ObjectNode applicationNode=OM.getObject(parent_id);
+			applicationNode.addChild(conPlat,object_id,title,ObjectType.MAP,hs.uid);
+			conPlat.exec("insert into $[plat].map_base (object_id,map_name,title,centralx,centraly,map_size,mapurl,saturl,sattransurl,database_link,creator,create_date,map_type,bound_type,minx,miny,maxx,maxy) values(?,?,?,?,?,?,?,?,?,?,?,$getdate(),?,?,?,?,?,?)",new String[]{object_id+"",title,title,centralx,centraly,map_size,mapUrl,satUrl,satTransUrl,dataSource,user_id,mapType,boundType,minX,minY,maxX,maxY});
+			ObjectNode mapNode=OM.getObject(object_id);
+			conPlat.commit();
+			<?{success:true,id:'?>parent_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if(type.equals("updatesave")){
+			String object_id = jacper.getStr("object_id");				
+			try{	
+				ObjectNode mapNode=OM.getObject(object_id);
+				mapNode.updateName(conPlat,title);
+				conPlat.exec("update $[plat].map_base set title=?,map_name=?,centralx=?,centraly=?,map_size=?,mapurl=?,saturl=?,sattransurl=?,database_link=?,map_type=?,bound_type=?,minx=?,miny=?,maxx=?,maxy=? where object_id=?",new String[]{title,title,centralx,centraly,map_size,mapUrl,satUrl,satTransUrl,dataSource,mapType,boundType,minX,minY,maxX,maxY,object_id});
+				WebMapFactory.getInstance().remove(object_id);
+				conPlat.commit();
+				<?{success:true,id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				e.printStackTrace();
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				conPlat.close();
+			}
+	}else if(type.equals("delete")){
+		String object_id = jacper.getStr("object_id");
+		try{	
+			conPlat.setAutoCommit(false);	
+			WebMapFactory.getInstance().remove(object_id);
+			ObjectNode mapNode=OM.getObject(object_id);
+			mapNode.destroy(conPlat);
+			conPlat.commit();
+			<?{success:true,id:'?>parent_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

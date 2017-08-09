@@ -1,0 +1,58 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.UUID;
+import com.susing.core.KingleSystem;
+
+@class{
+public void doGet(Jacper jacper) {
+doPost(jacper);
+}
+	public void doPost(Jacper jacper) {
+	try {
+			HttpSession hs = jacper.getSession();
+			Connection conEdu = jacper.getConnection("education");
+			String startdate = jacper.getString("startdate");
+			String enddate=jacper.getString("enddate");
+			enddate+="  23:59:59";
+			JSONObject jbout=new JSONObject();
+			JSONArray ja = new JSONArray();
+			String sql="select distinct(guanggaotongji.guanggaoid),guanggao.mingcheng from guanggaotongji,guanggao where guanggaotongji.guanggaoid=guanggao.id and shijian>=$str_date('"+startdate+"',111) and shijian<=$str_date('"+enddate+"',113)";
+			
+			String[][]rs=conEdu.get(sql);
+			
+			
+			for(int i=0;i<rs.length;i++){
+				JSONObject jb=new JSONObject();
+				jb.put("name",rs[i][1]);
+				String sqltong="select count(*) from guanggaotongji where guanggaoid='"+rs[i][0]+"' and shijian>=$str_date('"+startdate+"',111) and shijian<=$str_date('"+enddate+"',113)";
+				String sqlcheng="select count(*) from guanggaochengxian where guanggaoid='"+rs[i][0]+"' and shijian>=$str_date('"+startdate+"',111) and shijian<=$str_date('"+enddate+"',113)";
+				String[][]rstong=conEdu.get(sqltong);
+				String[][]rscheng=conEdu.get(sqlcheng);
+				jb.put("cheng",rscheng[0][0]);
+				jb.put("dian",rstong[0][0]);
+				if(Integer.parseInt(rstong[0][0])==0 || Integer.parseInt(rscheng[0][0])==0){
+				jb.put("dianjilv","0.0%");
+				}else{
+				double cou=Integer.parseInt(rscheng[0][0]);
+				double baifen=Math.round(Integer.parseInt(rstong[0][0])/cou*100*100)/100.0;
+				
+				jb.put("dianjilv",baifen+"%");
+				
+				ja.put(jb);
+				}
+			}
+			jbout.put("authArray",ja);
+			jacper.print(jbout);
+	} catch (Exception e) {
+			e.printStackTrace();
+	}
+	}}

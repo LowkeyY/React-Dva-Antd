@@ -1,0 +1,71 @@
+
+                  
+import java.io.IOException;
+import com.kinglib.*;
+   
+
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.gis.*;
+import com.kinglib.workbench.program.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String parentId=jacper.getString("parent_id","0");
+		String objectId=jacper.getStr("objectId");
+		String operateType=jacper.getStr("operateType");
+
+		Connection conPlat = jacper.getConnection("plat");
+	    jacper.getResponse().setContentType("application/x-json");
+		
+		String mapId="";
+		if(parentId.equals("0")){
+			mapId=jacper.getStr("mapId");
+		}else{
+			Program prg =ProgramFactory.getInstance().getProgram(conPlat,parentId);
+			mapId=prg.getMapId()+"";
+		}
+
+		WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId);
+
+		if(operateType.equals("Edit")){
+			EDITNode[] editNode=webMap.getPoiEditNode();
+			for(int i=0;i<editNode.length;i++){
+				if(objectId.equals(editNode[i].getObjectId()+"")){
+					<??> editNode[i].getJSON()<??>;
+				}
+			}
+		}else{
+			ObjectNode mapChildNode=ObjectManager.getObject(objectId); 
+			String menuId=jacper.getStr("menuId");
+			if(mapChildNode.getType()==ObjectType.MAPPOI){
+				POINode[] poiNode=webMap.getPoiNode();
+				for(int i=0;i<poiNode.length;i++){
+					if(objectId.equals(poiNode[i].getObjectId()+"")){
+						MenuNode  MN=poiNode[i].getMenuNodeById(menuId);
+						<??>MN.getJSON()<??>;
+					}
+				}
+			}else{
+				com.kinglib.gis.GroupNode[] groupNode=webMap.getGroupNode();
+				for(int i=0;i<groupNode.length;i++){
+					LayerNode[] layerNode=groupNode[i].getLayerNode();
+					for(int j=0;j<layerNode.length;j++){
+						if(objectId.equals(layerNode[j].getObjectId()+"")){
+							MenuNode  MN=layerNode[j].getMenuNodeById(menuId);
+							<??>MN.getJSON()<??>;
+							break;
+						}
+					}
+				}
+			}
+		}
+		conPlat.close();	
+	}
+}
+

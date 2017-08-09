@@ -1,0 +1,35 @@
+import gpra.filesystem.HWUnits;
+
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+//public class mySelfSpaceWorkCounts {
+@class{
+	public void doPost(Jacper jacper) {
+		HttpSession hs = jacper.getSession();
+		Connection con = jacper.getConnection(HWUnits.HW_DBLINK);
+		int[] workCounts = HWUnits.getWorkCountsByUser(con, String.valueOf(hs.uid));
+		JSONObject result = new JSONObject();
+		try {
+			if (workCounts != null) {
+				result.put("success", true);
+				if(workCounts[0] > 0)
+					result.put("shenhe", workCounts[0]);
+				if(workCounts[1] > 0)
+					result.put("shenpi", workCounts[1]);
+			}
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		if(result.length() >0)
+			jacper.print(result.toString());
+		else 
+			jacper.print("{success:false}");
+	}
+	public void doGet(Jacper jacper) {
+		doPost(jacper);
+	}
+}

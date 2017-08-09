@@ -1,0 +1,35 @@
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.HTMLPage;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import com.susing.core.KingleSystem;
+
+@class{
+	public void doGet(Jacper jacper) {
+
+		String dataId = jacper.getString("dataId", "");
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		HTMLPage page = service.getCache(dataId);
+		
+		if (page == null) {
+			jacper.print("{success:false,message:'请刷新页面重试。'}");
+			return;
+		}
+		
+		JSONObject obj = new JSONObject();
+		try {
+			JSONObject config = page.getConifg();
+			JSONArray shuxin = config.getJSONArray("shuxin");
+			JSONArray defaultValues = config.getJSONArray("defaultValues");
+			obj.put("propertyModel", shuxin);
+			obj.put("defaultValues", defaultValues);
+		} catch (JSONException e) {
+			jacper.print("{success:false,message:'json文件读取错误或者json文件格式错误。'}");
+			return;
+		}
+		jacper.print("{success:true,datas:" + obj.toString() + "}");
+	}
+}

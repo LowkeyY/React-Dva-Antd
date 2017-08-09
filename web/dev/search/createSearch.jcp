@@ -1,0 +1,110 @@
+
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.workbench.search.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+	                                              
+public void doPost(Jacper jacper) {
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	int user_id = (int)hs.uid;
+
+
+	String type = jacper.getStr("type");
+	String name = jacper.getStr("name");
+	String logicname = jacper.getStr("logicname");
+
+	String query_id = jacper.getStr("query_id");
+	String index_column = jacper.getStr("index_column");
+	String count_column = jacper.getStr("count_column");
+	String name_column = jacper.getStr("name_column");
+	String start_column = jacper.getStr("start_column");
+
+	String exp_item = jacper.getStr("exp_item");
+	String is_active = jacper.getStr("is_active");
+	String subCategory = jacper.getStr("sub_category");
+	String end_colunm = jacper.getStr("end_colunm");
+
+	String note = jacper.getStr("note");
+	String startName = jacper.getStr("startname");
+	String endName = jacper.getStr("endname");
+	String dataSource = jacper.getStr("datasource");
+
+	SearchFactory  SF=SearchFactory.getInstance();
+	ObjectManager OM=ObjectManager.getInstance();
+	if(type.equals("save")){
+		try{	
+
+			conPlat.setAutoCommit(false);	
+			String object_id  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+			String parent_id = jacper.getStr("parent_id");
+
+			ObjectNode applicationNode=OM.getObject(parent_id);
+			applicationNode.addChild(conPlat,object_id,logicname,ObjectType.SEARCH,user_id);	
+
+			conPlat.exec("insert into $[plat].search_base (object_id,name,logicname,query_id,index_column,count_column,name_column,exp_item,active,start_column,note,sub_category,end_column,start_name,end_name,data_source) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",new String[]{object_id+"",name,logicname,query_id,index_column,count_column,name_column,exp_item,is_active,start_column,note,subCategory,end_colunm,startName,endName,dataSource});
+	
+			conPlat.commit();
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if(type.equals("updatesave")){
+			String object_id = jacper.getStr("object_id");
+			try{	
+				ObjectNode searchNode=OM.getObject(object_id);
+				searchNode.updateName(conPlat,logicname);
+				conPlat.exec("update $[plat].search_base set name=?,logicname=?,query_id=?,index_column=?,count_column=?,name_column=?,exp_item=?,active=?,start_column=?,note=?,sub_category=?,end_column=?,start_name=?,end_name=?,data_source=? where object_id=?",new String[]{name,logicname,query_id,index_column,count_column,name_column,exp_item,is_active,start_column,note,subCategory,end_colunm,startName,endName,dataSource,object_id});
+				SF.remove(object_id);
+				conPlat.commit();
+				<?{success:true,id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				conPlat.close();
+			}
+	}else if(type.equals("delete")){
+		String object_id = jacper.getStr("object_id");
+		try{	
+			conPlat.setAutoCommit(false);	
+			ObjectNode searchNode=OM.getObject(object_id);
+			searchNode.destroy(conPlat);
+			SF.remove(object_id);
+			conPlat.commit();
+			conPlat.exec("delete from $[plat].search_index where search_id=?",new String[]{object_id});
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

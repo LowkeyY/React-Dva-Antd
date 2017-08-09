@@ -1,0 +1,284 @@
+
+import java.io.IOException;
+import com.kinglibx.report.*;
+import java.util.*;
+import com.kinglib.util.*;
+import electric.xml.*;
+import com.kinglibx.task.*;
+import java.sql.Timestamp;
+import com.kinglib.util.Documents;            
+import java.io.IOException;
+import com.social.api.core.model.User;
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.susing.core.*;
+import com.susing.server.*;
+
+@class{
+                              
+	public void doGet(Jacper jacper){
+		
+		Connection conPlat = jacper.getConnection("plat");
+		
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+		
+		String parent_id = jacper.getStr("parent_id");
+		String type =jacper.getStr("type");
+
+		String [] rs = {"","","","","","1","",""};
+
+		String[] month_arr = {"0","1","2","3","4","5","6","7","8","9","10","11"};
+		String[] monthCheckArr =new String [12];
+
+		String[] weekArr = {"1","2","3","4","-1"};
+		String[] weekCheckArr = new String [5];
+
+		String[] day_arr = {"1","2","3","4","5","6","7"};
+		String[] date_arr = {"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","-1","-2","-3"};		
+		String[] dateCheckArr =new String [34];		
+		String[] dateTypeArr ={"checked",""};
+
+		String[] hour_arr = new String[0];
+
+		String dateType="";
+		
+		String schedule_id = jacper.getStr("schedule_id");
+		String taskType="0";	
+		String[] taskArray=conPlat.getRow("select task_method from $[plat].sys_task where task_id=?",new String[]{parent_id});
+		if(taskArray!=null)
+			taskType=taskArray[0];
+
+		if(type.equals("edit")) {
+			rs = conPlat.getRow(
+			"select task_id,schedule_id,schedule_name,task_conf,entry_name,$date_str(entry_date,111) from $[plat].sys_task_schedule a where a.schedule_id=?",
+			new String[]{schedule_id});
+
+			try {
+				org.w3c.dom.NodeList nodes=null;
+
+				Document doc = Factory.getDocument(rs[3].toString());
+
+				Element root = doc.getRoot();
+				Element month = root.getElement("mon");
+				Element week = root.getElement("week");	
+				Element date = root.getElement("day");
+
+				nodes = month.getChildNodes();
+				if ( nodes.getLength() != 0 ){								
+					for ( int k=0; k<month_arr.length; k++ ) {					
+						for ( int i=0; i<nodes.getLength(); i++ ) {
+							if((((Element)nodes.item(i)).getAttribute("value")).equals(month_arr[k])){
+								monthCheckArr[k]="checked";
+								break;
+							}else{
+								monthCheckArr[k]="";
+							}
+						}				
+					}
+				}
+
+				nodes = week.getChildNodes();
+			  
+			  if ( nodes.getLength() != 0 ){	
+					for ( int k=0; k<weekArr.length; k++ ) {					
+						for ( int i=0; i<nodes.getLength(); i++ ) {
+							if((((Element)nodes.item(i)).getAttribute("value")).equals(weekArr[k])){
+								weekCheckArr[k]="selected";
+								break;
+							}else{
+								weekCheckArr[k]="";
+							}
+						}				
+					}
+					nodes = date.getChildNodes();
+					if ( nodes.getLength() != 0 ){								
+							for ( int k=0; k<7; k++ ) {					
+								for ( int i=0; i<nodes.getLength(); i++ ) {							
+									if((((Element)nodes.item(i)).getAttribute("value")).equals(date_arr[k])){
+										dateCheckArr[k]="selected";
+										break;
+									}else{
+										dateCheckArr[k]="";
+									}
+								}				
+							}
+					}
+					dateTypeArr[0]="";
+					dateTypeArr[1]="checked";
+					dateType="day";
+			  }else{
+					nodes = date.getChildNodes();
+					if ( nodes.getLength() != 0 ){								
+							for ( int k=0; k<date_arr.length; k++ ) {					
+								for ( int i=0; i<nodes.getLength(); i++ ) {							
+									if((((Element)nodes.item(i)).getAttribute("value")).equals(date_arr[k])){
+										dateCheckArr[k]="checked";
+										break;
+									}else{
+										dateCheckArr[k]="";
+									}
+								}				
+							}
+					}	
+					dateTypeArr[0]="checked";
+					dateTypeArr[1]="";
+					dateType="date";
+			  }
+				Element hour = root.getElement("time");
+				nodes = hour.getChildNodes();
+				if ( nodes.getLength() != 0 )
+					hour_arr = new String[nodes.getLength()];
+				for ( int i=0; i<nodes.getLength(); i++ ) {
+					hour_arr[i] = ((Element)nodes.item(i)).getAttribute("value");
+				}
+			}catch(Exception e) {
+				e.printStackTrace();
+			}
+		}
+		jacper.getResponse().setContentType("application/x-json");
+
+		try{
+			JSONObject scheduleJSON = new JSONObject("{}");
+			scheduleJSON.put("taskType",taskType);
+			scheduleJSON.put("schduleName",rs[2]);
+			scheduleJSON.put("creater",rs[4]);
+			scheduleJSON.put("createdate",rs[5]);
+			scheduleJSON.put("dateType",dateType);	
+			scheduleJSON.put("dateTypeArr",dateTypeArr);	
+
+			StringBuffer dateTypeString=new StringBuffer();
+			for(int i=0;i<dateTypeArr.length;i++){
+				dateTypeString.append(",'").append(dateTypeArr[i]).append("'");;
+			}
+			scheduleJSON.put("dateTypeArr","["+dateTypeString.toString().substring(1)+"]");
+
+
+			StringBuffer monthCheck=new StringBuffer();
+			for(int i=0;i<monthCheckArr.length;i++){
+				monthCheck.append(",'").append(monthCheckArr[i]).append("'");;
+			}
+			scheduleJSON.put("monthCheckArr","["+monthCheck.toString().substring(1)+"]");
+
+			StringBuffer weekCheck=new StringBuffer();
+			for(int i=0;i<weekCheckArr.length;i++){
+				weekCheck.append(",'").append(weekCheckArr[i]).append("'");
+			}
+			scheduleJSON.put("weekCheckArr","["+weekCheck.toString().substring(1)+"]");
+
+			StringBuffer dateCheck=new StringBuffer();
+			for(int i=0;i<dateCheckArr.length;i++){
+				dateCheck.append(",'").append(dateCheckArr[i]).append("'");;
+			}
+			scheduleJSON.put("dateCheckArr","["+dateCheck.toString().substring(1)+"]");
+
+			StringBuffer hourString=new StringBuffer();
+			for(int i=0;i<hour_arr.length;i++){
+				hourString.append(",'").append(hour_arr[i]).append("'");;
+			}
+			if(hourString.toString().length()!=0)
+				scheduleJSON.put("hourArr","["+hourString.toString().substring(1)+"]");
+			else
+				scheduleJSON.put("hourArr","[]");
+			<?[?>scheduleJSON.toString()<?]?>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+
+	public void doPost(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+
+		String type = jacper.getStr("type");
+		String parent_id = jacper.getStr("parent_id");
+		String content = jacper.getStr("content");
+		String schedule_name = jacper.getStr("schedule_name");
+
+		if(type.equals("delete")){
+			try{	
+				String schedule_id = jacper.getStr("schedule_id");
+				conPlat.exec("DELETE FROM $[plat].sys_task_param WHERE schedule_id = ?",new String[]{schedule_id});
+				conPlat.exec("DELETE FROM $[plat].sys_task_logger WHERE schedule_id = ?",new String[]{schedule_id});
+				conPlat.exec("DELETE FROM $[plat].sys_task_schedule WHERE schedule_id =?",new String[]{schedule_id});
+				<?{success:true,parent_id:'?>parent_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(type.equals("save")){
+			try{	
+				User ul=User.getUser(String.valueOf(user_id));
+				String CreatorName=(ul==null)?"":ul.getRealName();
+				int schedule_id=SQLUtils.getNextVal(conPlat,5);			
+				conPlat.exec("INSERT INTO $[plat].sys_task_schedule (task_id,schedule_id,schedule_name,task_conf,entry_name,entry_date) VALUES (?,?,?,?,?,$getdate())",new String[]{parent_id+"",schedule_id+"",schedule_name,content,CreatorName});
+				<?{success:true,schedule_id:'?>schedule_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(type.equals("updatesave")){
+			try{	
+				User ul=User.getUser(String.valueOf(user_id));
+				String CreatorName=(ul==null)?"":ul.getRealName();	
+				String schedule_id = jacper.getStr("schedule_id");
+				conPlat.exec("UPDATE $[plat].sys_task_schedule SET  schedule_name =?,task_conf = ?,entry_date=$getdate(),entry_name=?   WHERE schedule_id=?",new String[]{schedule_name,content,CreatorName,schedule_id+""});	
+				<?{success:true,schedule_id:'?>schedule_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(type.equals("restart")){
+			try{
+				String schedule_id = jacper.getStr("schedule_id");
+				String task_id = jacper.getStr("parent_id");
+				String[] serviceArray=KingleSystem.getServiceNames();
+				for(int i=0;i<serviceArray.length;i++){
+					if(("任务服务").equals(serviceArray[i])){
+						KingleTaskService taskService=(KingleTaskService)KingleSystem.getService(serviceArray[i]);
+						taskService.stopTask(task_id+"_"+schedule_id);
+						taskService.startTask(task_id+"_"+schedule_id);
+					}
+				}
+				<?{success:true}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}			
+		}else if(type.equals("run")){
+			try{
+				String schedule_id = jacper.getStr("schedule_id");
+				String task_id = jacper.getStr("parent_id");
+				String[] serviceArray=KingleSystem.getServiceNames();
+				boolean serviceStart=false;
+				for(int i=0;i<serviceArray.length;i++){
+					if(("任务服务").equals(serviceArray[i])){
+						serviceStart=true;
+						KingleTaskService taskService=(KingleTaskService)KingleSystem.getService(serviceArray[i]);
+						taskService.stopTask(task_id+"_"+schedule_id);
+						taskService.runNow(task_id+"_"+schedule_id);
+					}
+				}
+				if(serviceStart){
+				<?{success:true}?>;
+				}else{
+				<?{success:false,message:"任务服务未启动"}?>;
+				}
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}			
+		}
+	}
+}                                         
+                      
+                                                                                 

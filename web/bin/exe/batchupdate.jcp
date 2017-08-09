@@ -1,0 +1,135 @@
+
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.propertyset.PropertySet;
+import com.kinglib.workflow.Condition;
+import com.kinglib.workflow.TypeResolver;
+import com.kinglib.workflow.Workflow;
+import com.kinglib.workflow.WorkflowContext;
+import com.kinglib.workflow.WorkflowException;
+import com.kinglib.workflow.basic.BasicWorkflow;
+import com.kinglib.workflow.basic.BasicWorkflowContext;
+import com.kinglib.workflow.config.DefaultConfiguration;
+import com.kinglib.workflow.loader.AbstractDescriptor;
+import com.kinglib.workflow.loader.ActionDescriptor;
+import com.kinglib.workflow.loader.ConditionDescriptor;
+import com.kinglib.workflow.loader.ConditionsDescriptor;
+import com.kinglib.workflow.loader.StepDescriptor;
+import com.kinglib.workflow.loader.WorkflowDescriptor;
+import com.kinglib.workflow.spi.SimpleStep;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String user_id = hs.uid+"";
+
+		String workflowId=jacper.getStr("workflowId");
+		String instanceId=jacper.getStr("instanceId");
+		String buttonId=jacper.getStr("buttonId");
+
+		long entryId=jacper.getLong("entryId",-1);
+		int flowType=jacper.getInt("flowType",0);
+
+		long step_id = jacper.getLong("step_id",-1);
+
+		Workflow wf = new BasicWorkflow(user_id);
+		
+		DefaultConfiguration config = new DefaultConfiguration();
+		wf.setConfiguration(config);
+		WorkflowDescriptor wd =  wf.getWorkflowDescriptor(instanceId);
+		String  actionId=getAction(buttonId,wf,entryId,instanceId,user_id);
+		boolean commentFlag= isComment(actionId,wf,instanceId);
+		<?{success:true,actionId:'?>actionId<?',isComment:'?>commentFlag<?'}?>;
+	}
+	public boolean isComment (String actionId,Workflow wf,String instanceId) {
+			boolean commentFlag=false;
+			if(!actionId.equals("0")){
+				WorkflowDescriptor wd =  wf.getWorkflowDescriptor(instanceId);
+				ActionDescriptor ad=wd.getAction(Integer.parseInt(actionId));
+				commentFlag=ad.isComment();
+			}
+			return commentFlag;
+	}
+	public String getAction (String buttonId,Workflow wf,long entryId,String instanceId,String user_id){
+		String actionId="0";	
+		HashMap buttonMap=new HashMap();
+		if(!instanceId.equals("")){
+			WorkflowDescriptor wd =  wf.getWorkflowDescriptor(instanceId);
+			if(entryId==-1){			
+				List actList=wd.getInitialActions();
+				for (Iterator it = actList.iterator(); it.hasNext();) {
+					ActionDescriptor ad =(ActionDescriptor)it.next();
+					Map actionMap=ad.getMetaAttributes();
+					if(actionMap.containsKey("act_id")){
+						actionId=ad.getId()+"";
+					}else{
+						if(actionMap.containsKey("button_id")){
+							buttonMap.put(actionMap.get("button_id").toString(),ad.getId());
+						}
+					}
+				}
+			}else{
+				List stepList=wf.getCurrentSteps(entryId);
+				System.out.println(stepList.size());
+				for (Iterator iterator = stepList.iterator(); iterator.hasNext();) {
+						SimpleStep sp=(SimpleStep)iterator.next();
+						int stepId =sp.getStepId();
+						StepDescriptor sd=wd.getStep(stepId);
+						List actList=sd.getActions();
+						for (Iterator it = actList.iterator(); it.hasNext();) {
+							ActionDescriptor ad =(ActionDescriptor)it.next();
+							Map actionMap=ad.getMetaAttributes();
+							boolean isPass = true;
+							if(ad.getRestriction()!=null){
+								isPass = false;
+								PropertySet ps = wf.getPropertySet(entryId);
+								//保留原始的ps，暂只对nextOwner属性还原操作。 --暂时处理
+								boolean deletePsNextOwner = !ps.exists("nextOwner");
+								
+								
+								//动作设定条件时，以条件返回结果为准。暂时只支持 获取一个脚本的返回结果。
+								ConditionsDescriptor conditions = ad.getRestriction().getConditionsDescriptor();
+								for (Iterator iteor = conditions.getConditions().iterator(); iteor.hasNext();) {
+									AbstractDescriptor descriptor = (AbstractDescriptor) iteor.next();
+									if (descriptor instanceof ConditionDescriptor) {
+										try {
+											Condition condition = TypeResolver.getResolver().getCondition(
+													((ConditionDescriptor) descriptor).getType(),
+													((ConditionDescriptor) descriptor).getArgs());
+											Map<String,WorkflowContext> transientVars = new HashMap<String,WorkflowContext>();
+											transientVars.put("context", new BasicWorkflowContext(user_id));
+											if(condition.passesCondition(transientVars, ((ConditionDescriptor) descriptor).getArgs(), ps)){
+												isPass = true;
+												//保留原始的ps，暂只对nextOwner属性还原操作。 --暂时处理
+												if (deletePsNextOwner && ps.exists("nextOwner"))
+													ps.remove("nextOwner");
+												break;
+											};
+										} catch (WorkflowException e) {
+											e.printStackTrace();
+										}
+									}
+								}
+							}
+							if(actionMap.containsKey("button_id") && isPass){
+								buttonMap.put(actionMap.get("button_id").toString(),ad.getId());
+							}
+						}
+				}
+			}
+			if(buttonMap.containsKey(buttonId))
+					actionId=buttonMap.get(buttonId)+"";
+		}
+		return actionId;
+	 }
+}
+
+

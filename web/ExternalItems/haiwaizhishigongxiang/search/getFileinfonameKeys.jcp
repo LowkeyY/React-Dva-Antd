@@ -1,0 +1,12 @@
+import com.kinglib.Jacper;
+
+import gpra.filesystem.search.SearchUnits;
+
+//public class getFileinfonameKeys {
+@class{
+	public void doPost(Jacper jacper) {
+		String remark = jacper.getStr("remarks") , filename = jacper.getStr("filename");
+		String keys = SearchUnits.getExtractKeyTitle(remark, filename);
+		jacper.print("{'success':true,'remarks':'"+(keys.length() > 0 ? keys : "")+"'}");
+	}
+}

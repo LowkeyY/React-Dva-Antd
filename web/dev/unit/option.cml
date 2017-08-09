@@ -1,0 +1,100 @@
+<root><class name="dev.unit.option"><option><![CDATA[
+#options-grid .x-grid3-header {
+    background: #f9f9f9 url(images/hrow.gif) repeat-x left top;
+}
+#options-grid .new-unit-row {
+    height:24px;
+}
+#options-grid .new-unit-row .x-small-editor {
+    overflow:hidden;
+    width:100%;
+}
+#options-grid .new-unit-row .x-small-editor input {
+    font-size:11px;
+}
+#new-unit-icon {
+    width:16px;
+    height:16px;
+    margin-left:3px;
+    background: transparent url(/themes/icon/all/edit.gif) no-repeat;
+}
+.x-grid3-body .x-grid3-td-unit-col .x-grid3-cell-inner {
+    padding: 1px 0 0 0 !important;
+}
+
+.option-check {
+    width:98%;
+    height:16px;
+    background: transparent url(/themes/icon/all/del.gif) no-repeat;
+    cursor:pointer;
+}
+
+.option-overdue .x-grid3-cell-inner {
+    color:#fb223a;
+}
+
+.option-completed .x-grid3-cell-inner {
+    text-decoration:line-through;
+    color:gray;
+}
+
+.option-col-hd {
+    width:98%;
+    height:12px;
+    cursor:default;
+}
+
+.x-grid3-td-unit-title .x-grid3-cell-inner {
+    white-space:normal;
+}
+
+.x-grid3-dirty-cell {
+    background:transparent;
+}
+
+#action-panel .x-panel {
+	margin-bottom:3px;
+	margin-right:0;
+}
+#action-panel .x-panel-body {
+	border:0 none;
+}
+#action-panel .x-panel-body li {
+	margin:3px;	
+}
+#action-panel .x-panel-body li img {
+	width:16px;
+	height:16px;
+	vertical-align:middle;
+	margin-right:2px;
+	margin-bottom:2px;
+}
+#action-panel .x-panel-body li a {
+	text-decoration:none;
+	color:#3764A0;
+}
+#action-panel .x-plain-body {
+	background-color:#cad9ec;
+    padding:3px 0 0 5px;
+}
+
+#action-panel .x-panel-body li a:hover {
+	text-decoration:underline;
+	color:#15428b;
+}
+
+.x-panel-trans {
+	background:transparent;
+}
+
+.x-layout-split-west {
+	cursor:move;
+    background-color:#cad9ec;
+}
+.x-panel-header-text {
+	color:#3764A0;
+}
+#options-grid {
+	border-left:1px solid #99bbe8;
+}
+]]></option></class></root>

@@ -1,0 +1,105 @@
+import gpra.filesystem.space.HWSpaceFactory;
+import gpra.filesystem.space.HWSpaceNode;
+import gpra.filesystem.space.HWSpaceFactory.HWSessions;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import gpra.filesystem.HWUnits;
+import com.kinglib.*;
+	//		public class up{
+
+@class{
+	public void doPost(Jacper jacper) {
+		Connection con=jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			String spaceId = String.valueOf(jacper.getSession().get(HWSessions.HW_BASE_SPACEID.name()));
+			String date="";
+			HWSpaceNode space = HWSpaceFactory.getSpaceById(spaceId);
+			int leve=space.getLevel();
+			List<HWSpaceNode> sonNode=new ArrayList<HWSpaceNode>();
+			if(leve==3){
+				sonNode= HWSpaceFactory.getSpaceByParentId(space.getParentSpaceId());
+				
+				double count2=0.0;
+			String sql="select sum(file_size) from dir_file_base where space_id='"+spaceId+"'";
+			String[][] rs = con.get(sql);
+			//date+="<point name=\""+strings[1]+"\" y=\""+rs2[0][0]+"\"/>";
+			if(!rs[0][0].equals("")){
+					count2+=Double.parseDouble(rs[0][0])/1024.00;
+			}
+			count2=count2/1024.00/1024.00;
+			
+			date+="<point name=\""+space.getSpaceName()+"\" y=\""+count2+"\"/>";
+			
+			double count=0.0;
+			for (HWSpaceNode spaceNode : sonNode) {
+				if(!spaceNode.getSpaceId().equals(spaceId)){
+				
+				String sql2="select sum(file_size) from dir_file_base where space_id='"+spaceNode.getSpaceId()+"'";
+				String[][] rs2 = con.get(sql2);
+				//date+="<point name=\""+strings[1]+"\" y=\""+rs2[0][0]+"\"/>";
+				if(!rs2[0][0].equals("")){
+					count+=Double.parseDouble(rs2[0][0])/1024.00;
+				}
+				count=count/1024.00/1024.00;
+				}
+			}
+			date+="<point name=\"其他空间\" y=\""+count+"\"/>";
+			}
+			
+			String data="<anychart>"
+			+"<settings>"
+			+"<animation enabled=\"True\"/>"
+			+"</settings>"
+			+"<margin all=\"0\"/>"
+			+"<charts>"
+			+"<chart name=\"chart69087\" plot_type=\"Pie\">"
+			+"<data_plot_settings>"
+			+"<pie_series apply_palettes_to=\"Points\">"
+			+"<pie_style>"
+			+"<effects enabled=\"false\"/>"
+			+"</pie_style>"
+			+"<tooltip_settings enabled=\"True\">"
+			+"<format>"
+			+"{%Name}  文件共：{%Value}GB 占比例：{%YPercentOfSeries}{numDecimals:2}%"
+			+"</format>"
+			+"</tooltip_settings>"
+			+"<connector enabled=\"True\" thickness=\"1\"/>"
+			+"<label_settings enabled=\"True\" mode=\"outside\">"
+			+"<format>{%Name}:{%YPercentOfSeries}{numDecimals:1}%</format>"
+			+"</label_settings>"
+			+"</pie_series>"
+			+"</data_plot_settings>"
+			+"<chart_settings>"
+			+"<title>"
+			+"<text>项目大小占比</text>"
+			+"</title>"
+			+"<legend enabled=\"True\" ignore_auto_item=\"True\">"
+			+"<font size=\"12\"/>  "
+    		+"<format>{%Name} - {%Value}GB文件</format> "
+    		+"<title enabled=\"True\">"
+      		+"<text>图例:</text>"
+      		+"</title>"
+    		+"<items>"
+      		+"<item source=\"Points\" />"
+    		+"</items>"
+  			+"</legend> "
+			+"</chart_settings>"
+			+"<data>"
+			+"<series name=\"\" id=\"s0\">"
+			+date
+			+"</series>"
+			+"</data>"
+			+"</chart>"
+			+"</charts>"
+			+"</anychart>";
+			
+			jacper.print("{success:true,data:'"+data+"'}");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

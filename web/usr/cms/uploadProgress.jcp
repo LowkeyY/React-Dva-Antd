@@ -1,0 +1,33 @@
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.Err;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.GaoJian;
+
+import com.susing.core.KingleSystem;
+
+@class{
+	public void doPost(Jacper jacper){
+	
+		HttpSession hs = jacper.getSession();
+		String uuid = jacper.getString("uuid");
+
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		
+		Object obj = service.getQueueStatusMap(uuid);
+		
+		//System.out.println(obj==null?"null":obj.toString());
+			
+		String message = "";
+		
+		if(obj != null && !(obj instanceof Integer)){
+			message = obj.toString();
+			service.removeFormQueueStatusMap(uuid);
+			if(obj instanceof Err)
+				((Err) obj).printStackTrace();
+		}
+		
+		jacper.print("{success:true,message:\"" + message + "\"}");
+		
+	}
+}

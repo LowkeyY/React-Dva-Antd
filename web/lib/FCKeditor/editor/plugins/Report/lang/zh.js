@@ -1,0 +1,1 @@
+FCKLang.ReportBtn="插入或编辑报表";FCKLang.ReportDlgTitle="选择报表";FCKLang.ReportDlgName="选择报表";FCKLang.ReportErrNoName="请选择报表";FCKLang.ReportErrNameInUse="该报表已经被使用";

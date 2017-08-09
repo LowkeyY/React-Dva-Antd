@@ -1,0 +1,68 @@
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.*;
+import com.kinglib.util.json.*;
+import java.sql.Types;
+import java.util.*;
+import java.io.IOException;
+
+
+import com.susing.*;
+import com.susing.upload.FileUpload;
+import javax.servlet.ServletException;
+import com.susing.core.KingleSystem;
+import java.io.File;
+
+
+@class{
+
+	public void doPost(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+
+		if(FileUpload.isMultipartContent(jacper.getRequest().getContentType())){
+			jacper=new JacperFile(jacper);
+			((JacperFile)jacper).action();
+		}
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String user_id = hs.uid+"";
+		
+		String type = jacper.getStr("part");
+		String parent_id = jacper.getStr("parent_id");
+		String url = jacper.getStr("url");
+		String seq = jacper.getStr("seq");
+		String comment = jacper.getStr("file_detail");
+		String dir_name = jacper.getStr("dir_name");
+	    dir_name = dir_name.replaceAll("<","< ");
+	    dir_name = dir_name.replaceAll("'","\\\\'");
+		url=url+">>"+dir_name;
+		String dispic = jacper.getStr("dispic");
+		dispic=dispic.equals("true")?"1":"0";
+		comment = comment.replaceAll("'","''");	
+	    
+		try{
+			conPlat.setAutoCommit(false);	
+			String help_id = SQLUtils.getNextVal(conPlat,"20");
+			 if(type.equals("newpart")){
+				conPlat.execLarge("insert into $[plat].help_content (help_id,parent_id,creator_id,create_date,update_person,update_date,url,help_name,help_detail,seq) values (?,?,?,$getdate(),?,$getdate(),?,?,?,?)",new String[]{help_id+"",parent_id,user_id,user_id,url,dir_name,comment,seq});
+			}else{
+				conPlat.execLarge("insert into $[plat].help_content (help_id,category_id,creator_id,create_date,update_person,update_date,url,help_name,help_detail) values (?,?,?,$getdate(),?,$getdate(),?,?,?)",new String[]{help_id+"",parent_id,user_id,user_id,url,dir_name,comment});
+				conPlat.exec("update $[plat].help_category set son=son+1 where category_id=?",new  String[]{parent_id+""});
+			}
+			conPlat.commit();
+		<?{success:true,id:'?>parent_id<?'}?>;
+		}catch(Exception e){
+			try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}

@@ -1,0 +1,121 @@
+
+
+import java.io.*;
+import javax.servlet.*;
+import javax.servlet.http.*;
+import java.util.*;
+import java.util.zip.*;
+
+import com.kinglib.*;
+
+import com.susing.*;
+import com.susing.core.*;
+import com.susing.util.*;
+
+@class{
+
+	private static final String separator = File.separator;	
+	private String path;
+	private String cache;
+
+	public void init(){
+		path = (String)KingleSystem.getProperty("js_lib");
+	}
+
+	public void service(ServletRequest request,ServletResponse response)throws IOException{
+			
+			KingleServletRequest req = (KingleServletRequest)request;
+			KingleServletResponse res = (KingleServletResponse)response;
+			String method = req.getMethod();
+
+			String param = req.getQueryString(); 
+
+			File files =null;
+			File gzip = null;
+
+			try{				
+					String[] arr = param.split("\\.");
+					files = new File(path+separator+Strings.arrayJoin(arr,separator)+".css");
+					gzip = new File(path+separator+Strings.arrayJoin(arr,separator)+".cml");
+					boolean modified = needUpdate(files,gzip);
+					if(!modified && gzip.exists()){
+						long headerValue =0;
+						try{
+							headerValue = req.getDateHeader("If-Modified-Since");
+						}catch(Exception e){}
+							long lastModified = gzip.lastModified();
+						if (headerValue != -1 && (lastModified <= headerValue + 1000)){
+								res.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
+								return;
+						}
+					}
+					if(modified){
+						StringBuffer source = new StringBuffer();
+						source.append("<root>");
+						appendXML(source,files,arr);
+						source.append("</root>");
+						Files.writeString(gzip.getCanonicalPath(),new String[]{source.toString()},"UTF-8");
+					}
+			}catch(Throwable e){
+				PrintWriter pw = res.getWriter();
+				res.setXML();
+				KingleException.printErrorXML("整理文件出错","整理类时出现错误",e,pw);
+				return;
+			}
+
+			String[] arr = param.split("\\.");
+			gzip = new File(path+separator+Strings.arrayJoin(arr,separator)+".cml");
+
+			res.setXML();
+			res.setHeader("Last-Modified",FastHttpDateFormat.getDate(gzip.lastModified()));
+			res.setContentType("text/xml;charset=UTF-8");
+			res.setContentLength((int)gzip.length());
+
+			InputStreamReader in = null;
+			try{
+				in = new InputStreamReader (new FileInputStream(gzip),"UTF-8");
+				Files.stringCopyRange(in,res.getWriter(),4096);
+			}catch(IOException ie){
+				throw new KingleException("文件流操作错误",ie,"文件流操作错误");
+			}finally{
+				try{
+					if(in != null)
+						in.close();
+				}catch(Exception ex){
+					throw new KingleException("文件流无法关闭",ex,"文件流无法关闭");
+				}
+			}
+	}
+
+	private boolean needUpdate(File suks,File gzip){
+			if(Files.isUpdated(suks,gzip))
+				return true;
+		return false;
+	}
+
+	private void appendXML(StringBuffer xml,File source,String[] info){
+		String lib = Strings.arrayJoin(info,".");
+		String name = info[info.length-1];
+		String[] lines = com.kinglib.util.Files.readString(source,"UTF-8");
+		xml.append("<class name=\""+lib+"\"><"+name+"><![CDATA[");
+		String markName = null;
+		for(int i=0;i<lines.length;i++){			
+			String line = lines[i];
+			if(line.startsWith("#@")){
+				if(markName!=null)
+					xml.append("]]></"+markName+">");
+				else
+					xml.append("]]></"+name+">");
+				markName = line.substring(2).trim();
+				xml.append("<"+markName+"><![CDATA[");
+				continue;
+			}			
+			xml.append(line+'\n');		
+		}
+		if(markName!=null)
+			xml.append("]]></"+markName+">");
+		else
+			xml.append("]]></"+name+">");
+		xml.append("</class>");
+	}
+}

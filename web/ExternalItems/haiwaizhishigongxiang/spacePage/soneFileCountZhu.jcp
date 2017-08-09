@@ -1,0 +1,169 @@
+import gpra.filesystem.space.HWSpaceFactory;
+import gpra.filesystem.space.HWSpaceNode;
+import gpra.filesystem.space.HWSpaceFactory.HWSessions;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import gpra.filesystem.HWUnits;
+import com.kinglib.*;
+	//		public class up{
+
+@class{
+	public void doPost(Jacper jacper) {
+		Connection con=jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			String spaceId = String.valueOf(jacper.getSession().get(HWSessions.HW_BASE_SPACEID.name()));
+			String date="";
+			HWSpaceNode space = HWSpaceFactory.getSpaceById(spaceId);
+			int leve=space.getLevel();
+			List<HWSpaceNode> sonNode=new ArrayList<HWSpaceNode>();
+			if(leve==2){
+				sonNode= HWSpaceFactory.getSpaceByParentId(spaceId);
+			}else if(leve==3){
+				sonNode= HWSpaceFactory.getSpaceByParentId(space.getParentSpaceId());
+				
+			}
+			String date2="";
+			for (HWSpaceNode spaceNode : sonNode) {
+				String sql2="select count(file_id),sum(file_size) from dir_file_base where space_id='"+spaceNode.getSpaceId()+"'";
+				String[][] rs2 = con.get(sql2);
+				//date+="<point name=\""+strings[1]+"\" y=\""+rs2[0][0]+"\"/>";
+				date+="<point name=\""+spaceNode.getSpaceName()+"\" y=\""+rs2[0][0]+"\"/>";
+				
+				
+				
+				double count=0.0;
+			if(!rs2[0][1].equals("")){
+				count=Double.parseDouble(rs2[0][1])/1024.00;
+			}
+			count=count/1024.00/1024.00;
+				
+				date2+="<point name=\""+spaceNode.getSpaceName()+"\" y=\""+count+"\"/>";
+			}
+
+			
+		String data="<anychart>"
+			+"<settings>"
+			+"<animation enabled=\"True\" />"
+			+"</settings>"
+			+"<margin all=\"0\" />"
+			+"<charts>"
+			+"<chart name=\"chart69135\" plot_type=\"CategorizedVertical\" leftLen=\"192\" rightLen=\"0\">"
+			+"<data_plot_settings />"
+			+"<chart_settings>"
+			+"<title>"
+			+"<text>所内项目空间文件统计"
+			+"</text>"
+			+"</title>"
+			+"<chart_background>"
+			+"<fill enabled=\"true\" type=\"Solid\" color=\"#FFFFFF\" />"
+			+"<border enabled=\"False\" />"
+			+"<inside_margin all=\"8\" />"
+			+"</chart_background>"
+			+"<legend enabled=\"True\" position=\"Right\" align=\"\" inside_dataplot=\"true\" align_by=\"\" Columns=\"1\">"
+			+"<title enabled=\"false\" />"
+			+"</legend>"
+			+"<data_plot_background>"
+			+"<border enabled=\"False\" />"
+			+"<fill type=\"Solid\" color=\"#FFFFFF\" />"
+			+"</data_plot_background>"
+			+"<axes>"
+			+"<x_axis>"
+			+"<zero_line enabled=\"False\" />"
+			+"<labels rotation=\"0\">"
+			+"<format>{%Value}{numDecimals:0,thousandsSeparator:}"
+			+"</format>"
+			+"</labels>"
+			+"<title>"
+			+"<text>文件名称"
+			+"</text>"
+			+"</title>"
+			+"<scale minimum=\"DefaultValue\" />"
+			+"<major_grid>"
+			+"<line color=\"#C0C0C0\" />"
+			+"</major_grid>"
+			+"<minor_grid>"
+			+"<line color=\"#C0C0C0\" opacity=\"0.5\" />"
+			+"</minor_grid>"
+			+"</x_axis>"
+			+"<extra>"
+			+"<y_axis name=\"yaxis69135-1\" position=\"Normal\">"
+			+"<zero_line enabled=\"False\" />"
+			+"<title>"
+			+"<font bold=\"True\" />"
+			+"<text>文件大小"
+			+"</text>"
+			+"</title>"
+			+"<labels>"
+			+"<format>{%Value}{numDecimals:2,thousandsSeparator:}"
+			+"</format>"
+			+"</labels>"
+			+"<scale type=\"Linear\" minimum=\"0\" />"
+			+"<major_grid>"
+			+"<line color=\"#C0C0C0\" />"
+			+"</major_grid>"
+			+"<minor_grid>"
+			+"<line color=\"#C0C0C0\" opacity=\"0.5\" />"
+			+"</minor_grid>"
+			+"</y_axis>"
+			+"</extra>"
+			+"<y_axis name=\"yaxis69135-0\" position=\"Normal\">"
+			+"<zero_line enabled=\"False\" />"
+			+"<title>"
+			+"<font bold=\"True\" />"
+			+"<text>文件个数"
+			+"</text>"
+			+"</title>"
+			+"<labels>"
+			+"<format>{%Value}{numDecimals:0,thousandsSeparator:}"
+			+"</format>"
+			+"</labels>"
+			+"<scale type=\"Linear\" minimum=\"0\" />"
+			+"<major_grid>"
+			+"<line color=\"#C0C0C0\" />"
+			+"</major_grid>"
+			+"<minor_grid>"
+			+"<line color=\"#C0C0C0\" opacity=\"0.5\" />"
+			+"</minor_grid>"
+			+"</y_axis>"
+			+"</axes>"
+			+"</chart_settings>"
+			+"<styles>"
+			+"<bar_style name=\"lineColor0\">"
+			+"<fill color=\"#99CCFF\" opacity=\"0.8\" type=\"Solid\" />"
+			+"<line color=\"#99CCFF\" />"
+			+"</bar_style>"
+			+"<bar_style name=\"lineColor1\">"
+			+"<fill color=\"#CCFFCC\" opacity=\"0.8\" type=\"Solid\" />"
+			+"<line color=\"#CCFFCC\" />"
+			+"</bar_style>"
+			+"</styles>"
+			+"<data>"
+			+"<series name=\"文件总数\" id=\"s1\" color=\"#CCFFCC\" type=\"Bar\" y_axis=\"yaxis69135-1\" style=\"lineColor1\">"
+			+"<tooltip enabled=\"True\">"
+			+"<format>{%Name}{numDecimals:0,thousandsSeparator:} {%SeriesName}:{%YValue}{numDecimals:0,thousandsSeparator:}"
+			+"</format>"
+			+"</tooltip>"
+			+date
+			+"</series>"
+			+"<series name=\"文件大小GB\" id=\"s0\" color=\"#99CCFF\" type=\"Bar\" y_axis=\"yaxis69135-0\" style=\"lineColor0\">"
+			+"<tooltip enabled=\"True\">"
+			+"<format>{%Name}{numDecimals:0,thousandsSeparator:} {%SeriesName}:{%YValue}{numDecimals:2,thousandsSeparator:}"
+			+"</format>"
+			+"</tooltip>"
+			+date2
+			+"</series>"
+			+"</data>"
+			+"</chart>"
+			+"</charts>"
+			+"</anychart>";
+			
+			jacper.print("{success:true,data:'"+data+"'}");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

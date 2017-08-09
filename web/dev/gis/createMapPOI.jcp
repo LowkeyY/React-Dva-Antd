@@ -1,0 +1,133 @@
+
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.gis.*;
+
+@class{
+	                                              
+public void doPost(Jacper jacper) {
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = hs.uid+"";
+
+	String type = jacper.getStr("type");
+
+	String name = jacper.getStr("name");
+	String logicname = jacper.getStr("logicname");
+
+	String layer_type = jacper.getStr("layer_type");
+	String query_id = jacper.getStr("query_id");
+	String data_column = jacper.getStr("data_column");
+	String id_column = jacper.getStr("id_column");
+	String name_column = jacper.getStr("name_column");
+	
+	String style_column = jacper.getStr("style_column");
+	String exp_item = jacper.getStr("exp_val");
+	String isActive = jacper.getStr("isActive");
+	String dblink = jacper.getStr("dblink");
+	String rownum = jacper.getStr("rownum");
+
+	String isDefault = jacper.getStr("isDefault");
+	String searchId = jacper.getStr("searchId");
+	String storeType = jacper.getStr("storeType");
+
+	String min_scale = jacper.getStr("min_scale");
+	String max_scale = jacper.getStr("max_scale");
+
+	ObjectManager OM=ObjectManager.getInstance();
+	if(type.equals("save")){
+		try{	
+			conPlat.setAutoCommit(false);	
+			String object_id  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+			String parent_id = jacper.getStr("objectId");
+			String layerMethod = jacper.getStr("layerMethod");
+			ObjectNode mapNode=OM.getObject(parent_id);
+			String mapId=mapNode.getId();
+			WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+			conPlat.exec("insert into $[plat].map_poi (object_id,name,logicname,layer_type,query_id,data_column,id_column,name_column,exp_item,active,style_column,min_scale,max_scale,dblink,row_num,layer_method,is_default,spatial_store_type,search_id) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",new String[]{object_id+"",name,logicname,layer_type,query_id,data_column,id_column,name_column,exp_item,isActive,style_column,min_scale,max_scale,dblink,rownum,layerMethod,isDefault,storeType,searchId});
+
+			if(layerMethod.equals("Edit")){
+				mapNode.addChild(conPlat,object_id,logicname,ObjectType.MAPEDIT,hs.uid);
+				webMap.reloadEditLayer(conPlat);
+			}else{
+				mapNode.addChild(conPlat,object_id,logicname,ObjectType.MAPPOI,hs.uid);
+				webMap.reloadPOILayer(conPlat);
+			}
+			conPlat.commit();
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {e1.printStackTrace();}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if(type.equals("updatesave")){
+			String object_id = jacper.getStr("object_id");
+			String layerMethod = jacper.getStr("layerMethod");
+			try{	
+				ObjectNode mapPOINode=OM.getObject(object_id);
+
+				ObjectNode mapNode=mapPOINode.upTo(ObjectType.MAP);
+				String mapId=mapNode.getId();
+				WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+				mapPOINode.updateName(conPlat,logicname);
+				conPlat.exec("update $[plat].map_poi set name=?,logicname=?,layer_type=?,query_id=?,data_column=?,id_column=?,name_column=?,exp_item=?,active=?,style_column=?,min_scale=?,max_scale=?,dblink=?,row_num=?,is_default=?,spatial_store_type=?,search_id=? where object_id=?",new String[]{name,logicname,layer_type,query_id,data_column,id_column,name_column,exp_item,isActive,style_column,min_scale,max_scale,dblink,rownum,isDefault,storeType,searchId,object_id});
+				conPlat.commit();
+				if(layerMethod.equals("Edit")){
+					webMap.reloadEditLayer(conPlat);
+				}else{
+					webMap.reloadPOILayer(conPlat);
+				}
+				<?{success:true,id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				conPlat.close();
+			}
+	}else if(type.equals("delete")){
+		String object_id = jacper.getStr("object_id");
+		String parent_id = jacper.getStr("parent_id");
+		try{	
+			conPlat.setAutoCommit(false);	
+
+			ObjectNode mapPOINode=OM.getObject(object_id);
+			ObjectNode mapNode=mapPOINode.upTo(ObjectType.MAP);
+			String mapId=mapNode.getId();
+			WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+			mapPOINode.destroy(conPlat);
+			conPlat.commit();
+			webMap.reloadEditLayer(conPlat);
+			webMap.reloadPOILayer(conPlat);
+			<?{success:true,id:'?>parent_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

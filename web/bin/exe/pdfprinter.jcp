@@ -1,0 +1,38 @@
+             
+import java.io.*;
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.printer.*;
+import com.kinglib.ui.core.utils.*;
+import com.susing.*;
+
+@class{
+	public void doGet(Jacper jacper){
+			
+			HttpSession hs = jacper.getSession();
+
+			String Page = jacper.getString("pageSize");
+			String topWidth = jacper.getString("topWidth");
+			String bottomWidth = jacper.getString("bottomWidth");
+			String leftWidth = jacper.getString("leftWidth");
+			String rightWidth = jacper.getString("rightWidth");
+			String pageOrient = jacper.getString("pageOrient");
+			String programType = jacper.getString("programType");
+
+			try {
+				Map<String, String> paramsMap = (Map<String, String>) jacper.getParamMap();
+				KingleServletResponse response = jacper.getResponse();
+				response.setContentType("application/pdf");
+				OutputStream out = response.getOutputStream();
+				Printer p=PrinterFactory.getPrinter(programType);
+				Param param=new Param(jacper);
+				param.put("jacper",jacper);
+				int size=p.print(out,param,Page,pageOrient,topWidth,bottomWidth,leftWidth,rightWidth);
+				response.setContentLength(size);
+				out.flush();
+				param.releaseResources();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+	}
+}

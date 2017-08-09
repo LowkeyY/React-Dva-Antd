@@ -1,0 +1,108 @@
+
+import com.kinglib.workbench.dataservice.DataServiceFactory;
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.dictionary.*;
+@class{
+	public void doGet(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+ 		HttpSession hs = jacper.getSession();
+
+		String sort = jacper.getStr("sort");
+		String dir = jacper.getStr("dir");
+
+		String sql = "select object_id || '_' || ip_address || '_' || auth_string,auth_string,ip_address from $[plat].data_service_auth where object_id=?";
+
+		int startRow = jacper.getInt("start",0);
+		//int rowCount = jacper.getInt("limit",0);
+		String object_id=jacper.getString("object_id","-1");
+	
+		Grid gd=new Grid(sql,"object_id",new String[]{"key","auth_string","ip_address"});
+		JSONObject gridJSON=gd.getJSON(conPlat,new String[]{jacper.getStr("objectId")},startRow,-1,dir,sort);
+	//	jacper.getResponse().setContentType("application/x-json");
+		jacper.print(gridJSON.toString());
+		conPlat.close();
+}
+
+	public void doPost(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		Connection conPlat = jacper.getConnection("plat");
+
+		String types=jacper.getStr("type");
+
+		String auth_string=jacper.getStr("auth_string");
+		String ip_address=jacper.getStr("ip_address");
+		String object_id=jacper.getStr("object_id");
+	
+		if(types.equals("save")){
+			try{	
+				String insertStr="insert into $[plat].data_service_auth (object_id,auth_string,ip_address)  values (?,?,?)";
+				conPlat.exec(insertStr,new String[]{object_id+"",auth_string,ip_address});
+				<?{success:true,object_id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(types.equals("updatesave")){	
+			try{	
+
+				String old_auth_string=jacper.getStr("old_auth_string");
+				String old_ip_address=jacper.getStr("old_ip_address");
+				String updStr="update $[plat].data_service_auth set auth_string=?,ip_address=? where object_id=? and ip_address=? and auth_string=?  ";
+				String[] key=jacper.getStr("key").split("_");
+				conPlat.exec(updStr,new String[]{auth_string,ip_address,key[0],key[1],key[2]});
+
+
+				<?{success:true,object_id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(types.equals("delete")){
+			try{	
+				String[] key=jacper.getStr("key").split("_");
+				conPlat.exec("delete from $[plat].data_service_auth where object_id=? and ip_address=? and auth_string=?",key);
+				<?{success:true,object_id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(types.equals("saveAll")){
+			try{	
+				String delStr="delete from $[plat].data_service_auth where object_id=?";
+				conPlat.exec(delStr,new String[]{object_id+""});
+
+				String[] optionCodeArray = jacper.getArray("auth_string");
+				String[] optionValueArray = jacper.getArray("ip_address");
+
+				for(int i=0;i<optionValueArray.length;i++){
+					conPlat.exec("insert into $[plat].data_service_auth (object_id,auth_string,ip_address)  values (?,?,?)",new String[]{object_id,optionCodeArray[i],optionValueArray[i]});
+				}
+				<?{success:true,object_id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(types.equals("deleteAll")){
+			try{	
+				String delStr="delete from $[plat].data_service_auth where object_id=?";
+				conPlat.exec(delStr,new String[]{object_id+""});
+				<?{success:true,object_id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}
+		DataServiceFactory.getInstance().remove(object_id);
+
+	}
+}

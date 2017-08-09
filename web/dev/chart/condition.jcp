@@ -1,0 +1,174 @@
+import com.kinglib.*;
+import com.kinglib.bi.chart.*;
+import com.kinglib.bi.*;
+import com.kinglib.util.*;
+import java.net.*;
+import java.util.*;
+import java.io.*;
+import com.kinglibx.query.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.parser.SearchEditorBuilder;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.workbench.widget.Widget;
+import com.kinglib.workbench.widget.WidgetFactory;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+  
+@class{
+	public void doPost(Jacper jacper){
+
+		jacper.getSession();
+
+		String objectId=jacper.getStr("objectId");
+		String data_id=jacper.getStr("data_id");
+		Connection conPlat = jacper.getConnection("plat");
+
+		try{	
+			JSONObject metaJSON=new JSONObject();	
+			JSONObject searchFieldJSON=null;
+			metaJSON.put("success","true");
+			Chart c=ChartFactory.getInstance().getChart(conPlat,objectId,"anychart");
+			String queryId=c.get("queryId");
+			searchFieldJSON=getSearchEditor(jacper,conPlat,data_id.length()==0,queryId);
+			metaJSON.put("searchEditor",searchFieldJSON);
+
+			<??>metaJSON.toString()<??>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+
+
+	public JSONObject getSearchEditor(Jacper jacper,Connection con,boolean fullSearch,String query_id){
+		
+		ArrayList scolumList =new ArrayList();
+		int totalNum=0;
+		QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+		QueryExtend QE=queryEF.getQueryExtend(con,query_id);
+		QuerySearch qs=QE.getQuerySearch(con,fullSearch);
+		String[][] scolum=qs.getSearchColum();		
+		if(scolum.length>0){	
+			 for(int j=0;j<scolum.length;j++){
+				 if(scolum[j].length!=0){
+					 totalNum++;
+					scolumList.add(scolum[j]);
+				}
+			 }
+		}
+
+		String[][] scolumArray=new String[totalNum][];
+		scolumList.toArray(scolumArray);
+		
+		ArrayList list = new ArrayList();
+		ArrayList listArr = new ArrayList();
+
+		for(int i=0;i<scolumArray.length;i++){
+			if(!listArr.contains(scolumArray[i][0]+scolumArray[i][1])){
+				listArr.add(scolumArray[i][0]+scolumArray[i][1]);
+				list.add(scolumArray[i]);
+			}
+		}
+		String[][] arr  = new String[list.size()][];
+		list.toArray(arr);
+
+		ArrayList<String> idList = new ArrayList<String>();
+		ArrayList<String> titleList = new ArrayList<String>();
+		ArrayList<String> pnameList = new ArrayList<String>();
+		ArrayList<String> dataTypeList = new ArrayList<String>();
+		ArrayList<String> defaultValueList = new ArrayList<String>();
+		ArrayList<String> specialSetList = new ArrayList<String>();
+		ArrayList<String> notNullList = new ArrayList<String>();
+		ArrayList<String> optionList = new ArrayList<String>();
+		ArrayList<String> paramTypeList = new ArrayList<String>();
+		ArrayList<String> tabIdList = new ArrayList<String>();
+
+		if(arr.length>0){
+			for(int i=0;i<arr.length;i++){	
+				int paramType=Integer.parseInt(arr[i][2]);
+				paramTypeList.add(paramType+"");
+				String id=arr[i][0];
+				idList.add(id);
+				String title=arr[i][1];
+				titleList.add(title);	
+				String pname=arr[i][8];
+				pnameList.add(pname);
+				String defaultValue=arr[i][3];
+				defaultValueList.add(defaultValue);
+				String dataType=arr[i][4];
+				dataTypeList.add(dataType);
+				String specialSet=arr[i][5];
+				specialSetList.add(specialSet);	
+				String notNull=arr[i][7];
+				notNullList.add(notNull);
+				String optionId=arr[i][6];
+				optionList.add(optionId);
+				tabIdList.add(arr[i][9]);
+			}
+		}
+
+		JSONObject retj = new JSONObject();
+		try {
+			Param param = new Param();
+			param.put("plat", con);
+			MetaColumn mc;
+			String paramType;
+			JSONObject js;
+			SearchEditorBuilder sep = new SearchEditorBuilder();
+			JSONArray editors = new JSONArray();
+
+			for (int i = 0; i < idList.size(); i++) {
+				mc = MetaFactory.getColumn((new StringBuilder(15)).append(
+						tabIdList.get(i)).append(MetaFactory.idDelimiter)
+						.append(idList.get(i)).toString());
+				if (mc != null) {
+					sep.setJSON(new JSONObject());
+
+					try {
+						paramType = paramTypeList.get(i);
+					} catch (Exception e) {
+						paramType = "0";
+					}
+					if (paramType.indexOf("-")!=-1) {
+
+						Widget wid = WidgetFactory.getWidget((Connection)param.getObject("plat"), paramType);
+						if (wid != null) {
+							sep.dealWidget(param, mc, wid);
+						} else {
+							sep.deal(param, mc);
+						}
+					} else {
+						sep.deal(param, mc);
+					}
+					js = sep.getJSON();
+					if (js != null) {
+						js.put("xtitleList", titleList.get(i));
+						js.put("pname",pnameList.get(i));
+						if (notNullList.get(i).equals("y")) {
+							js.put("allowBlank", false);
+							js.put("blankText", titleList.get(i) + "������д");
+						}
+						if (!defaultValueList.get(i).equals("")){
+							String tempValue=DefaultValue.getInstance().replace(jacper, defaultValueList.get(i));
+							js.put("value",tempValue);
+						}
+						if (!js.has("width"))
+							js.put("width", 120);
+						editors.put(titleList.get(i) + ".");
+						editors.put(js);
+						editors.put(" ");
+					}
+				}
+			}
+			if (editors.length() > 0) {
+				retj.put("editors", editors);
+				retj.put("libs", sep.getLibString());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return retj;
+	 }
+}

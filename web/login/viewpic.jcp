@@ -1,0 +1,28 @@
+
+
+import java.io.InputStream;
+import java.io.IOException;
+import com.kinglib.*;
+
+
+@class{
+
+public void doGet(Jacper jacper){
+
+String file_id = jacper.getStr("file_id");
+
+<?<html style="border:0"><title>?>jacper.trans("查看图片")<?</title>
+<body leftmargin=0 topmargin=0 onload=mov()>
+<img src='download.jcp?file_id=?>file_id<?'></img>
+<script>
+function mov(){
+	self.moveTo(0,0);
+	self.resizeTo(screen.availWidth,screen.availHeight);
+}
+</script>
+</body>
+</html>
+?>;
+
+	}
+}

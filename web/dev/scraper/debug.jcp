@@ -1,0 +1,85 @@
+
+
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglibx.query.*;
+import java.util.Calendar;
+import org.w3c.dom.NodeList;
+import electric.xml.*;
+
+import java.io.*;
+import java.util.Properties;
+import com.kinglib.scraper.definition.ScraperConfiguration;
+import com.kinglib.scraper.runtime.*;
+import com.kinglib.scraper.runtime.variables.*;
+import com.susing.EasyConnection;
+import com.susing.sql.ConnectionManager;
+
+import com.kinglib.database.*;
+import com.kinglib.scraper.*;
+import org.apache.log4j.*;
+import org.apache.log4j.jdbc.*;
+import org.apache.log4j.PatternLayout;
+import org.apache.log4j.PropertyConfigurator;
+import org.apache.log4j.helpers.QuietWriter;
+import org.apache.log4j.helpers.OnlyOnceErrorHandler;
+
+
+@class{
+
+	public void XMLPost(JacperXML jacper){
+		
+		Connection conPlat = jacper.getConnection("plat");
+		Document doc = null;
+		try{
+			doc = jacper.getXML();
+		}catch(IOException iex){
+			<?XML?>jacper.trans("解析错误")<??>;
+		}
+
+		String type=jacper.getString("type");
+		String objectId=jacper.getString("objectId");
+		String searchName=jacper.getString("searchName");
+		String tabId=jacper.getString("tabId");
+
+		String workingDir=".";
+		Extractor et=new Extractor(doc.toString());
+		et.init(workingDir);
+
+        Scraper scraper =et.getScraper();
+		
+		Properties props = new Properties();
+		props.setProperty("log4j.rootLogger", "INFO, file");
+		props.setProperty("log4j.appender.file", "org.apache.log4j.FileAppender");
+		props.setProperty("log4j.appender.file.File", "c:/out.html");
+		props.setProperty("log4j.appender.file.DatePattern", "yyyy-MM-dd");
+		props.setProperty("log4j.appender.file.layout", "org.apache.log4j.HTMLLayout");
+		props.setProperty("log4j.appender.file.layout.ConversionPattern", "%-5p (%20F:%-3L) - %m\n");
+		PropertyConfigurator.configure(props);	
+
+			scraper.setDebug(false);
+			scraper.setJacper(jacper);
+			scraper.setMethod("input");
+			scraper.setObjectId(objectId);
+			scraper.setTabId(tabId);
+
+			MetaTable mt = MetaFactory.getObject(tabId);
+			String DbLink=mt.getDblink();
+			Connection conTmp1=jacper.getConnection(DbLink);	
+			try{
+				ScraperContext sct=scraper.getContext();
+				sct.setVar("searchName",searchName);
+				CtrlPanel cp=CtrlPanelFactory.getCtrlPanel(jacper.getStr("id"));
+				sct.setVar("CtrlPanel",cp);
+				scraper.setConnection(conTmp1);
+				scraper.setObjectId(objectId);
+				et.run();
+				conTmp1.commit();
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conTmp1.close();
+			}
+	}
+}

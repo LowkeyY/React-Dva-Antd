@@ -1,0 +1,42 @@
+
+import java.io.IOException;
+
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.workbench.*;
+import com.kinglib.database.*;
+import java.util.*;
+
+@class{
+ public void doPost(Jacper jacper){
+		
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		Connection conPlat = jacper.getConnection("plat"); 
+		String type= jacper.getStr("type");
+
+		String[][] groups=null;
+ 
+		String object_id = jacper.getStr("object_id");
+		groups = conPlat.get("select id,lname||'  '||pname from $[plat].meta_column a where a.object_id=(select b.tab_id from $[plat].prg_base b where b.object_id=?) order by id",new String[]{object_id});
+		JSONArray jarr=new JSONArray();
+		try{
+			for(int i=0;i<groups.length;i++){
+				JSONObject items = new JSONObject("{}");
+				items.put("value",groups[i][0]);
+				items.put("text",groups[i][1]);
+				jarr.put(items);
+			}
+			jacper.print("{items:"+jarr+"}");
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+}

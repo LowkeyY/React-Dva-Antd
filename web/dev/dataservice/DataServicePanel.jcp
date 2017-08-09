@@ -1,0 +1,181 @@
+
+import java.util.*;
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.SQLUtils;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+import com.kinglib.workbench.dataservice.DataServiceFactory;
+
+@class{
+
+// 数据服务Panel Jcp
+	public void doGet(Jacper jacper) {
+
+		jacper.getSession();
+		Connection conPlat = jacper.getConnection("plat");
+		String parent_id = jacper.getStr("parent_id");
+
+		try {
+			JSONObject dataJSON = new JSONObject();
+
+			String[] rs = conPlat.getRow("SELECT  LOGIC_NAME,PHYSICAL_NAME,SERVICE_TYPE,INTERFACE_TYPE,DATA_PATTERN,AUTHER_MODE,EXPLANTION,IS_CLIENT,SOURCE_TYPE,SOURCE_OBJECT,SERVICE_METHOD FROM $[plat].data_service where  object_id=?", new String[] { parent_id });
+			dataJSON.put("logic_name", rs[0]);
+			dataJSON.put("physics_name", rs[1]);
+			dataJSON.put("service_type", rs[2]);
+			dataJSON.put("interface_type", rs[3]);
+			dataJSON.put("data_pattern", rs[4]);
+			dataJSON.put("auther_mode", rs[5]);
+			dataJSON.put("explantion", rs[6]);//,SOURCE_TYPE,SOURCE_OBJECT,SERVICE_METHOD
+			
+			dataJSON.put("source_type", rs[8]);
+			dataJSON.put("source_object", rs[9]);
+			dataJSON.put("service_method", rs[10]);
+
+			ObjectNode node = ObjectManager.getObject(parent_id);
+			if (node != null) {
+				dataJSON.put("lastModifyTime", node.getLastModifyTime());
+				dataJSON.put("lastModifyName", node.getLastModifyName());
+			}
+			if (rs[7].equals("false") &&  rs[2].equals("0")) {
+				int port = jacper.getRequest().getServerPort();
+				String url = "http://" + jacper.getRequest().getServerName();
+				if (port != 80)
+					url += ":" + port;
+				dataJSON.put("url", url +"/rest/"+ DataServiceFactory.getInstance().getURI(conPlat,parent_id));
+			}else{
+				dataJSON.put("url", jacper.trans("无"));
+			}
+			dataJSON.put("object_id", parent_id);
+			JSONObject taskJSON = new JSONObject("{success:true}");
+			taskJSON.put("data", dataJSON);
+			jacper.print(taskJSON.toString());
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			conPlat.close();
+		}
+	}
+
+	public void doPost(Jacper jacper) {
+
+		HttpSession hs = jacper.getSession();
+		long user_id = hs.uid;
+
+		Connection conPlat = jacper.getConnection("plat");
+		String type = jacper.getStr("type");
+		String logicName = jacper.getStr("logic_name");
+		String physicsName = jacper.getStr("physics_name");
+		String serviceType = jacper.getStr("service_type");
+		String interfaceType = jacper.getStr("interface_type");
+		String dataPattern = jacper.getStr("data_pattern");
+		String autherMode = jacper.getStr("auther_mode");
+		String explantion = jacper.getStr("explantion");
+		String parent_id = jacper.getStr("parent_id");
+		String sourceType = jacper.getStr("source_type");
+		String sourceObject ="";
+		
+		String serviceMethod = "";
+		if(sourceType.equals("0")){
+			serviceMethod="query";
+			sourceObject= jacper.getStr("css_query");
+		}else if(sourceType.equals("1")){
+			sourceObject= jacper.getStr("css_table");
+			if(jacper.getStr("insert").equals("on")){
+				serviceMethod="insert";
+			}
+			if(jacper.getStr("update").equals("on")){
+				serviceMethod+=",update";
+			}
+			if(jacper.getStr("delete").equals("on")){
+				serviceMethod=",delete";
+			}
+		}else{
+			sourceObject= jacper.getStr("className");
+		}
+		
+		
+		
+
+		if (type.equals("save")) {
+			try {
+				conPlat.setAutoCommit(false);
+				String object_id="";
+				String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+				if(idType==null||idType.equals("0")){
+					object_id = SQLUtils.getNextVal(conPlat,1)+"";
+				}else{
+					object_id =UUID.randomUUID().toString();
+				}
+
+				ObjectNode applicationNode = ObjectManager.getObject(parent_id);
+				applicationNode.addChild(conPlat, object_id, logicName, ObjectType.DATASERVICE, user_id);
+				conPlat.exec("INSERT INTO $[plat].data_service (object_id,LOGIC_NAME,PHYSICAL_NAME,SERVICE_TYPE,INTERFACE_TYPE,DATA_PATTERN,AUTHER_MODE,EXPLANTION,SOURCE_TYPE,SOURCE_OBJECT,SERVICE_METHOD) VALUES (?,?,?,?,?,?,?,?,?,?,?)", new String[] { object_id + "", logicName, physicsName, serviceType, interfaceType, dataPattern, autherMode, explantion,sourceType,sourceObject,serviceMethod });
+				conPlat.commit();
+				jacper.print("{success:true,id:'" + object_id + "'}");
+			} catch (Exception e) {
+				try {
+					conPlat.rollback();
+				} catch (Exception e1) {
+				}
+				e.printStackTrace();
+				jacper.print("{success:false,message:'" + e.toString() + "'");
+			} finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				} catch (Exception e2) {
+				}
+			}
+		} else if (type.equals("updatesave")) {
+			try {
+				conPlat.setAutoCommit(false);
+				ObjectNode dataNode = ObjectManager.getObject(parent_id);
+				dataNode.updateName(conPlat, logicName);
+				conPlat.exec("UPDATE $[plat].data_service SET  LOGIC_NAME=?,PHYSICAL_NAME=?,SERVICE_TYPE=?,INTERFACE_TYPE=?,DATA_PATTERN=?,AUTHER_MODE=?,EXPLANTION=?,SOURCE_TYPE=?,SOURCE_OBJECT=?,SERVICE_METHOD=? WHERE object_id=?", new String[] { logicName, physicsName, serviceType, interfaceType, dataPattern, autherMode, explantion, parent_id,sourceType,sourceObject,serviceMethod });
+				jacper.print("{success:false,id:'" + parent_id + "'");
+				conPlat.commit();
+			} catch (Exception e) {
+				try {
+					conPlat.rollback();
+				} catch (Exception e1) {
+				}
+				e.printStackTrace();
+				jacper.print("{success:false,message:'" + e.toString() + "'");
+			} finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				} catch (Exception e2) {
+				}
+			}
+		} else if (type.equals("delete")) {
+			try {
+				conPlat.setAutoCommit(false);
+				ObjectManager.getObject(parent_id).destroy(conPlat);
+				conPlat.commit();
+				jacper.print("{success:true}");
+			} catch (Exception e) {
+				try {
+					conPlat.rollback();
+				} catch (Exception e1) {
+				}
+				e.printStackTrace();
+				jacper.print("{success:false,message:'" + e.toString() + "'");
+			} finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				} catch (Exception e2) {
+				}
+			}
+		}
+		DataServiceFactory.getInstance().remove(parent_id);
+	}
+
+}                                         
+                      
+                                                                                 

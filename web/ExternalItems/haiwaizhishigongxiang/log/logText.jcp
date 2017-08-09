@@ -1,0 +1,62 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.database.*;
+import com.kinglib.bi.*;
+
+
+@class{
+
+	public void doPost(Jacper jacper){
+	
+		String ed=jacper.getStr("ENTRY_DATE");
+		ed=ed.substring(0,ed.length()-2);
+		Connection conPlat = jacper.getConnection("plat");
+		int level=jacper.getInt("LOG_LEVEL",10);
+		String[] rs =conPlat.getRow("select $date_str(ENTRY_DATE,113),LOG_LEVEL,CONTENT,CATEGORY,RECORDER from $[plat].Log where ENTRY_DATE=$str_date(?,120) and LOG_LEVEL=? and CATEGORY=? and RECORDER=?",
+		new String[]{ed,String.valueOf(level),jacper.getStr("CATEGORY"),jacper.getStr("RECORDER")});
+
+
+
+			<?
+					<html>
+						<head>
+						<style>
+							.logtable{
+								font-size:12px;
+							}
+							
+							.STYLE1{
+								border-bottom-style:solid ;
+								border-bottom-width:1px ;
+							}
+						</style>
+						</head>
+						<body>
+							<table width="450" height="200" border="0" class="logtable">
+	 								
+	  								<tr>
+										    <td width="76" height="38"><div align="center">?>jacper.trans("日志日期")<?:</div></td>
+										    <td width="78" class="STYLE1">?>ed<?</td>
+										    <td width="87"><div align="center" >?>jacper.trans("日志级别")<?:</div></td>
+										    <td width="74" class="STYLE1">?>level<?</td>
+									</tr>
+	  								
+	  								<tr>
+										    <td height="38"><div align="center">?>jacper.trans("日志类型")<?:</div></td>
+										    <td    class="STYLE1">?>jacper.getStr("CATEGORY")<?</td>
+										    <td><div align="center">?>jacper.trans("记录者")<?:</div></td>
+										    <td class="STYLE1">?>jacper.getStr("RECORDER")<?</td>
+									</tr>
+									<tr>
+									    <td colspan="4">
+									    	
+									    	  <textarea name="textarea" style="width:600px;margin:20 5 5 40;padding:4px;height:300px;font-size:12px;" readonly=true>?>jacper.getStr("CONTENT")<?</textarea>
+										</td>
+									</tr>
+							</table>
+						</body>
+					</html>
+			?>;
+
+	}
+}

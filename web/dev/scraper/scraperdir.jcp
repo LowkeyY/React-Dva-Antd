@@ -1,0 +1,72 @@
+
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+import com.susing.sql.*;
+import com.kinglib.*;
+import java.util.*;  
+import com.kinglib.workbench.*;
+
+
+@class{
+public void doPost(Jacper jacper) {
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = hs.uid+"";
+
+	String type = jacper.getStr("type");
+	String group_name = jacper.getStr("name");
+
+	ObjectManager OM=ObjectManager.getInstance();
+
+	if (type.equals("save")){
+		try{	
+			String objectId = jacper.getStr("object_id");
+			String object_id  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = com.kinglib.SQLUtils.getNextVal(conPlat,1)+"";	
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+			ObjectNode portalNode=OM.getObject(objectId);
+			portalNode.addChild(conPlat,object_id,group_name,ObjectType.SCRAPERGROUP,hs.uid);
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			conPlat.close();
+		}
+	}else if (type.equals("updatesave")){
+		String objectId = jacper.getStr("object_id");		
+		ObjectNode groupNode=OM.getObject(objectId);
+		groupNode.updateName(conPlat,group_name);
+		conPlat.close();
+		<?{success:true,id:'?>objectId<?'}?>;
+	}else if (type.equals("delete")){
+		String objectId = jacper.getStr("objectId");
+		try{	
+			conPlat.setAutoCommit(false);	
+			ObjectNode groupNode=OM.getObject(objectId);
+			groupNode.destroy(conPlat);
+			conPlat.commit();
+			<?{success:true}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

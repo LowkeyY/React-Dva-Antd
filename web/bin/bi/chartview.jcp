@@ -1,0 +1,92 @@
+           
+import java.util.ArrayList;
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.workbench.program.*;
+import com.kinglib.bi.chart.Chart;
+import com.kinglib.bi.chart.ChartFactory;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+    
+@class{
+
+	public void doPost(Jacper jacper) {
+
+		Connection conPlat = jacper.getConnection("plat");
+		jacper.setSession(); 
+		String series = jacper.getStr("series");
+		try {
+
+			JSONArray jarr = new JSONArray(series);
+			int width = jacper.getInt("width", 800);
+			int height = jacper.getInt("height", 600);
+			String[] base = null;
+			ArrayList<String> al = new ArrayList<String>(30);
+
+			for (String item : ChartFactory.baseAttNames) {
+			    if(item.equals("showGrid")){
+			    	int IsGrideLine=0; 
+        			int gridX=0, gridY=0;
+        			if((jacper.getStr("Grid_X")).equals("on")) gridX=1;
+        			if((jacper.getStr("Grid_Y")).equals("on")) gridY=1;
+ //       			System.out.println("gridX+gridY="+gridX+gridY);
+        			switch(gridX+gridY){
+        				case 0:   
+        					IsGrideLine=0;
+        				break;
+        		
+        				case 1: 
+        	    			IsGrideLine= (gridX ==1  ? 2:3 );
+        					break;
+        
+            			case 2:   
+        					IsGrideLine=1;
+        					break; 
+        			}
+        			al.add(String.valueOf(IsGrideLine));
+			    }else  if(item.equals("dataTooltip")){
+			    		String Is_Titled="";
+
+						if((jacper.getStr("Is_Titled_X")).equals("on")) Is_Titled=Is_Titled+"X";
+						if((jacper.getStr("Is_Titled_Y")).equals("on")) Is_Titled=Is_Titled+"Y";
+						if((jacper.getStr("Is_Titled_Z")).equals("on")) Is_Titled=Is_Titled+"Z";
+
+						al.add(Is_Titled);
+			    }else{
+			    
+					al.add(jacper.getStr(item));
+				}
+			}
+
+			base=al.toArray(new String[al.size()]);
+
+			Program prg =ProgramFactory.getInstance().getProgram(conPlat,base[0]);
+			base[0]=String.valueOf(prg.getQueryId());
+
+			String[][] se = new String[jarr.length()][];
+
+			for (int i = 0; i < jarr.length(); i++) {
+				JSONObject jo = jarr.getJSONObject(i);
+				ArrayList<String> col = new ArrayList<String>(20);
+				for (String item : ChartFactory.colAttNames) {
+
+					col.add(jo.optString(item, ""));
+				}
+				se[i] = col.toArray(new String[col.size()]);
+			}
+
+            
+			Chart c = ChartFactory.getInstance().getChart("-1", "anychart", base, se);
+			
+			jacper.print(c.build(jacper, conPlat, width, height));
+
+		} catch (JSONException e) {
+			conPlat.close();
+			e.printStackTrace();
+		}
+	}
+
+}
+ 

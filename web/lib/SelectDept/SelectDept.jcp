@@ -1,0 +1,36 @@
+            
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.social.api.core.model.*;
+
+               
+@class{
+
+	public void doGet(Jacper jacper){  
+
+		String id = jacper.getString("node");
+		try{
+			JSONArray treeArr=new JSONArray();
+			int i=0;
+			Dept p=Dept.getDept(id);
+			for(Dept d:p.getChilds()){
+				JSONObject js = new JSONObject();
+				js.put("id",d.getDeptId());
+				js.put("text",d.getShortName());
+				js.put("leaf",!d.hasChild());
+				js.put("icon","/themes/icon/common/group.gif");
+				js.put("allowSelect",true);
+				treeArr.put(js);
+			}		
+			jacper.print(treeArr.toString());
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+
+	}
+	public void doPost(Jacper jacper){  
+		String deptId=jacper.getString("deptId");
+		Dept u=Dept.getDept(deptId);
+		jacper.print("{success:true,value:'"+u.getShortName()+"'}");
+	}
+}

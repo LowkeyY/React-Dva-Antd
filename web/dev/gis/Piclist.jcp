@@ -1,0 +1,105 @@
+import java.io.IOException;   
+import java.io.*;  
+import java.text.SimpleDateFormat;    
+import java.util.Calendar; 
+import org.w3c.dom.*;
+import com.susing.core.*; 
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.dictionary.*;
+import com.kinglib.util.*;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+@class{
+  public void doGet(Jacper jacper){
+    HttpServletRequest request = jacper.getRequest();
+    HttpServletResponse response = jacper.getResponse();
+	String del_mark = jacper.getStr("del_mark");
+	String del_name = jacper.getStr("del_name");
+	String obj_type=jacper.getStr("obj_type");
+	String coms = jacper.getStr("coms");
+    Connection conPlat = jacper.getConnection("plat");
+	if(del_mark.equals("true")){
+		conPlat.exec("delete from $[plat].map_meta where meta_name=?",new String[]{del_name});
+		<?{success:true}?>;
+		return;
+	}
+	if(coms.equals("true")){
+		try{
+			Dict objtypes = DictFactory.getInstance().getDict(conPlat,80149);
+			String[][] objTypeArray=objtypes.getOptionsArray();
+			ArrayList<String[]> al=new ArrayList<String[]>(20);
+			for(int i=0;i<objTypeArray.length;i++){
+				al.add(new String[]{objTypeArray[i][1],objTypeArray[i][0]});		
+			}
+			String[][] rsl = al.toArray(new String[al.size()][2]);
+			Arrays.sort(rsl, new TwoDimArrayComparator());
+			JSONObject typeJSON = new JSONObject("{success:true}");
+			JSONArray jarr=new JSONArray();
+			for(int i=0;i<rsl.length;i++){
+				JSONObject js=new JSONObject("{}");
+				js.put("text",rsl[i][0]);
+				js.put("value",rsl[i][1]);
+				jarr.put(js);
+			}
+			typeJSON.put("Rows",jarr);
+			jacper.print(typeJSON.toString());
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+		return;
+	}else{
+		try{
+			String[][] rs;
+			if(obj_type.equals("") || obj_type.equals(null)){
+				rs = conPlat.get("select meta_name,file_type,file_name,file_size from $[plat].map_meta",new String[]{});
+			}else{
+				rs = conPlat.get("select meta_name,file_type,file_name,file_size from $[plat].map_meta where obj_type=?",new String[]{obj_type});
+			}
+		//try{
+			//String[][] rs = conPlat.get("select meta_name,file_type,file_name,file_size from $[plat].map_meta where obj_type=?",new String[]{obj_type});
+			JSONObject	dirJSON=null;
+			dirJSON = new JSONObject("{}");
+			JSONArray rowsJSONArray = new JSONArray();
+			if(rs.length>0){
+				for(int i=0;i<rs.length;i++){
+					JSONObject nodeJSON = new JSONObject("{}");
+					nodeJSON.put("name", rs[i][0]);
+					nodeJSON.put("file_type", rs[i][1]);
+					nodeJSON.put("file_name", rs[i][2]);
+					nodeJSON.put("file_size", rs[i][3]);
+					nodeJSON.put("folder", false);
+					nodeJSON.put("icon", "bmp");
+					rowsJSONArray.put(nodeJSON);
+				}
+			}else{
+
+			}
+			dirJSON.put("success",true);
+			dirJSON.put("Rows",rowsJSONArray);
+			<??>dirJSON.toString()<??>;
+		}
+		catch(Exception e){
+		  try{
+				JSONObject	dirJSON=null;
+				dirJSON = new JSONObject("{}");	
+				dirJSON.put("success",false);
+				<??>dirJSON.toString()<??>;
+			}catch(Exception ex){
+				e.printStackTrace();
+			}	
+		}finally{
+			conPlat.close();
+		}
+	}
+  }
+  public void doPost(Jacper jacper){
+    this.doGet(jacper);
+  }
+}

@@ -1,0 +1,60 @@
+.basement{
+	background: url(../../themes/icon/dashPattern/fill_basement.gif) left top no-repeat, url(../../themes/icon/dashPattern/fill_basement.gif) -320px bottom no-repeat, url(../../themes/icon/dashPattern/fill_basement.gif) -640px top repeat-y;
+}
+.basement_h{
+    background-image: url(../../themes/icon/dashPattern/fill_basement_h.gif);
+}
+.chert{
+    background-image: url(../../themes/icon/dashPattern/fill_chert.gif);
+}
+.chert_h{
+    background-image: url(../../themes/icon/dashPattern/fill_chert_h.gif);
+}
+.dolomite{
+    background-image: url(../../themes/icon/dashPattern/fill_dolomite.gif);
+}
+.dolomite_h{
+    background-image: url(../../themes/icon/dashPattern/fill_dolomite_h.gif);
+}
+.limestone{
+    background-image: url(../../themes/icon/dashPattern/fill_limestone.gif);
+}
+.limestone_h{
+    background-image: url(../../themes/icon/dashPattern/fill_limestone_h.gif);
+}
+.sandstone{
+    background-image: url(../../themes/icon/dashPattern/fill_sandstone.gif);
+}
+.sandstone_h{
+    background-image: url(../../themes/icon/dashPattern/fill_sandstone_h.gif);
+}
+.shale{
+    background-image: url(../../themes/icon/dashPattern/fill_shale.gif);
+}
+.shale_h{
+    background-image: url(../../themes/icon/dashPattern/fill_shale_h.gif);
+}
+.siltstone{
+    background-image: url(../../themes/icon/dashPattern/fill_siltstone.gif);
+}
+.siltstone_h{
+    background-image: url(../../themes/icon/dashPattern/fill_siltstone_h.gif);
+}
+.x-icon-combo-item {
+    background-repeat: no-repeat;
+    background-position: 3px 50%;
+    padding-left: 72px;
+}
+.x-icon-combo-icon{
+    background-repeat: no-repeat;
+    background-position: 0 50%;
+    width: 72px;
+    height: 14px;
+}
+.x-icon-combo-input {
+    padding-left: 75px;
+}
+.x-form-field-wrap .x-icon-combo-icon {
+    top: 3px;
+    left: 6px;
+}

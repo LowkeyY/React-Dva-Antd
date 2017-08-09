@@ -1,0 +1,98 @@
+import gpra.filesystem.space.HWSpaceFactory;
+import gpra.filesystem.space.HWSpaceNode;
+import gpra.filesystem.space.HWSpaceFactory.HWSessions;
+
+import java.util.ArrayList;
+
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+//public class SearchSpaceTree{
+@class{
+	public void doPost(Jacper jacper) {
+		HttpSession hs = jacper.getSession();
+		JSONArray children = getSpaceByUser(hs.uid);
+		jacper.print(children);
+	}
+	public void doGet(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		String path = jacper.getString("path");
+		if("currentSpace".equals(path))
+			path = hs.getString(HWSessions.HW_BASE_SPACEID.name());
+		JSONArray children = new JSONArray();
+		
+		if(path != null && path.length() > 0)
+			children = getSpaceByPath(path.split("::")[0]);
+		jacper.print("{success:true,childs:"+children+"}");
+	}
+	
+	public JSONArray getSpaceByUser(int uid) {
+		String userId = String.valueOf(uid);
+		JSONArray children = new JSONArray();
+		try {
+			children.put(getSpaces(HWSpaceFactory.getBaseSpace() , userId , true));
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		return children;
+	}
+	
+	public JSONObject getSpaces(HWSpaceNode baseNode , String userId , boolean isAll) throws JSONException{
+		JSONArray children = new JSONArray();
+		ArrayList<HWSpaceNode> childNodes = HWSpaceFactory.getSpaceByParentId(baseNode.getSpaceId());
+		if(childNodes.size() > 0){
+			if(baseNode.getLevel() < 3 && !baseNode.getSpaceName().matches("^.*公共项目$"))
+				children.put(add2JsonO(baseNode, userId , new JSONArray() ,false , ""));
+			for(HWSpaceNode node : childNodes){
+					children.put(getSpaces(node, userId , true));
+			}
+		}
+		return add2JsonO(baseNode , userId , children , childNodes.size() > 0);
+	}
+	
+	public JSONArray getSpaceByPath(String spaceId){
+		boolean isAll = false;
+		spaceId = (isAll = spaceId.endsWith("-all")) ? spaceId.replaceAll("-all", "") : spaceId;
+		JSONArray children = new JSONArray();
+		HWSpaceNode hsn = HWSpaceFactory.getSpaceById(spaceId);
+		while(hsn != null){
+			children.put(hsn.getSpaceId() + (isAll ? "-all" : ""));
+			if(!isAll && HWSpaceFactory.getSpaceByParentId(hsn.getSpaceId()).size() > 0)
+				children.put(hsn.getSpaceId()+"-all");
+			if(hsn.getSpaceId().equals(hsn.getParentSpaceId()))
+				break;
+			isAll = false;
+			hsn = HWSpaceFactory.getSpaceById(hsn.getParentSpaceId());
+			
+		}
+		return children;
+	}
+	
+	public String getIcon(String type){
+		return type.equals("space") ? "/themes/icon/all/server_database.gif" : "/themes/icon/all/bullet_green.gif";
+	}
+	public JSONObject add2JsonO(HWSpaceNode node , String userId , JSONArray children , boolean isAll) throws JSONException{
+		return add2JsonO(node , userId , children , isAll , null);
+	}
+	public JSONObject add2JsonO(HWSpaceNode node , String userId , JSONArray children , boolean isAll , String text) throws JSONException{
+		JSONObject obj = node.toJson();
+		obj.put("id", node.getSpaceId() + (isAll ? "-all" : ""));
+		if(!isAll && node == HWSpaceFactory.getBaseSpace())
+			obj.put("hidden", true);
+		if(text != null && node.getLevel() == 2)
+			obj.put("text",  "所公共空间");
+		if(node.getLevel() == 1){
+			obj.put("text",   isAll ? "所有空间" : node.getSpaceName());
+		}
+		obj.put("nodeType", "async");
+		obj.put("action", true);
+		obj.put("leaf", children.length() == 0);
+		obj.put("icon" , getIcon(node.getMyType()));
+		if(children.length() > 0)
+			obj.put("children", children);
+		return obj;
+	}
+}

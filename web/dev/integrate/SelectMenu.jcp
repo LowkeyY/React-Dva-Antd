@@ -1,0 +1,69 @@
+import java.util.ArrayList;
+
+import com.kinglib.Jacper;
+import com.kinglib.ui.menu.Menu;
+import com.kinglib.ui.menu.MenuFactory;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+
+@class{
+
+	public void doGet(Jacper jacper) {
+
+		String id = jacper.getStr("node");
+		int level = jacper.getInt("level", 1);
+		ArrayList<Menu> rs = new ArrayList<Menu>();
+
+		if (level == 1) {
+			ObjectNode currentNode = ObjectManager.getObject(id);
+			if (currentNode == null) {
+				jacper.print("{success:false,message:'"+jacper.trans("定制错误,原因参见控制台")+"'}");
+				return;
+			}
+			ObjectNode sysNode = currentNode.upTo(ObjectType.SYSTEM);
+			String systemId = sysNode.getId();
+			Menu root = MenuFactory.getInstance().getRoot();
+			for (Menu sub : root.getChilds()) {
+			
+				if (sub.getPortalId().equals(systemId)&& sub.isTopMenu()) {
+				System.out.println(sub.getPortalId()+"==="+systemId+"==="+sub.getPath());
+					rs.add(sub);
+				}
+			}
+		} else {
+			Menu menu = MenuFactory.getInstance().getMenu(id);
+			if (menu != null && menu.hasChild() && menu.isTopMenu()) {
+				for (Menu sub : menu.getChilds()){
+					if (sub.isTopMenu()&&!sub.hasChild()){
+						rs.add(sub);
+					}
+				}
+			}
+		}
+
+		try {
+			JSONArray treeJSONArray = new JSONArray();
+			int nextLevel = level + 1;
+			String icon="/xp/menu.gif";
+			for (Menu m : rs) {
+				if(m.hasChild()||m.getPath().equals("")){
+					JSONObject resultJSON = new JSONObject();
+					resultJSON.put("text", m.getTitle());
+					resultJSON.put("leaf", !m.hasChild());
+					resultJSON.put("id", m.getId());
+					resultJSON.put("icon", "/themes/icon" + ((m.getIconUrl().length()==0)?icon:m.getIconUrl()));
+					resultJSON.put("level", nextLevel);
+					resultJSON.put("allowSelect", true);
+					treeJSONArray.put(resultJSON);
+				}
+			}
+			jacper.print(treeJSONArray);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+}

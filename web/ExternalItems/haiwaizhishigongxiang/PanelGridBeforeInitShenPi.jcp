@@ -1,0 +1,21 @@
+import com.kinglib.*;
+import gpra.filesystem.HWUnits;
+
+//public class PanelGridBeforeInitShenPi{
+@class{
+	public void doPost(Jacper jacper) {
+		
+		String id=jacper.getStr("file_id");
+		HttpSession hs = jacper.getSession();
+		Connection con =jacper.getConnection(HWUnits.HW_DBLINK);
+		try{
+			String sql="select FILE_ID from DIR_APPLY_BASIC where APPLY_ID='"+id+"'";
+			String fileId = con.get(sql)[0][0];
+			jacper.print("{sucess:true,result:"+fileId+"}");
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			con.close();
+		}
+	}
+}

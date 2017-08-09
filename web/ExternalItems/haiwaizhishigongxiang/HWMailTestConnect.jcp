@@ -1,0 +1,34 @@
+import com.kinglib.*;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.mail.HWMailMessages;
+
+//public class HWMailTestConnect{
+@class{
+	public void doGet(Jacper jacper){
+		System.out.println("测试邮箱连接");
+		Connection conDocmgr = jacper.getConnection(HWUnits.HW_DBLINK);
+		
+		String pop3server=jacper.getString("adress");
+		String username=jacper.getString("name");
+		String password=jacper.getString("password");
+		
+		try{
+				boolean bo= HWMailMessages.testConnectToServer(pop3server, username, password);
+				
+				if (bo) {
+					System.out.println("连接成功");
+					jacper.print("{'success':true,'message':'连接成功。'}");
+				}else{
+					System.out.println("连接失败。请检查配置。");
+					jacper.print("{'success':false,'message':'连接失败。请检查配置。'}");
+				}
+		}catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	public void doPost(Jacper jacper){
+		doGet(jacper);
+	}
+
+}

@@ -1,0 +1,94 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.folder.*;
+import com.kinglib.workbench.program.*;
+import java.util.ArrayList;
+
+@class{
+	public void doGet(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		String userId=hs.uid+"";
+		String objectId = jacper.getString("objectId","0");
+		String id = jacper.getStr("id").trim();
+
+		Connection conPlat = jacper.getConnection("plat");
+		ProgramFactory PF=ProgramFactory.getInstance();
+		Program prg =PF.getProgram(conPlat,objectId);
+		ProgramFolder pf=ProgramFolderFactory.getInstance().getProgramFolder(objectId+"");
+
+		String hasChild = "0";
+		try{
+			<?<root _id="?>id<?"><forder _parent="?>id<?" event="event1">?>; 
+			if(id.equals("0")){
+				if(prg.haveFavorite()){
+					hasChild="0";
+					ArrayList myFavotiteList=pf.getFavorite(userId);
+					if(myFavotiteList!=null)
+						hasChild="1";
+					String url = "/bin/exe/folderTree.jcp?objectId="+objectId+"&amp;id=favotite";
+					<?<e _id="favotite" _hasChild ="?>hasChild<?" icon0="/themes/icon/all/star.gif" icon1="/themes/icon/all/star.gif" title="?>jacper.trans("我的收藏")<?" eventType="0"  url="?>url<?"/>?>;
+				}
+				if(prg.haveMyQuery()){
+					hasChild="0";
+					String url = "/bin/exe/folderTree.jcp?objectId="+objectId+"&amp;id=myquery";
+					<?<e _id="myquery" _hasChild ="?>hasChild<?" icon0="/themes/icon/all/folder_find.gif" icon1="/themes/icon/xp/folder.gif" title="?>jacper.trans("我的查询")<?" eventType="2"  url="?>url<?"/>?>;
+				}
+			}
+			if(id.equals("favotite")){
+				ArrayList myFavotiteList=pf.getFavorite(userId);
+				String[][] prgArray=new String[myFavotiteList.size()][3];
+				myFavotiteList.toArray(prgArray);
+				for(int i=0;i<prgArray.length;i++){
+						String nodeId=prgArray[i][0];
+						Program tempPrg =PF.getProgram(conPlat,prgArray[i][0]);
+						String treeTitle=tempPrg.getTitle();
+						String prgType=tempPrg.getType()+"";
+						String startType=tempPrg.getStartType();
+						ProgramType PT=ProgramType.parseProgramType(prgType);
+						String starticon=PT.getIcon();
+						String endicon=PT.getIcon();
+						<?<e _id="?>nodeId<?" _hasChild ="?>hasChild<?"  order="?>startType<?"  programType="?>PT.toString()<?" icon0="?>starticon<?" icon1="?>endicon<?" title="?>treeTitle<?" eventType="3"/>?>;
+					}
+			}else if(id.equals("myquery")){
+			
+			
+			}else{
+				FolderNode[] childNodeArray=pf.getSubNode(id,userId);
+				for(int i=0;i<childNodeArray.length;i++){
+					String nodeId=childNodeArray[i].getId();
+					String treeTitle=childNodeArray[i].getTitle();
+					String eventString="";
+					hasChild="0";
+					String url = "/bin/exe/folderTree.jcp?objectId="+objectId+"&amp;id="+nodeId;
+					String starticon="/themes/icon"+childNodeArray[i].getStartIcon();
+					String endicon="/themes/icon"+childNodeArray[i].getEndIcon();
+					if(!childNodeArray[i].isLeaf())
+						hasChild="1";
+					<?<e _id="?>nodeId<?" _hasChild ="?>hasChild<?" icon0="?>starticon<?" icon1="?>endicon<?" title="?>treeTitle<?" eventType="0"  url="?>url<?"/>?>;
+				}
+				FolderNode currentNode=pf.getNode(id);
+				String[][] prgArray=currentNode.getProgramArray();
+				if(prgArray!=null){
+					for(int i=0;i<prgArray.length;i++){
+						String nodeId=prgArray[i][0];
+						Program tempPrg =PF.getProgram(conPlat,prgArray[i][0]);
+						String treeTitle=tempPrg.getTitle();
+						String prgType=tempPrg.getType()+"";
+						String startType=tempPrg.getStartType();
+						ProgramType PT=ProgramType.parseProgramType(prgType);
+						String starticon=PT.getIcon();
+						String endicon=PT.getIcon();
+						<?<e _id="?>nodeId<?" _hasChild ="?>hasChild<?" order="?>startType<?"  programType="?>PT.toString()<?"  icon0="?>starticon<?" icon1="?>endicon<?" title="?>treeTitle<?" eventType="1"/>?>;
+					}
+				}
+			}
+			<?</forder></root>?>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+}

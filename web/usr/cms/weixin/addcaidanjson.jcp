@@ -1,0 +1,91 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import me.chanjar.weixin.common.bean.WxMenu;
+import me.chanjar.weixin.common.bean.WxMenu.WxMenuButton;
+import me.chanjar.weixin.common.exception.WxErrorException;
+import me.chanjar.weixin.mp.api.WxMpInMemoryConfigStorage;
+import me.chanjar.weixin.mp.api.WxMpServiceImpl;
+import zpluginlistenerautorun.wenxin.WxMenuButtonTest;
+import zpluginlistenerautorun.wenxin.WxMenuTest;
+
+import com.google.gson.Gson;
+
+
+
+/**
+用于站内选择栏目
+*/
+
+
+@class{
+
+	public void doPost(Jacper jacper) {
+
+		String dataIds = jacper.getString("dataId");
+		WxMpServiceImpl wxMpService = new WxMpServiceImpl();
+		
+		Connection conEdu = jacper.getConnection("education");
+		String sql="select appid,appsecret from CMS_WEIXIN_SET where lanmuid='"+dataIds+"'";
+
+		String[][] rs1=conEdu.get(sql);
+		String appId = rs1[0][0], secret = rs1[0][1];
+		if(appId.equals("")|| appId.equals("XX")){
+			jacper.print("{success:false,message:'微信栏目配置信息错误。'}");
+			return;
+		}
+		
+		WxMpInMemoryConfigStorage config = new WxMpInMemoryConfigStorage();
+		config.setAppId(appId);
+		config.setSecret(secret);
+		wxMpService = new WxMpServiceImpl();
+		wxMpService.setWxMpConfigStorage(config);
+		
+		
+		
+		String json=jacper.getString("json");
+		System.out.println(json);
+		
+		 Gson gson = new Gson();  
+		 WxMenuTest test=gson.fromJson(json, WxMenuTest.class);
+		 
+		WxMenu mu=new WxMenu();
+		List<WxMenuButton> buttons= new ArrayList<WxMenuButton>();
+		int i = 1 ;
+		for (WxMenuButtonTest wxMenuButton : test.getButton()) {
+			int j = 1 ;
+			List<WxMenuButton> subButons = wxMenuButton.getSubButtons();
+			for(WxMenuButton subButton : subButons){
+				subButton.setKey(String.valueOf((i*10) + (j++)));
+			}
+			
+			WxMenuButton but=new WxMenuButton();
+			but.setKey(String.valueOf(i++));
+			but.setName(wxMenuButton.getName());
+			but.setSubButtons(wxMenuButton.getSubButtons());
+			
+			but.setType(wxMenuButton.getType());
+			
+			String btnurl=wxMenuButton.getUrl();
+			if(btnurl.length()>0 && btnurl.indexOf("http://")<0 && btnurl.indexOf("https://")<0){
+				btnurl="http://"+btnurl;
+			}
+			
+			but.setUrl(btnurl);
+			buttons.add(but);
+		}
+		mu.setButtons(buttons);
+		try {
+			
+			wxMpService.menuCreate(mu);
+			jacper.print("{success:true,message:'微信按钮创建成功。'}");
+		} catch (WxErrorException e) {
+			jacper.print("{success:false,message:'微信创建按钮失败。'}");
+			e.printStackTrace();
+		}
+		
+	}
+}

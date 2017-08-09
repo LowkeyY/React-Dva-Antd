@@ -1,0 +1,113 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.database.Attribute;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+
+import org.apache.poi.hssf.usermodel.HSSFFont;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFCell;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.util.Region;
+import org.apache.poi.hssf.usermodel.*;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+
+import java.io.FileOutputStream;
+import javax.servlet.http.HttpServletResponse;
+
+@class{
+	public void doGet(Jacper jacper){
+	
+					
+					String message = "";
+					boolean success = true;
+					String title="Template";
+					String name="";
+					
+					
+				try{	
+					HSSFWorkbook wb =new HSSFWorkbook();
+					HSSFSheet sheet = wb.createSheet();
+					wb.setSheetName(0,title);
+					sheet.setColumnWidth(0, 6500);
+					sheet.setColumnWidth(1, 6500);
+					sheet.setColumnWidth(2, 3000);
+					sheet.setColumnWidth(3, 3400);
+					sheet.setColumnWidth(4, 3000);
+					sheet.setColumnWidth(5, 6500);
+					sheet.setColumnWidth(6, 3500);
+					sheet.setColumnWidth(7, 3500);
+					sheet.setColumnWidth(8, 3500);
+					sheet.setColumnWidth(9, 8000);
+					
+					HSSFCellStyle style =wb.createCellStyle();
+					style.setBorderBottom(HSSFCellStyle.BORDER_THIN);
+	         		style.setBorderLeft(HSSFCellStyle.BORDER_THIN);
+	         		style.setBorderRight(HSSFCellStyle.BORDER_THIN);
+	         		style.setBorderTop(HSSFCellStyle.BORDER_THIN);
+	         		style.setAlignment(HSSFCellStyle.ALIGN_CENTER);
+	         		
+	         		HSSFFont font = wb.createFont();
+					font.setFontName("宋体");
+					font.setFontHeightInPoints((short)11);
+					
+					style.setFont(font);
+					
+					
+					
+					HSSFCellStyle style1 =wb.createCellStyle();
+					style1.setBorderBottom(HSSFCellStyle.BORDER_THIN);
+	         		style1.setBorderLeft(HSSFCellStyle.BORDER_THIN);
+	         		style1.setBorderRight(HSSFCellStyle.BORDER_THIN);
+	         		style1.setBorderTop(HSSFCellStyle.BORDER_THIN);
+	         		style1.setAlignment(HSSFCellStyle.ALIGN_CENTER);
+	         		
+	         		HSSFFont font1 = wb.createFont();
+					font1.setFontName("宋体");
+					font1.setFontHeightInPoints((short)13);
+					
+					style1.setFont(font1);
+					
+					HSSFRow row1 =sheet.createRow(0);
+					HSSFCell cell = row1.createCell(0);
+        			String[] topName = {jacper.trans("数据项名称"),jacper.trans("拼音代码"),jacper.trans("类型"),jacper.trans("宽度"),jacper.trans("小数位数"),jacper.trans("计量单位"),jacper.trans("主键"),jacper.trans("非空"),jacper.trans("默认值"),jacper.trans("填写规定")};
+        			for(short i=0;i<topName.length;i++){
+        					cell = row1.createCell(i);
+				        	cell.setCellValue(new HSSFRichTextString(topName[i]));
+				        	cell.setCellStyle(style1);
+        			}
+        			
+		 			HSSFRow row2 = sheet.createRow((short)1);
+ 					row2.setHeightInPoints((short) 25);
+			 		HSSFCell cell2 = row2.createCell(5);
+			 		cell2.setCellStyle(style);
+			 		cell2.setCellValue(new HSSFRichTextString(jacper.trans("表逻辑名称")+" /"+jacper.trans("表物理名称")));
+			 		
+			 		
+			 		name = new String(title.getBytes("gb2312"),"iso-8859-1");	 	
+					HttpServletResponse res = jacper.getResponse();
+					res.setContentType("application/vnd.ms-excel");
+		       		res.setHeader("Content-Disposition", "attachment;filename="+name+".xls");
+					res.setHeader("Accept-ranges", "bytes");
+					wb.write(res.getOutputStream());
+		    		
+          	
+          } catch (Exception e) {
+            e.printStackTrace();
+           	success = false;
+        	message = e.getMessage();
+        }
+    	  if(!success){
+			<?<script>alert("Excel?>jacper.trans("生成错误,原因是:")+message<?");window.close();</script>?>;
+			return;
+		}
+        
+        
+	}
+}

@@ -1,0 +1,81 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.space.HWSpaceFactory.HWSessions;
+		//	public class up{
+
+	@class{
+	public void doPost(Jacper jacper) {
+		Connection con=jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			String spaceId = String.valueOf(jacper.getSession().get(HWSessions.HW_BASE_SPACEID.name()));
+			String date="";
+			String sql="";
+			if(spaceId.equals("8afaec81-53efdc82-0153-efdc829f-0000")){
+				sql="select count(*),c.DATUM_NAME from dir_file_base b left join DIR_DATUM_BASE c on b.FILE_CLASS=c.datum_id where att_128='1' and is_secrecy='0' group by c.DATUM_NAME";
+			}else{
+				sql="select count(*),c.DATUM_NAME from dir_file_base b left join DIR_DATUM_BASE c on b.FILE_CLASS=c.datum_id where b.space_id='"+spaceId+"' and att_128='1' group by c.DATUM_NAME";
+			}
+			
+			String[][] rs = con.get(sql);
+			for (String[] strings : rs) {
+				String count= strings[0];
+				String name= strings[1];
+				if(!count.equals("0")){
+					date+="<point name=\""+name+"\" y=\""+count+"\"/>";
+				}
+			}
+			
+			String data="<anychart>"
+			+"<settings>"
+			+"<animation enabled=\"True\"/>"
+			+"</settings>"
+			+"<margin all=\"0\"/>"
+			+"<charts>"
+			+"<chart name=\"chart69087\" plot_type=\"Pie\">"
+			+"<data_plot_settings>"
+			+"<pie_series apply_palettes_to=\"Points\">"
+			+"<pie_style>"
+			+"<effects enabled=\"false\"/>"
+			+"</pie_style>"
+			+"<tooltip_settings enabled=\"True\">"
+			+"<format>"
+			+"主题词分类：{%Name}  文件共：{%YValue}{numDecimals:0,thousandsSeparator:}个 占比例：{%YPercentOfSeries}{numDecimals:0}%"
+			+"</format>"
+			+"</tooltip_settings>"
+			+"<connector enabled=\"True\" thickness=\"1\"/>"
+			+"<label_settings enabled=\"True\" mode=\"outside\">"
+			+"<format>{%Name}:{%YPercentOfSeries}{numDecimals:0}%</format>"
+			+"</label_settings>"
+			+"</pie_series>"
+			+"</data_plot_settings>"
+			+"<chart_settings>"
+			+"<title>"
+			+"<text>按主题词分类统计</text>"
+			+"</title>"
+			+"<legend enabled=\"True\" ignore_auto_item=\"True\">"
+    		+"<format>{%Name} - {%YValue}{numDecimals:0,thousandsSeparator:}个文件</format> "
+    		+"<title enabled=\"True\">"
+      		+"<text>图例:</text>"
+      		+"</title>"
+    		+"<items>"
+      		+"<item source=\"Points\" />"
+    		+"</items>"
+  			+"</legend> "
+			+"</chart_settings>"
+			+"<data>"
+			+"<series name=\"\" id=\"s0\">"
+			+date
+			+"</series>"
+			+"</data>"
+			+"</chart>"
+			+"</charts>"
+			+"</anychart>";
+			
+			jacper.print("{success:true,data:'"+data+"'}");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

@@ -1,0 +1,167 @@
+
+/* 已发箱
+ * @(#)/docflowk/archivesback.jcp	1.0.0 03/04/14
+ *
+ * Copyright 2003 Bizdict Co.,Ltd. All rights reserved.
+ *
+ * 主程序作者：
+ * @author ch
+ *
+ * 修改者：
+ *
+ * 修改日期:
+ *
+ * 修改理由:
+ *
+ */
+
+
+
+
+
+import java.io.IOException;
+
+ 
+import com.kinglib.*;
+import SoftwareFX.ChartFX.*;
+
+import java.io.*;
+import java.util.*;
+import javax.servlet.*;
+
+@class{
+	public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	Connection conCert = jacper.getConnection("cert");
+	
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	String dept_id=hs.getString("dept_id");
+	
+	String role_id=hs.getString("role_id");
+
+
+    <?
+	<html>
+	<head>
+	<title>?>jacper.trans("工作流管理")<?</title>
+	<meta http-equiv="Content-Type" content="text/html">
+	<yacus style="behavior:url(#default#userdata);" id="__YACUS_CACHE"/>
+	<SCRIPT SRC="/JavaScript"></SCRIPT>
+	<script src='/themes/js/show.js'></script>
+		<script src="/themes/js/showmenu.js"></script>
+	<link rel='stylesheet' type='text/css' href='/themes/css/advance.css'>
+	<SCRIPT>
+	susing("MButton","Menu");
+	function main(){
+	var returnto;
+	var titleMap = new Map();
+	leftwin =  new MButton("?>jacper.trans("切换窗填充")<?","/themes/icon/xp/leftwin.gif");
+	leftwin.click = function(){
+		if(parent.left._LEFTWIN_.style.display == 'none'){
+			parent.left._LEFTWIN_.style.display = '';
+			parent.rightFrame.cols="20%,80%";
+			leftwin.setDown(false);
+		}else{
+			parent.left._LEFTWIN_.style.display = 'none';
+			parent.rightFrame.cols="0,*";
+			leftwin.setDown(true);
+		}
+	}
+	var workstat =  new MButton("?>jacper.trans("返回")<?","/themes/default/icon/common/redo.gif");
+	workstat.click = function(){
+		self.location.replace("wfapply.jcp?"+Math.random());
+	}
+	titleMap.append("",workstat);
+
+	titleMap.append("<span style='height:22;width:6;background-image:url(\"/themes/images/separator.gif\")'> </span>",leftwin);
+	titleMap.finish(titlemap);
+	leftwin.setDown(false);
+	}
+	</SCRIPT>
+	</head>
+<body topmargin="0" leftmargin="0" rightmargin="0" bottommargin="0"  >
+<table height="100%" width="100%"  cellspacing="0" cellpadding="0">
+<tr height=20  width="100%"><td>
+	<table cellspacing cellpadding align=center width=100%>
+			<tr><td nowrap width='100%' height='25' colspan='2'>
+					<table width='100%' cellspacing='0' cellpadding='0' height='28' bgcolor="#9EBEF5">
+							<tr><td nowrap width='2' height='25' ></td><td valign='bottom'>
+									<table width="70%" cellspacing="0" cellpadding="0" background="/themes/images/bg2.gif">
+									   <tr>
+											<td width=7><img src="/themes/images/t1.gif"></td>
+											<td width="100%" background="/themes/images/bg2.gif" id=titlemap></td>
+											<td width=13><img src="/themes/images/tbar_tail.gif"></td>
+									   </tr>
+									</table>
+							</td></tr>
+					</table>
+			</td></tr>
+	</table>
+</td></tr>
+<tr  width="100%"><td  style="border-left:1px solid #ACA899;">
+<table cellSpacing="3" cellPadding width="100%" height=100% bgcolor="#ECE9D8" style="border-left:1px solid #ACA899;border-right:1px solid #ACA899;border-top:1px solid #ACA899" >
+	 <tr><td align="left">				
+			<table   width="100%" bgcolor="#FEFAEF" style="border-top:1px solid #ACA899;border-left:1px solid #ACA899;border-right:1px solid #FFFFFF;border-bottom:1px solid #FFFFFF" cellspacing cellpadding height="100%" >
+			<tr  id=aaa><td valign="top" height="100%">	
+			<table cellpadding cellspacing width="100%" height="100%" >
+				<tr height=1><td bgcolor="#ACA899"></td></tr>
+				<tr>
+					<TD width='50%' height='50%'>												 
+						<table width="100%" height=100% bgcolor="#FEFAEF"  style="border-top:1px solid #FFFFFF;border-left:1px solid #FFFFFF;border-right:1px solid #ACA899;border-bottom:1px solid #ACA899"><tr height=20 bgcolor="#ECE9D8"><td style="border-top:1px solid #FFFFFF;border-left:1px solid #FFFFFF;border-right:1px solid #ACA899;border-bottom:1px solid #ACA899">
+						<B>?>jacper.trans("申请工作流状态统计")<?</B>
+						</td></tr>
+						<tr><td align="left" valign="top" cellspacing="0" width="100%"  cellpadding="0" id="IMAGEAREA0">?>jacper.trans("正在生成图形")<?</td>
+						</td></tr></table>	
+					</TD>
+					<TD width='50%' height='50%'>						
+					<table width="100%" height=100% bgcolor="#FEFAEF"  style="border-top:1px solid #FFFFFF;border-left:1px solid #FFFFFF;border-right:1px solid #ACA899;border-bottom:1px solid #ACA899"><tr height=20 bgcolor="#ECE9D8"><td style="border-top:1px solid #FFFFFF;border-left:1px solid #FFFFFF;border-right:1px solid #ACA899;border-bottom:1px solid #ACA899">
+						<B>?>jacper.trans("已审批工作流状态统计")<?</B>
+						</td></tr><tr><td align="left" valign="top" cellspacing="0" width="100%"  cellpadding="0" id="IMAGEAREA1">?>jacper.trans("正在生成图形")<?</td>
+						</td></tr></table>	
+					</TD>
+				</tr>
+				<tr>
+					<TD width='50%' height='50%'>					
+					<table width="100%" height=100% bgcolor="#FEFAEF"  style="border-top:1px solid #FFFFFF;border-left:1px solid #FFFFFF;border-right:1px solid #ACA899;border-bottom:1px solid #ACA899"><tr height=20 bgcolor="#ECE9D8"><td style="border-top:1px solid #FFFFFF;border-left:1px solid #FFFFFF;border-right:1px solid #ACA899;border-bottom:1px solid #ACA899">
+						<B>?>jacper.trans("已提交分类统计")<?</B>
+						</td></tr><tr><td align="left" valign="top" cellspacing="0" width="100%"  cellpadding="0" id="IMAGEAREA2">?>jacper.trans("正在生成图形")<?</td>
+						</td></tr></table>	
+					</TD>
+					<TD width='50%' height='50%'>				
+					<table width="100%" height=100% bgcolor="#FEFAEF"  style="border-top:1px solid #FFFFFF;border-left:1px solid #FFFFFF;border-right:1px solid #ACA899;border-bottom:1px solid #ACA899"><tr height=20 bgcolor="#ECE9D8"><td style="border-top:1px solid #FFFFFF;border-left:1px solid #FFFFFF;border-right:1px solid #ACA899;border-bottom:1px solid #ACA899">
+						<B>?>jacper.trans("已审批分类统计")<?</B>
+						</td></tr>
+						<tr><td align="left" valign="top" cellspacing="0" width="100%"  cellpadding="0" id="IMAGEAREA3">?>jacper.trans("正在生成图形")<?</td>
+						</td></tr></table>	
+					</TD>
+				</tr>
+			</table>
+		</td></tr>
+	</table>
+	</td></tr>
+</table></td></tr>
+<tr height=20  width="100%">
+	<td background="/themes/default/images/status_bg.gif" id="statu"></td></tr>
+</td></tr>
+</table>
+<script>
+	IMAGEAREA0.innerHTML="<img align=middle  src='statechart.jcp?type=1&ran=?>System.currentTimeMillis()<?&height="+(aaa.offsetHeight-60)/2+"&width="+aaa.offsetWidth/2+"' border='0'>"
+</script>
+<script>
+	IMAGEAREA1.innerHTML="<img align=middle  src='statechart.jcp?type=2&ran=?>System.currentTimeMillis()<?&height="+(aaa.offsetHeight-60)/2+"&width="+aaa.offsetWidth/2+"' border='0'>"
+</script>
+<script>
+	IMAGEAREA2.innerHTML="<img align=middle  src='statechart.jcp?type=3&ran=?>System.currentTimeMillis()<?&height="+(aaa.offsetHeight-60)/2+"&width="+aaa.offsetWidth/2+"' border='0'>"
+</script>
+<script>
+	IMAGEAREA3.innerHTML="<img align=middle  src='statechart.jcp?type=4&ran=?>System.currentTimeMillis()<?&height="+(aaa.offsetHeight-60)/2+"&width="+aaa.offsetWidth/2+"' border='0'>"
+</script>
+</body>
+<? </HTML>?>;
+ }
+}
+

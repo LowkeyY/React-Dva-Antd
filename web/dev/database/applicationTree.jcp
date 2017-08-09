@@ -1,0 +1,94 @@
+
+import java.util.ArrayList;
+import java.util.HashSet;
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+
+
+@class{
+
+
+
+	public void doGet(Jacper jacper) {
+		String objectId = jacper.getStr("node");
+		String icon;
+		ObjectNode[] nodes = null;
+		boolean isRoot = "0".equals(objectId);
+		if (isRoot) {
+			nodes = ObjectManager.getInstance().root.getChilds();
+			icon = "/themes/icon/xp/dhd.gif";
+
+		} else {
+			ObjectNode node=ObjectManager.getObject(objectId);
+			nodes=node.findAllChildsByType(ObjectType.APPLICATION);
+			icon = "/themes/icon/xp/spzl.gif";
+		}
+
+
+		String dlk = jacper.getStr("dlk");
+		if (!dlk.equals("")) {
+			Connection conPlat = jacper.getConnection("plat");
+			String[][] rs=conPlat.get("select object_id from $[plat].application_base where database_link=?",new String[]{dlk},0);
+			conPlat.close();
+			if(rs.length>0){
+				if(isRoot){
+					HashSet<ObjectNode> al= new HashSet<ObjectNode>(10);
+					for(String[] row:rs){
+						ObjectNode node=ObjectManager.getObject(row[0]);
+						if(node!=null){
+							al.add(node.upTo(ObjectType.SYSTEM));
+						}
+					}
+					nodes=al.toArray(new ObjectNode[al.size()]);
+				}else{
+					ArrayList<ObjectNode> al = new ArrayList<ObjectNode>(10);
+					String id;
+					for(ObjectNode node:nodes){
+						id=String.valueOf(node.getId());
+						for(String[] row:rs){
+							if(row[0].equals(id)){
+								al.add(node);
+								break;
+							}
+						}
+					}
+					nodes=al.toArray(new ObjectNode[al.size()]);
+				}
+			}else if(!isRoot){
+				nodes=null;
+			}
+		}
+
+		try {
+			if (nodes != null) {
+				JSONArray treeJSONArray = new JSONArray();
+				JSONObject resultJSON;
+				for (ObjectNode node : nodes) {
+					resultJSON = new JSONObject();
+					resultJSON.put("text", node.getName());
+					resultJSON.put("leaf", !isRoot);
+					resultJSON.put("allowSelect", !isRoot);
+					resultJSON.put("id", node.getId());
+					resultJSON.put("icon", icon);
+					treeJSONArray.put(resultJSON);
+				}
+				jacper.print(treeJSONArray.toString());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+
+
+
+}
+
+
+			

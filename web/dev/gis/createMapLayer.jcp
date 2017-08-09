@@ -1,0 +1,133 @@
+
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.gis.*;
+
+@class{
+	                                              
+public void doPost(Jacper jacper) {
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = hs.uid+"";
+
+	String type = jacper.getStr("type");
+
+	String name = jacper.getStr("name");
+	String logicname = jacper.getStr("logicname");
+
+	String layer_type = jacper.getStr("layer_type");
+	String hasAttribute = jacper.getStr("hasAttribute");
+	String chart_type = jacper.getStr("chartType");
+	String data_column = jacper.getStr("data_column");
+	String id_column = jacper.getStr("id_column");
+	String name_column = jacper.getStr("name_column");
+	String attr_column = jacper.getStr("attr_column");
+
+	String dblink = jacper.getStr("dblink");
+	String style_column = jacper.getStr("style_column");
+	String exp_item = jacper.getStr("exp_val");
+	String searchId = jacper.getStr("searchId");
+	String storeType = jacper.getStr("storeType");
+
+	if(chart_type.equals("6")||chart_type.equals("7")||chart_type.equals("5"))
+		attr_column = jacper.getStr("attr2_column");
+
+	String query_id = jacper.getStr("query_id");
+	String bgcolor = jacper.getStr("bgcolor");
+	String bordercolor = jacper.getStr("bordercolor");
+	String nbucket = jacper.getStr("nbucket");
+	String width = jacper.getStr("chartWidth");
+	String height = jacper.getStr("chartHeight");
+	String increradius = jacper.getStr("increradius");
+	String initradius = jacper.getStr("initradius");
+	String active = jacper.getStr("active");
+	String min_scale = jacper.getStr("min_scale");
+	String max_scale = jacper.getStr("max_scale");
+
+	String seq = jacper.getStr("seq");
+	String opacity = jacper.getStr("opacity");
+	String onDefault = jacper.getStr("onDefault");
+
+	ObjectManager OM=ObjectManager.getInstance();
+	if(type.equals("save")){
+		try{	
+			conPlat.setAutoCommit(false);	
+			String object_id  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+			String parent_id = jacper.getStr("object_id");
+			ObjectNode groupNode=OM.getObject(parent_id);
+			groupNode.addChild(conPlat,object_id,logicname,ObjectType.MAPLAYER,hs.uid);
+			ObjectNode mapNode=groupNode.upTo(ObjectType.MAP);
+			String mapId=mapNode.getId();
+			WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+			conPlat.exec("insert into $[plat].map_layerbase (group_id,layer_type,hasattribute,chart_type,data_column,id_column,name_column,attr_column,style_column,name,logicname,object_id,query_id,nbucket,basecolor,strockcolor,initradius,increradius,chartheigth,chartwidth,active,min_scale,max_scale,seq,opacity,on_default,dblink,exp_item,search_id,spatial_store_type) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",new String[]{parent_id,layer_type,hasAttribute,chart_type,data_column,id_column,name_column,attr_column,style_column,name,logicname,object_id+"",query_id,nbucket,bgcolor,bordercolor,initradius,increradius,height,width,active,min_scale,max_scale,seq,opacity,onDefault,dblink,exp_item,searchId,storeType});
+			conPlat.commit();
+			webMap.reloadLayer(conPlat);
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if(type.equals("updatesave")){
+			String object_id = jacper.getStr("object_id");
+			try{	
+				ObjectNode mapLayerNode=OM.getObject(object_id);
+				mapLayerNode.updateName(conPlat,logicname);
+
+				ObjectNode mapNode=mapLayerNode.upTo(ObjectType.MAP);
+				String mapId=mapNode.getId();
+				WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+				conPlat.exec("update $[plat].map_layerbase set layer_type=?,hasattribute=?,chart_type=?,data_column=?,id_column=?,name_column=?,attr_column=?,style_column=?,name=?,logicname=?,query_id=?,nbucket=?,basecolor=?,strockcolor=?,initradius=?,increradius=?,chartheigth=?,chartwidth=?,active=?,min_scale=?,max_scale=?,seq=?,opacity=?,on_default=?,dblink=?,exp_item=?,search_id=?,spatial_store_type=? where object_id=?",new String[]{layer_type,hasAttribute,chart_type,data_column,id_column,name_column,attr_column,style_column,name,logicname,query_id,nbucket,bgcolor,bordercolor,initradius,increradius,height,width,active,min_scale,max_scale,seq,opacity,onDefault,dblink,exp_item,searchId,storeType,object_id});
+				conPlat.commit();
+				webMap.reloadLayer(conPlat);
+				<?{success:true,id:'?>object_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				conPlat.close();
+			}
+	}else if(type.equals("delete")){
+		String object_id = jacper.getStr("object_id");
+		String parent_id = jacper.getStr("parent_id");
+		try{	
+			conPlat.setAutoCommit(false);	
+			ObjectNode mapLayerNode=OM.getObject(object_id);
+			ObjectNode mapNode=mapLayerNode.upTo(ObjectType.MAP);
+			String mapId=mapNode.getId();
+			WebMap webMap =WebMapFactory.getInstance().getWebMap(conPlat,mapId+"");
+			mapLayerNode.destroy(conPlat);
+			conPlat.commit();
+			webMap.reloadLayer(conPlat);
+			<?{success:true,id:'?>parent_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

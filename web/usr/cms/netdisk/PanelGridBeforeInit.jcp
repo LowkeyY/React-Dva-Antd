@@ -1,0 +1,33 @@
+
+import com.kinglib.*;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.util.json.JSONPart;
+	//public class up{
+@class{
+	public void doPost(Jacper jacper) {
+		String fileId = jacper.getStr("file_id");
+		HttpSession hs = jacper.getSession();
+		Connection con = jacper.getConnection("education");
+		try {
+			String sql="select p.file_path from dir_file_base b left join dir_file_physical p on b.phy_file_id=p.phy_file_id  where b.file_id=?";
+			String[] rs = con.getRow(sql,new String[]{fileId});
+			if(rs!=null && rs.length>0){
+				JSONObject json = new JSONObject();
+				json.put("success", true);
+				json.put("path", rs[0]);
+				
+				jacper.print(json.toString());
+				
+			}else{
+				jacper.print("{success:true,err:true}");
+				
+			}
+			
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			con.close();
+		}
+	}
+}

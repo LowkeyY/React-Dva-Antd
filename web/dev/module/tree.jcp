@@ -1,0 +1,112 @@
+            
+import java.util.ArrayList;
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+
+                
+@class{
+
+	public void doGet(Jacper jacper) {
+
+		HttpSession hs = jacper.getSession();
+
+		String id = jacper.getString("node", "-999");
+		if (!id.equals("-999")) {
+			ObjectNode node = ObjectManager.getObject(id);
+			try {
+				jacper.print(this.getChilds(node));
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+		}else{
+			String path=jacper.getString("path");
+			if(path!=null){
+
+				String[] pps = path.split("/");
+
+				JSONObject root = new JSONObject();
+				JSONObject c = root, ca = null;
+				JSONArray cs = null;
+				ObjectNode node = null;
+				try {
+					for (int i = 0; i < pps.length - 1; i++) {
+						node = ObjectManager.getObject(pps[i]);
+						if (node == null || !node.haveChild())
+							break;
+						cs = getChilds(node);
+						if (cs.length() == 0)
+							break;
+						c.put("children", cs);
+						ca = null;
+						for (int j = 0; j < cs.length(); j++) {
+							if (cs.getJSONObject(j).getString("id").equals(pps[i + 1])) {
+								ca = cs.getJSONObject(j);
+							}
+						}
+						if (ca == null)
+							break;
+						c = ca;
+					}
+					cs=root.getJSONArray("children");
+					if(cs!=null){
+						jacper.print(cs);
+					}
+				} catch (Exception e) {}
+			}
+		}
+
+	}
+
+
+	private JSONArray getChilds(ObjectNode node) throws JSONException{
+
+		JSONArray children=new JSONArray();
+		if (node != null) {
+			ObjectNode[] childs = null;
+			switch (node.getType()) {
+			case ObjectType.SYSTEM:
+				childs = node.findAllChildsByType(ObjectType.APPLICATION);
+				break;
+			case ObjectType.APPLICATION:
+				childs = node.getChilds(ObjectType.MODULE);
+				break;
+			case ObjectType.MODULE:
+				ArrayList<ObjectNode> al = new ArrayList<ObjectNode>();
+				int t = 0;
+				for (ObjectNode n : node.getChilds()) {
+					t = n.getType();
+					if (t == ObjectType.MAINFRAME
+							|| t == ObjectType.LEFTFRAME
+							|| t == ObjectType.RIGHTFRAME
+							|| t == ObjectType.UPPERFRAME
+							|| t == ObjectType.LOWERFRAME)
+						al.add(n);
+				}
+				childs = al.toArray(new ObjectNode[al.size()]);
+				break;
+			case ObjectType.MAINFRAME:
+			case ObjectType.LEFTFRAME:
+			case ObjectType.RIGHTFRAME:
+			case ObjectType.UPPERFRAME:
+			case ObjectType.LOWERFRAME:
+				childs = node.getChilds(ObjectType.PROGRAM);
+				break;
+			}
+			if(childs!=null){
+				for(int i=0;i<childs.length;i++){
+					JSONPart part=new JSONPart();
+					part.join("text",childs[i].getName());
+					part.join("id",childs[i].getId());
+					part.join("leaf",childs[i].haveChild());
+					part.join("icon","/themes/icon/web/person.gif");
+					children.put(part);
+				}
+			}
+		}
+		return children;
+	}
+}

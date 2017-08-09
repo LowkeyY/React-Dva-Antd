@@ -1,0 +1,66 @@
+
+/*
+ * @(#)/bbs/postfile.jcp	1.0.0 03/04/16
+ *
+ * Copyright 2003 Bizdict Co.,Ltd. All rights reserved.
+ *
+ * 主程序作者：
+ * @author lzy
+ *
+ * 修改者：
+ *
+ * 修改日期:
+ *
+ * 修改理由:
+ *
+ */
+
+
+
+
+
+import java.io.IOException;
+
+import com.kinglib.*;
+import com.susing.*;
+
+
+@class{
+
+
+	public void filePost(JacperFile jacper){
+		Connection con1=jacper.getConnection("utils");
+
+
+		int parent_id = jacper.getInt("parent_id","error");
+		int knowledge_id = jacper.getInt("knowledge_id","error");
+		EFile uf = jacper.getFile("attach_file");
+		String file_name = uf.getAttribute("file-name");
+		file_name = file_name.substring(file_name.lastIndexOf("\\")+1,file_name.length());
+		String ContentType =uf.getAttribute("content-type");
+		int dispic = jacper.getInt("dispic","error");
+		String auth = jacper.getStr("auth");
+		if(dispic==-999999) dispic = 0;
+//		jacper.action(1024*5120);//1MB
+		if(jacper.checkError()) return;
+
+		int filelength = (int)uf.length();
+		java.io.InputStream fin=null;
+		try{
+			fin = uf.getInputStream();
+		}catch(Exception e){throw new KingleException(jacper.trans("IO错误"),e);}
+		if(jacper.checkError()) return;
+		try {
+	//		SQLExt.easyBlob(con1,"insert into
+	//		"insert into $[utils].kmap_attach(category_id,knowledge_id,file_name,file_type,attach_file,dispic) values ("+parent_id+","+knowledge_id+",'"+file_name+"','"+ContentType+"',EMPTY_BLOB(),"+dispic+")",
+	//		"select attach_file from $[utils].kmap_attach where knowledge_id="+knowledge_id+" FOR UPDATE","attach_file",fin,new String[]{parent_id+"",knowledge_id+"",file_name,ContentType,dispic+""},4,filelength);
+
+			con1.execLarge("insert into $[utils].kmap_attach(category_id,knowledge_id,file_name,file_type,attach_file,dispic) values (?,?,?,?,?,?)",new Object[]{parent_id,knowledge_id,file_name,ContentType,uf,dispic});
+
+			fin.close();
+		}catch (IOException e){e.printStackTrace();}
+
+		<?<script>self.location.href="categorycreate.jcp?auth=?>auth<?&type=view&parent_id=?>parent_id<?&ran="+Math.random();</script>?>;
+
+	}
+}

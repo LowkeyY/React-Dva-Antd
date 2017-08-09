@@ -1,0 +1,12 @@
+import java.io.IOException;      
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+
+@class{
+public void doPost(Jacper jacper){
+	jacper.getResponse().setContentType("application/x-json");
+	<?[{"__type":"DigitalBucket.FileSystem.Tagging+Tag","Name":"?>"哈哈哈"<?","Count":1}]?>;
+}
+}

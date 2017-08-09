@@ -1,0 +1,228 @@
+            
+import com.kinglib.*;
+import com.kinglib.workbench.*;
+import com.kinglib.util.json.*;
+import com.social.api.core.model.*;
+
+@class{
+	public void doGet(Jacper jacper){  
+	    String id=jacper.getString("node");
+		String objectId = jacper.getString("id","-1");
+		JSONArray treeJSONArray = new JSONArray();
+		if(id.indexOf("node")!=-1){
+			ObjectNode prgNode=ObjectManager.getObject(objectId);
+			ObjectNode systemNode=prgNode.upTo(ObjectType.SYSTEM);
+			ObjectNode[] nodes=systemNode.findAllChildsByType(ObjectType.APPLICATION);
+			JSONObject js = null;
+			try{
+				for(int i=0;i<nodes.length;i++){
+					js = new JSONObject();
+					int son=(nodes[i].getChilds(ObjectType.MODULE).length+nodes[i].getChilds(ObjectType.MAP).length+nodes[i].getChilds(ObjectType.SEARCH).length+nodes[i].getChilds(ObjectType.PORTALET).length+nodes[i].getChilds(ObjectType.WORKFLOW).length);
+					boolean leaf=true;
+					if(son>0) leaf=false;
+					js.put("id", "system:"+String.valueOf(nodes[i].getId()));
+					js.put("text", String.valueOf(nodes[i].getName()));
+					js.put("leaf", leaf);
+					js.put("icon", "/themes/icon/xp/spzl.gif");
+					js.put("allowSelect", false);
+					treeJSONArray.put(js);
+				}
+			}catch(Exception e){}
+			jacper.print(treeJSONArray);
+		}else if(id.indexOf("system")!=-1){
+			String objId=id.substring(id.indexOf(":")+1,id.length());
+			ObjectNode appNode=ObjectManager.getObject(objId);
+			ObjectNode[] nodes=appNode.getChilds(ObjectType.MODULE);
+			JSONObject js = null;
+			try{
+				for(int i=0;i<nodes.length;i++){
+					js = new JSONObject();
+					js.put("id", "module:"+String.valueOf(nodes[i].getId()));
+					js.put("text", String.valueOf(nodes[i].getName()));
+					js.put("leaf", !nodes[i].haveChild());
+					js.put("icon", "/themes/icon/xp/report.gif");
+					js.put("allowSelect", false);
+					treeJSONArray.put(js);
+				}
+			}catch(Exception e){}
+
+			nodes=appNode.getChilds(ObjectType.MAP);
+			try{
+				for(int i=0;i<nodes.length;i++){
+					js = new JSONObject();
+					js.put("id", "map:"+String.valueOf(nodes[i].getId()));
+					js.put("text", String.valueOf(nodes[i].getName()));
+					js.put("leaf", !nodes[i].haveChild());
+					js.put("icon", "/themes/icon/all/map.gif");
+					js.put("allowSelect", false);
+					treeJSONArray.put(js);
+				}
+			}catch(Exception e){}
+
+
+			nodes=appNode.getChilds(ObjectType.SEARCH);
+			try{
+				for(int i=0;i<nodes.length;i++){
+					js = new JSONObject();
+					js.put("id", String.valueOf(nodes[i].getId()));
+					js.put("text", String.valueOf(nodes[i].getName()));
+					js.put("leaf", !nodes[i].haveChild());
+					js.put("acttype","Search");
+					js.put("icon", "/themes/icon/all/magnifier_zoom_in.gif");
+					js.put("allowSelect", true);
+					treeJSONArray.put(js);
+				}
+			}catch(Exception e){}
+			nodes=appNode.getChilds(ObjectType.PORTALET);
+			try{
+				for(int i=0;i<nodes.length;i++){
+					js = new JSONObject();
+					js.put("id", String.valueOf(nodes[i].getId()));
+					js.put("text", String.valueOf(nodes[i].getName()));
+					js.put("leaf", !nodes[i].haveChild());
+					js.put("acttype","portlet");
+					js.put("icon", "/themes/icon/all/layout_content.gif");
+					js.put("allowSelect", true);
+					treeJSONArray.put(js);
+				}
+			}catch(Exception e){}
+
+			nodes=appNode.getChilds(ObjectType.WORKFLOW);
+			try{
+				for(int i=0;i<nodes.length;i++){
+					js = new JSONObject();
+					js.put("id", "workflow:"+String.valueOf(nodes[i].getId()));
+					js.put("text", String.valueOf(nodes[i].getName()));
+					js.put("leaf", !nodes[i].haveChild());
+					js.put("icon", "/themes/icon/common/workflow1.gif");
+					js.put("allowSelect", false);
+					treeJSONArray.put(js);
+				}
+			}catch(Exception e){}
+			jacper.print(treeJSONArray);
+		}else if(id.indexOf("module")!=-1||id.indexOf("workflowact")!=-1){
+			String actype="program";
+			if(id.indexOf("workflowact")!=-1) actype="workflow"; 		
+			String objId=id.substring(id.indexOf(":")+1,id.length());
+			ObjectNode appNode=ObjectManager.getObject(objId);
+			ObjectNode[] nodes=appNode.getChilds(ObjectType.MAINFRAME);
+			JSONObject js = null;
+			try{
+				for(int i=0;i<nodes.length;i++){
+					js = new JSONObject();
+					js.put("id", String.valueOf(nodes[i].getId()));
+					js.put("text", String.valueOf(nodes[i].getName()));
+					js.put("leaf", true);
+					js.put("acttype",actype);
+					js.put("icon", "/themes/icon/xp/frame.gif");
+					js.put("allowSelect", true);
+					treeJSONArray.put(js);
+				}
+			}catch(Exception e){}
+			
+			nodes=appNode.getChilds(ObjectType.LEFTFRAME);
+			try{
+				for(int i=0;i<nodes.length;i++){
+					js = new JSONObject();
+					js.put("id", String.valueOf(nodes[i].getId()));
+					js.put("text", String.valueOf(nodes[i].getName()));
+					js.put("leaf", true);
+					js.put("acttype",actype);
+					js.put("icon", "/themes/icon/xp/frame.gif");
+					js.put("allowSelect", true);
+					treeJSONArray.put(js);
+				}
+			}catch(Exception e){}
+
+			nodes=appNode.getChilds(ObjectType.RIGHTFRAME);
+			try{
+				for(int i=0;i<nodes.length;i++){
+					js = new JSONObject();
+					js.put("id", String.valueOf(nodes[i].getId()));
+					js.put("text", String.valueOf(nodes[i].getName()));
+					js.put("leaf", true);
+					js.put("acttype",actype);
+					js.put("icon", "/themes/icon/xp/frame.gif");
+					js.put("allowSelect", true);
+					treeJSONArray.put(js);
+				}
+			}catch(Exception e){}
+
+			nodes=appNode.getChilds(ObjectType.UPPERFRAME);
+			try{
+				for(int i=0;i<nodes.length;i++){
+					js = new JSONObject();
+					js.put("id", String.valueOf(nodes[i].getId()));
+					js.put("text", String.valueOf(nodes[i].getName()));
+					js.put("leaf", true);
+					js.put("acttype",actype);
+					js.put("icon", "/themes/icon/xp/frame.gif");
+					js.put("allowSelect", true);
+					treeJSONArray.put(js);
+				}
+			}catch(Exception e){}
+
+
+			nodes=appNode.getChilds(ObjectType.LOWERFRAME);
+			try{
+				for(int i=0;i<nodes.length;i++){
+					js = new JSONObject();
+					js.put("id", String.valueOf(nodes[i].getId()));
+					js.put("text", String.valueOf(nodes[i].getName()));
+					js.put("leaf", true);
+					js.put("acttype",actype);
+					js.put("icon", "/themes/icon/xp/frame.gif");
+					js.put("allowSelect", true);
+					treeJSONArray.put(js);
+				}
+			}catch(Exception e){}
+			jacper.print(treeJSONArray);
+		}else if(id.indexOf("map")!=-1){
+			String objId=id.substring(id.indexOf(":")+1,id.length());
+			ObjectNode appNode=ObjectManager.getObject(objId);
+			ObjectNode[] nodes=appNode.getChilds(ObjectType.MAPPOI);
+			JSONObject js = null;
+			try{
+				for(int i=0;i<nodes.length;i++){
+					js = new JSONObject();
+					js.put("id", String.valueOf(nodes[i].getId()));
+					js.put("text", String.valueOf(nodes[i].getName()));
+					js.put("leaf", !nodes[i].haveChild());
+					js.put("acttype","Gis");
+					js.put("icon", "/themes/icon/all/tag_blue.gif");
+					js.put("allowSelect", true);
+					treeJSONArray.put(js);
+				}
+			}catch(Exception e){}
+			nodes=appNode.getChilds(ObjectType.MAPEDIT);
+			try{
+				for(int i=0;i<nodes.length;i++){
+					js = new JSONObject();
+					js.put("id", String.valueOf(nodes[i].getId()));
+					js.put("text", String.valueOf(nodes[i].getName()));
+					js.put("leaf", !nodes[i].haveChild());
+					js.put("acttype","GisEdit");
+					js.put("icon", "/themes/icon/xp/folder6.gif");
+					js.put("allowSelect", true);
+					treeJSONArray.put(js);
+				}
+			}catch(Exception e){}
+		}else if(id.indexOf("workflow")!=-1){
+			String objId=id.substring(id.indexOf(":")+1,id.length());
+			ObjectNode appNode=ObjectManager.getObject(objId);
+			ObjectNode[] nodes=appNode.getChilds(ObjectType.WORKFLOWACT);
+			JSONObject js = null;
+			try{
+				for(int i=0;i<nodes.length;i++){
+					js = new JSONObject();
+					js.put("id", "workflowact:"+String.valueOf(nodes[i].getId()));
+					js.put("text", String.valueOf(nodes[i].getName()));
+					js.put("leaf", !nodes[i].haveChild());
+					js.put("icon", "/themes/icon/xp/act.gif");
+					js.put("allowSelect", false);
+					treeJSONArray.put(js);
+				}
+			}catch(Exception e){}
+		}
+	}
+}

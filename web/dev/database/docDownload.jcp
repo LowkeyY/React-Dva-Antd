@@ -1,0 +1,57 @@
+
+import com.kinglib.*;
+import com.kinglib.database.*;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.FileInputStream;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
+import com.kinglib.util.Files;
+import javax.servlet.http.HttpServletResponse;
+
+@class{
+	public void doGet(Jacper jacper){
+	
+		boolean isLogin = jacper.setSession();
+		String fileName = jacper.getString("docName");
+
+		if(fileName==null || fileName.length()==0 || fileName.equals("0")){
+			fileName="default";
+		}else{
+			fileName=fileName.replace('.','_').replace('\\','_').replace('/','_');
+		}
+		fileName=fileName+".doc";
+
+
+		HttpServletResponse res = jacper.getResponse();
+		res.setHeader("Content-Disposition", "attachment;filename=template.doc");
+		res.setContentType("application/msword");
+
+		String path=jacper.getRequest().getSession().getServletContext().getRealPath(jacper.getRequest().getRequestURI());
+		StringBuilder sb=new StringBuilder(path.substring(0,path.lastIndexOf(File.separatorChar)));
+		sb.append(File.separatorChar).append("docTemplate").append(File.separatorChar);
+		path=sb.append(fileName).toString();
+		File file =new File(path);
+		
+		if(file.exists()){
+		
+			res.setHeader("Content-Length", String.valueOf(file.length()));
+			res.setHeader("Accept-ranges", "bytes");
+			FileInputStream in=null;
+			
+			try {
+				in=new FileInputStream(file);
+				Files.copyRange(in, res.getOutputStream(), 1024);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}finally{
+				try{
+					if(in!=null)
+						in.close();
+				}catch(Exception ee){}
+			}
+		}
+	}
+}

@@ -1,0 +1,87 @@
+.iconbgcolor{
+    background-image:url(/ui/wss/res/img/bar/ico_bgcolor.png)!important;background-position:right!important;width:19px!important
+}
+.icontextcolor{
+    background-image:url(/ui/wss/res/img/bar/ico_textcolor.png)!important;background-position:right!important;width:18px!important
+}
+.icon_new_doc{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -900px!important
+}
+.icon_open_doc{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -916px!important
+}
+.icon_save_doc{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -614px!important
+}
+.icon_undo{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -932px!important
+}
+.icon_redo{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -948px!important
+}
+.icon_copy{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -16px!important
+}
+.icon_cut{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -0px!important
+}
+.icon_paste{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -32px!important
+}
+.icon_format_painter{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -964px!important
+}
+.icon_font_bold{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -836px!important
+}
+.icon_font_italic{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -852px!important
+}
+.icon_font_fett{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -868px!important
+}
+.icon_font_kursiv{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -884px!important
+}
+.icon_font_gras{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -836px!important
+}
+.icon_font_italique{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -852px!important
+}
+.icon_font_underline{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -980px!important
+}
+.icon_align_left{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -996px!important
+}
+.icon_align_center{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -1012px!important
+}
+.icon_align_right{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -1028px!important
+}
+.icon_merge_cells{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -1044px!important
+}
+.icon_unmerge_cells{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -1060px!important
+}
+.icon_insert_chart{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -1076px!important
+}
+.icon_lock{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -1092px!important
+}
+.icon_vert_dynarange{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -1108px!important
+}
+.icon_hor_dynarange{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -1124px!important
+}
+.icon_designer_preview{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -1140px!important
+}
+.icon_user_mode{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -1156px!important
+}

@@ -1,0 +1,17 @@
+#container p{
+	position:relative;
+	width:600px;
+	text-align:left;
+	margin-left:50px;
+
+}
+li{
+	text-align:left;
+}
+p{
+	font-family:"微软雅黑","宋体";font-size:15px;
+	
+}
+.a{
+	text-decoration:none;	
+}

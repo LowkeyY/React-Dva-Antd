@@ -1,0 +1,16 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.scraper.runtime.variables.*;
+@class{
+	public void doGet(Jacper jacper){
+		String id=jacper.getString("id");
+		if(id!=null){
+			CtrlPanel cp=CtrlPanelFactory.getCtrlPanel(id);
+			if(cp.haveMessage()){
+				String message=cp.getMessage();
+				jacper.print(message);
+			}
+		}
+	}
+}

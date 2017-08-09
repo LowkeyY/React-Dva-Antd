@@ -1,0 +1,63 @@
+
+import com.kinglib.*;    
+
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+
+@class{
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String parent_id = jacper.getStr("parent_id");
+	String type = jacper.getStr("type");
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+		JSONObject widgetJSON = new JSONObject("{}");
+		String[] rs = conPlat.getRow(
+		"select tab_id,propertyset from $[plat].prg_base a where a.object_id=?",new String[]{parent_id});
+		widgetJSON.put("object_id",rs[0]);
+		widgetJSON.put("importitem",rs[1]);
+	   <?[?>widgetJSON.toString()<?]?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+	public void doPost(Jacper jacper){
+
+		Connection conPlat=jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		int user_id = (int)hs.uid;
+
+		String type = jacper.getStr("type");
+		String parent_id = jacper.getStr("parent_id");
+		String propertySet = jacper.getStr("importitem");
+
+		try{	
+			conPlat.setAutoCommit(false);	
+			conPlat.exec("UPDATE $[plat].prg_base SET propertyset =? WHERE object_id =?",new String[]{propertySet,parent_id});
+
+			<?{success:true,id:'?>parent_id<?'}?>;
+			conPlat.commit();
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}	
+	}
+}

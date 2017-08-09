@@ -1,0 +1,111 @@
+
+
+import java.util.Map;
+import com.kinglib.*;
+import com.kinglib.bi.*;
+import com.kinglib.util.*;
+import com.kinglibx.query.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.*;
+import com.kinglib.ui.core.utils.*;
+
+@class{
+
+	public void doPost(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		Connection conTemp =null;
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String userId=hs.uid+"";
+
+		String query_id = jacper.getString("query_id","-1");
+
+		String objectId="";
+		if(query_id.equals("-1")){
+			objectId=jacper.getStr("objectId");
+			Program prg =ProgramFactory.getInstance().getProgram(conPlat,objectId);
+			query_id=prg.getQueryId();
+		}
+
+		String meta = jacper.getStr("meta");
+		
+		String type = jacper.getStr("type");
+		if(type.equals("getButton")){
+			try{
+				JSONObject singleJSON = new JSONObject("{}");
+				if(!objectId.equals("")){
+					JSONValue jval = ButtonFactory.getJson(conPlat, objectId, userId);
+					if (jval != null) {
+						singleJSON.put("buttonArray",jval);	
+					}
+					
+				}
+				jacper.print(singleJSON.toString());
+			}catch(Exception e){
+				e.printStackTrace(); 
+			}
+		}else{
+			try{
+				JSONObject singleJSON = new JSONObject("{}");
+				if(!objectId.equals("")){
+					JSONValue jval = ButtonFactory.getJson(conPlat, objectId, userId);
+					if (jval == null) {
+						throw new Err(Err.DEFINED_ERROR,"未定制按钮");
+					}
+					singleJSON.put("buttonArray",new JSONValue(jval.toString()));	
+				}
+				JSONObject resultJSON=new JSONObject("{}");
+				QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+				QueryExtend QE=queryEF.getQueryExtend(conPlat,query_id);
+				Query query =QE.getQuery();
+				String server=QE.getServer(conPlat,query_id+"");
+				conTemp = jacper.getConnection(server);
+
+				Map p = Factory.newHashMap();
+
+				JSONObject metaJSON=new JSONObject("{}");
+				if(meta.equals("true")){	
+					QuerySearch qs=null;
+					if(objectId.equals("")){
+						qs= QE.getFullQuerySearch(conPlat);
+					}else{
+						qs= QE.getQuerySearch(conPlat);
+					}
+					JSONObject searchEditor=qs.getSearchEditor(jacper,conPlat);
+					metaJSON.put("searchEditor",searchEditor);	
+				}
+
+				String dataId=jacper.getStr("dataId");
+
+				if(dataId.equals("")){
+					p=QE.getAllQuerySearchCondition(jacper,conPlat,query,p);
+				}else{
+					p=QE.getQueryImportCondition(jacper,conPlat,query_id+"");
+					p=QE.getQuerySearchCondition(jacper,conPlat,query,p);
+				}
+				String[] title = query.getCells();
+				String sql = query.parseSql(conPlat,title,p); 
+
+				String[] result=conTemp.getRow(sql);
+
+				JSONObject dataJSON = new JSONObject("{}");
+				if(result!=null){
+					for(int i=0;i<result.length;i++){
+						dataJSON.put(title[i],result[i]);
+					}
+				}
+				jacper.print(dataJSON.toString());
+			}catch(Exception e){
+				e.printStackTrace(); 
+			}finally{
+				conPlat.close();
+				if(conTemp!=null){
+					conTemp.close();
+				}
+			}
+		}
+	}
+}

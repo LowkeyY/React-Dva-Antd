@@ -1,0 +1,53 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+
+@class{   
+
+
+public void doGet(Jacper jacper){
+
+	String id=jacper.getStr("_id");
+	if(jacper.checkError()) return;
+
+	boolean isLogin = jacper.setSession();  
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+			
+	Connection conPlat = jacper.getConnection("plat");
+
+	String hasChild = "0";
+	String forder_id = ""+id;
+	String view = jacper.getStr("view");
+	
+	String href = "",target="";
+     
+	<?<root _id="?>forder_id<?">
+	<forder _parent="?>forder_id<?" event="event1">?>;
+
+
+	String[][] rs = conPlat.get(
+	"select ctrl_id,'"+jacper.trans("第")+"'||level_num||'"+jacper.trans("级")+"',tree_type from $[plat].ctrl_select where module_id=? order by level_num ASC",new String[]{id+""});
+
+	String[] treeType=new String[rs.length];
+	
+
+	for(int i=0;i<rs.length;i++){
+	
+		id = rs[i][0];
+		if(rs[i][2].equals("1")){
+			treeType[i]=rs[i][1]+"("+jacper.trans("正常")+")";
+		}else if(rs[i][2].equals("2")){
+			treeType[i]=rs[i][1]+"("+jacper.trans("递归")+")";
+		}
+		
+		href = "/dev/ctrl/selectMag.jcp?type=view&amp;module_id="+id+"&amp;ran="+Math.random();
+		target =  "rightFrame";
+		<?<e _id="?>rs[i][0]<?1" _parent="?>forder_id<?" framenum="1" _hasChild ="0"   type="view" params="parent_id=?>rs[i][0]<?&amp;tree_type=?>rs[i][2]<?" title="?>treeType[i]<?" icon0="/themes/icon/xp/layer.gif" icon1="/themes/icon/xp/layer.gif" />?>;
+	}
+	<?</forder>
+	</root>?>;
+}
+}

@@ -1,0 +1,385 @@
+
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.SQLUtils;
+import com.kinglib.ui.core.utils.Param;
+
+import gpra.filesystem.HWDefaultRunningQueue;
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.HWUnits.HWSpaceConfig;
+import gpra.filesystem.space.HWSpaceFactory;
+import gpra.filesystem.space.HWSpaceNode;
+import gpra.filesystem.task.HWTaskWork;
+import gpra.filesystem.task.HWTaskWork2PDF;
+import gpra.filesystem.task.HWTaskWorkSolr;
+import gpra.filesystem.upload.EctractZip;
+import gpra.filesystem.upload.HWUpExcealUnits;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.util.Map;
+import java.util.UUID;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+import com.susing.upload.FileUpload;
+import com.susing.util.Files;
+
+//public class up{
+@class{
+	private  String[][] subjectsDefault = {
+		{"组织机构" , "组织机构" , "1bf13e8d-41db-4268-8b11-2ccb34d0717e"},
+		{"政务" , "综合政务" , "7d82b4d1-ad7b-4011-b613-5e5c39b479b9"},
+		{"综合政务" , "综合政务" , "7d82b4d1-ad7b-4011-b613-5e5c39b479b9"},
+		{"国有资产" , "国民经济管理、国有资产监管" , "e4294d2e-69bc-4b95-8ee8-6a3ffbc1d96f"},
+		{"国民经济" , "国民经济管理、国有资产监管" , "e4294d2e-69bc-4b95-8ee8-6a3ffbc1d96f"},
+		{"审计" , "财政、金融、审计" , "8afaecca-5413e2e5-0154-140ecc73-0015"},
+		{"金融" , "财政、金融、审计" , "8afaecca-5413e2e5-0154-140ecc73-0015"},
+		{"财政" , "财政、金融、审计" , "8afaecca-5413e2e5-0154-140ecc73-0015"},
+		{"能源" , "国土资源、能源" , "828bd54a-2937-4073-830a-d33072ff697c"},
+		{"国土资源" , "国土资源、能源" , "828bd54a-2937-4073-830a-d33072ff697c"},
+		{"林业" , "农业、林业、水利" , "8afaecca-5413e2e5-0154-140c94b7-000d"},
+		{"农业" , "农业、林业、水利" , "8afaecca-5413e2e5-0154-140c94b7-000d"},
+		{"水利" , "农业、林业、水利" , "8afaecca-5413e2e5-0154-140c94b7-000d"},
+		{"交通" , " 工业、交通" , "8afaecca-5413e2e5-0154-1407a88a-0004"},
+		{"工业" , " 工业、交通" , "8afaecca-5413e2e5-0154-1407a88a-0004"},
+		{"旅游" , "商贸、海关、旅游" , "ad0bba09-ffdd-4d73-832e-1bba6ff7ba1e"},
+		{"商贸" , "商贸、海关、旅游" , "ad0bba09-ffdd-4d73-832e-1bba6ff7ba1e"},
+		{"海关" , "商贸、海关、旅游" , "ad0bba09-ffdd-4d73-832e-1bba6ff7ba1e"},
+		{"安全生产" , "市场监管、安全生产监管" , "440fa2b3-3220-4644-85f8-9b8f170d8291"},
+		{"市场监管" , "市场监管、安全生产监管" , "440fa2b3-3220-4644-85f8-9b8f170d8291"},
+		{"城乡建设" , "城乡建设、环境保护" , "8afaecca-5413e2e5-0154-140ad098-0008"},
+		{"环境保护" , "城乡建设、环境保护" , "8afaecca-5413e2e5-0154-140ad098-0008"},
+		{"科技" , " 科技、教育" , "bb6f2c60-d062-4973-ae83-bbac03a9ca05"},
+		{"教育" , " 科技、教育" , "bb6f2c60-d062-4973-ae83-bbac03a9ca05"},
+		{"新闻出版" , "文化、广电、新闻出版" , "412746cf-d932-4e23-9424-43f8e6694c0e"},
+		{"广电" , "文化、广电、新闻出版" , "412746cf-d932-4e23-9424-43f8e6694c0e"},
+		{"文化" , "文化、广电、新闻出版" , "412746cf-d932-4e23-9424-43f8e6694c0e"},
+		{"体育" , "卫生、体育" , "030acfc7-1e06-49d4-afff-1593eb22e0fb"},
+		{"卫生" , "卫生、体育" , "030acfc7-1e06-49d4-afff-1593eb22e0fb"},
+		{"计划生育" , "人口与计划生育、妇女儿童工作" , "6b5ac888-5817-4d80-9340-96e3bd2beb42"},
+		{"妇女儿童" , "人口与计划生育、妇女儿童工作" , "6b5ac888-5817-4d80-9340-96e3bd2beb42"},
+		{"人口" , "人口与计划生育、妇女儿童工作" , "6b5ac888-5817-4d80-9340-96e3bd2beb42"},
+		{"监察" , "劳动、人事、监察" , "51d3aef4-a5ce-424c-bf26-cccb8d9a0526"},
+		{"人事" , "劳动、人事、监察" , "51d3aef4-a5ce-424c-bf26-cccb8d9a0526"},
+		{"劳动" , "劳动、人事、监察" , "51d3aef4-a5ce-424c-bf26-cccb8d9a0526"},
+		{"公安" , "公安、安全、司法" , "f1228f41-4042-4c96-ab0f-8847344e5c4d"},
+		{"司法" , "公安、安全、司法" , "f1228f41-4042-4c96-ab0f-8847344e5c4d"},
+		{"民政" , "民政、扶贫、救灾" , "4cb991af-bb9c-4919-986b-23d49bcac93a"},
+		{"扶贫" , "民政、扶贫、救灾" , "4cb991af-bb9c-4919-986b-23d49bcac93a"},
+		{"救灾" , "民政、扶贫、救灾" , "4cb991af-bb9c-4919-986b-23d49bcac93a"},
+		{"民族" , "民族、宗教" , "dcb23b9b-ea7d-44a3-a4aa-a793c59317c1"},
+		{"宗教" , "民族、宗教" , "dcb23b9b-ea7d-44a3-a4aa-a793c59317c1"},
+		{"对外事务" , "对外事务" , "8afaec81-545195cb-0154-5195cbfa-0000"},
+		{"港澳" , "港澳侨工作" , "1d9a0cc7-1cf2-446e-83cc-d68014e30219"},
+		{"国防" , "国防" , "6bd9084c-db0c-498f-a957-54539a5dbd82"},
+		{"经济" , "综合经济" , "8afaecca-5413c2b4-0154-13ca9e92-0003"},
+		{"秘书" , "秘书、行政" , "a7e1a3fa-1577-4669-bec7-1123ab423720"},
+		{"行政" , "秘书、行政" , "a7e1a3fa-1577-4669-bec7-1123ab423720"}
+};
+	public void doPost(Jacper jacper){
+		try {
+			System.out.println("批量上传开始>>>");
+			Param param =new Param(jacper);
+			Connection conDocmgr= param.getConnection(HWUnits.HW_DBLINK);
+			Connection conPlatForm= param.getConnection("plat");
+			String userId=param.getStr("userId");
+			FileUpload upload = new FileUpload(Integer.parseInt(userId));
+			try {
+				upload.parseRequest(param.getRequest());
+			} catch (Exception e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			boolean isAdd=false;
+			upload.appendParamToMap(param);
+			String key=param.getString("key");
+
+
+
+			String targetPath= HWTaskWork2PDF.basePath+"batch\\"+key+"\\"; //解压文件路径
+			File targetFile=new File(targetPath);
+			if  (!targetFile .exists()  && !targetFile .isDirectory())      
+			{       
+				jacper.print("{success:true,message:'未找到解压文件。'");
+				return;
+			}  
+
+			HWSpaceNode space=HWSpaceFactory.getBaseSpace();
+			insOne(targetFile, conDocmgr,space,userId,key);
+			
+			EctractZip.deleteDirectory(targetPath);
+		} catch (Exception e) {
+			e.printStackTrace();
+			jacper.print("{success:true,message:'入库过程中出现错误。'");
+		}
+	}
+
+	public String insOne(File targetFile,Connection con,HWSpaceNode space,String userId,String key) throws Exception{
+		String err="";
+		File[] files = targetFile.listFiles(); // 该文件目录下文件全部放入数组
+		String nodeId=space.getDefaultDirId();
+		if (nodeId!=null && !nodeId.equals("")) {
+			if (files != null) {
+				for (int i = 0; i < files.length; i++) {
+					File nowFile=files[i];
+					if (nowFile.isDirectory()) {
+						err+=insFile(nowFile,con,space,userId,key);
+					}else{
+						HWUpExcealUnits.minus(key);
+						insDateFile(nowFile,con,space,nodeId,userId,key);
+					}
+				}
+			}
+		}
+		return err;
+	}
+	
+	public void minusFileCount(File targetFile,String key){
+		File[] files = targetFile.listFiles(); // 该文件目录下文件全部放入数组
+		
+		if (files != null) {
+			for (int i = 0; i < files.length; i++) {
+				File nowFile=files[i];
+				if (nowFile.isDirectory()) {
+					minusFileCount(nowFile,key);
+				}else{
+					HWUpExcealUnits.minus(key);
+				}
+			}
+		}
+	}
+
+
+	public String insFile(File targetFile,Connection con,HWSpaceNode space,String userId,String key) throws Exception{
+		String err="";
+		File[] files = targetFile.listFiles(); // 该文件目录下文件全部放入数组
+		String nodeId=HWUpExcealUnits.getClass(targetFile.getName());
+		if (nodeId!=null && !nodeId.equals("")) {
+			if (files != null) {
+				for (int i = 0; i < files.length; i++) {
+					File nowFile=files[i];
+					if (nowFile.isDirectory()) {
+						err+=insFile(nowFile,con,space,userId,key);
+					}else{
+
+						HWUpExcealUnits.minus(key);
+						insDateFile(nowFile,con,space,nodeId,userId,key);
+
+					}
+
+				}
+			}
+		}
+		return err;
+	}
+
+
+	public void insDateFile(File nowFile,Connection con,HWSpaceNode space,String nodeId,String userId,String key){
+		try {
+			String base = HWTaskWork2PDF.basePath;
+			
+			Map<String, String>dateresult=EctractZip.getFileClass(nowFile,subjectsDefault);
+			String fileClass=dateresult.get("class");
+			String upDate=dateresult.get("date");
+			String beizhu=dateresult.get("beizhu");
+			
+			String fileId = HWUnits.getFileId(con) , fileName = nowFile.getName() , phyFileid = "" , filetype = "" , filepath = "" , fileURI = "" , fileSize = Long.toString(nowFile.length());
+
+			boolean hasPhysicalFile = false;
+			FileInputStream nowfis=new FileInputStream(nowFile);
+			String fileMD5 = HWUnits.getFileMD5Code(nowfis) , newfilename = "";
+
+			String[] row = con.getRow("select p.phy_file_id from DIR_FILE_PHYSICAL p where p.file_md5 = ?" , new String[]{fileMD5});
+			if(row != null && row.length >0){
+				phyFileid = row[0];
+				HWUnits.addPhysicalFileCount(con, phyFileid);
+				hasPhysicalFile = true;
+			}
+			int pos=-1;
+			filetype = (pos = fileName.lastIndexOf(".")) != -1 ? fileName.substring(pos + 1) : "unknown"; //文件类型
+			String uuid=UUID.randomUUID().toString();
+			if(!hasPhysicalFile){
+				filepath = base + toHexString(uuid.substring(uuid.length()-2, uuid.length()).getBytes())+File.separator;
+				File filep = new File(filepath);
+				if (!(filep.exists()))
+					filep.mkdirs();
+				newfilename = filepath + uuid.substring(0,uuid.length()-2);			    
+				fileURI = "file:" + newfilename;
+				phyFileid = UUID.randomUUID().toString();
+				con.exec("insert into DIR_FILE_PHYSICAL values(?,?,?,?,?,?,?,?,?)", new String[]{phyFileid,space.getSpaceId(),fileURI,fileMD5,nowFile.getName(),fileSize,filetype,"1",""});
+				copyFile(nowFile,new File(newfilename));
+
+
+				HWDefaultRunningQueue.add(new HWTaskWork2PDF(phyFileid, newfilename, filetype));
+			}	
+			String spaceId=space.getSpaceId();
+			if(nodeId!=null && !nodeId.equals("")){
+				nodeId = nodeId.split("::")[0];
+			}
+
+			String base_dir = space.getDefaultDirId();	//空间默认节点id
+			String dirId = "";					//目录
+
+			String getDirsql="select P_NODE_ID from DIR_NODE_INFO where NODE_ID=?";
+			boolean boo=true;
+			String node_id=nodeId;       //循环用节点id;
+			while (boo) {
+				String[][] rs= con.get(getDirsql, new String[]{node_id});
+				if(rs!=null && rs.length>0 && !rs[0][0].equals("")){
+					dirId=dirId.equals("")?rs[0][0]:rs[0][0]+"/"+dirId;
+					node_id=rs[0][0];
+				}else{
+					break;
+				}
+			}
+
+			if(dirId.equals("")){
+				dirId=spaceId+"/"+base_dir+"/"+nodeId;
+			}else{
+				dirId=spaceId+"/"+base_dir+"/"+dirId+"/"+nodeId;
+			}
+
+			String fileInfoName=fileName.substring(0,fileName.indexOf("."));
+
+			User user=CertManager.getUser(userId);
+			String deptId=user.getDeptId();
+
+			String sql="insert into dir_file_base(file_id,phy_file_id,file_name,file_size,file_type,file_upload_date,file_uploader,file_dir,region_id,country_id,space_id,node_id,file_dept,file_class,att_128,is_secrecy,file_info_name,FILE_REMARKS)" +
+			"values(?,?,?,?,?,$str_date(?,120),?,?,$str_date(?,111),?,?,?,?,?,?,?,?,?)";
+			con.exec(sql,new String[]{fileId,phyFileid,fileName,fileSize,filetype,HWUnits.getNowDateLong(),userId,dirId,upDate,nodeId,spaceId,nodeId,deptId,fileClass,"1","0",fileInfoName,beizhu});
+
+			String insreview="insert into DIR_DATUM_FILE_REVIEWED values(?,?,?,?,?,null)";
+			con.exec(insreview,new String[]{fileId,"","0","",""});
+
+			HWUnits.UploadFileLog(con, fileId, fileInfoName, userId, nodeId, space.getSpaceId());
+
+			String up="update DIR_DATUM_FILE_REVIEWED set FILE_AUDIT = '1',FILE_INPUT_USER = ? ,AUDIT_date = $str_date(?,120) where file_id = ?";
+			con.exec(up , new String[]{userId , HWUnits.getNowDateLong() , fileId});
+
+
+			String[] result = con.getRow("select p.file_path , f.file_type from DIR_FILE_BASE f left outer join dir_file_physical p on f.phy_file_id = p.phy_file_id where f.file_id = ?",new String[]{fileId});
+			if(result != null && result.length > 0){
+				result[0]=result[0].replace("\\","\\\\");
+				String solrUrl = "http://127.0.0.1/"+HWUnits.getSolrWebName()+"/"+HWSpaceConfig.SOLR_NAME.toString()+"/";
+				HWTaskWork.exec(new HWTaskWorkSolr(solrUrl, spaceId, fileId, fileName, result[1], result[0].substring(5)));
+			}
+
+		} catch (Exception e) {
+			HWUpExcealUnits.insErr(key, 1);
+			e.printStackTrace();
+		}
+	}
+
+
+	public static void copyFile(File source, File target) throws IOException {
+		FileInputStream in = null;
+		FileOutputStream out = null;
+		try{
+			Files.copyRange((in = new FileInputStream(source)), (out = new FileOutputStream(target)), 16 * 1024);
+		}finally{
+			if(in != null)
+				in.close();
+			if(out != null)
+				out.close();
+		} 
+	} 
+
+	public int getIntegral(double size){
+		int s=0;
+		if(size<=10){
+			s=1;
+		}
+		if(size>10&&size<=20){
+			s=2;
+		}
+		if(size>20&&size<=30){
+			s=3;
+		}
+		if(size>30&&size<=40){
+			s=4;
+		}
+		if(size>40&&size<=50){
+			s=5;
+		}
+		if(size>50&&size<=60){
+			s=6;
+		}
+		if(size>60&&size<=70){
+			s=7;
+		}
+		if(size>70&&size<=80){
+			s=8;
+		}
+		if(size>80&&size<=90){
+			s=9;
+		}
+		if((size>90&&size<=100)||size>100){
+			s=10;
+		}
+		return s;
+	}
+	private static void nioTransferCopy(File source, File target) {  
+		FileChannel in = null;  
+		FileChannel out = null;  
+		FileInputStream inStream = null;  
+		FileOutputStream outStream = null;  
+		try {  
+			inStream = new FileInputStream(source);  
+			outStream = new FileOutputStream(target);  
+			in = inStream.getChannel();  
+			out = outStream.getChannel();  
+			in.transferTo(0, in.size(), out);  
+		} catch (IOException e) {  
+			e.printStackTrace();  
+		} finally {  
+			try {
+				inStream.close();  
+				in.close();  
+				outStream.close();  
+				out.close();  
+			} catch (Exception e2) {
+				e2.printStackTrace();
+			}
+		}  
+	}  
+	public String toHexString(byte[] b)
+	{
+		StringBuffer buffer = new StringBuffer();
+		for (int i = 0; i < b.length; ++i)
+		{
+			buffer.append("0x");
+			buffer.append(toHexString(b[i]));
+			//buffer.append(" ");
+		}
+		return buffer.toString();
+	}
+
+	public String toHexString(byte b)
+	{
+		char[] buffer = new char[2];
+		buffer[0] = Character.forDigit((b >>> 4) & 0x0F, 16);
+		buffer[1] = Character.forDigit(b & 0x0F, 16);
+		return new String(buffer);
+	}
+	public Long getId(Connection conDocmgr){
+		Long num=null;
+		String[] rs=conDocmgr.getRow("select file_id_count from dir_file_bianma",new String[]{});
+		if(rs!=null){
+			num=Long.valueOf(rs[0]);
+			num=num+1;
+		}
+		return num;
+	}
+
+
+
+	public Long getSord(Connection conPlatForm,int count){
+		Long num=(long)SQLUtils.getNextVal(conPlatForm, 1216,count);
+		return num;
+	}
+}

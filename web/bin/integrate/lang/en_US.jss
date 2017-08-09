@@ -1,0 +1,1 @@
+bin.integrate.lang={"选择实例":"Select Instance","选择集成实例":"Select the integrated instance","确定":"OK","取回当前模块框架类型错误.请核实":"Retrieve the current module frame type error , please verify","必须选择一个实例!":"Must select an instance","关闭":"Close","取消":"Cancel"}

@@ -1,0 +1,150 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+
+
+@class{
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	String id=jacper.getStr("id");
+	String root = jacper.getStr("root");
+	String app_type=jacper.getStr("app_type");
+
+	String level=jacper.getStr("level");
+
+	String forder_id = id;
+	String hasChild = "0";
+
+	String[] rrss=null;		
+	String[][] rs=null;
+	<?<root _id="?>forder_id<?">?>;
+	<?<forder _parent="?>forder_id<?" event="event1">?>;	
+	
+	if(level.equals("1")){		
+		//rs = conPlat.get("select top_id,top_title,icon_url,portal_id from $[plat].sys_top where is_system='true' and parent_top='0' order by top_seq ",new String[]{},0);		
+		rs = conPlat.get("select top_id,top_title,icon_url,portal_id from $[plat].sys_top where  parent_top='0' order by top_seq ",new String[]{},0);		
+
+		if(rs!=null){				
+			for(int i=0;i<rs.length;i++){
+				
+				rrss = conPlat.getRow("select count(*) from $[plat].sys_application where parent_app=?  ",new String[]{rs[i][0]});
+				String[] rrss1 = conPlat.getRow("select count(*) from $[plat].sys_top where parent_top=?  ",new String[]{rs[i][0]});
+
+				if (Integer.parseInt(rrss[0])+Integer.parseInt(rrss1[0])>0)
+					hasChild = "1";
+				else
+					hasChild = "0";
+
+				<?<e _id="?>rs[i][0]<?" _hasChild ="?>hasChild<?" icon0="/themes/icon?>rs[i][2]<?" icon1="/themes/icon?>rs[i][2]<?" title="?>rs[i][1]<?"  program="top"  type="view" params="isSystem=y&amp;from=menu&amp;id=?>rs[i][0]<?&amp;portal_id=?>rs[i][3]<?" url="/bin/menu/tree.jcp?level=2&amp;id=?>rs[i][0]<?&amp;parent_app=?>rs[i][0]<?&amp;app_type=top&amp;root=?>root<?"/>?>;
+			}
+		}		
+		/*rs = conPlat.get("select max(a.system_id),max(a.system_name),count(b.top_id) from $[plat].system_base a left outer join $[plat].sys_top b on a.system_id=b.portal_id group by a.system_id",new String[]{},0);
+		if(rs!=null){				
+			for(int i=0;i<rs.length;i++){
+				if (Integer.parseInt(rs[i][2])>0)
+					hasChild = "1";
+				else
+					hasChild = "0";
+
+				<?<e _id="?>rs[i][0]<?" _hasChild ="?>hasChild<?" icon0="/themes/icon/xp/axx.gif" icon1="/themes/icon/xp/axx.gif" title="?>rs[i][1]<?"   url="/bin/menu/tree.jcp?level=3&amp;id=?>rs[i][0]<?&amp;app_type=portal&amp;parent_app=?>rs[i][0]<?&amp;"/>?>;
+			}
+		}*/	
+	}else if(level.equals("2")&&app_type.equals("top")){
+		rs = conPlat.get("select max(a.top_id),max(a.top_title),max(a.icon_url),count(b.app_id),max(a.portal_id)  from $[plat].sys_top a left outer join $[plat].sys_application b on a.top_id=b.parent_app where  parent_top=? group by a.top_seq,a.top_id order by a.top_seq ,a.top_id",new String[]{id+""},0);		
+		if(rs!=null){				
+			for(int i=0;i<rs.length;i++){
+				if (Integer.parseInt(rs[i][3])>0)
+					hasChild = "1";
+				else
+					hasChild = "0";
+
+				<?<e _id="?>rs[i][0]<?" _hasChild ="?>hasChild<?" icon0="/themes/icon?>rs[i][2]<?" icon1="/themes/icon?>rs[i][2]<?" title="?>rs[i][1]<?"  program="top"  type="view" params="isSystem=y&amp;from=menu&amp;id=?>rs[i][0]<?&amp;portal_id=?>rs[i][4]<?" url="/bin/menu/tree.jcp?level=2&amp;id=?>rs[i][0]<?&amp;parent_app=?>rs[i][0]<?&amp;app_type=top&amp;root=?>root<?"/>?>;
+			}
+		}	
+		rs = conPlat.get("select app_id,app_title,son,app_name,app_path,object_id,portal_id from $[plat].sys_application where parent_app=?  order by app_seq",new String[]{id+""},0);	
+		if(rs!=null){				
+			for(int i=0;i<rs.length;i++){			
+				rrss = conPlat.getRow("select count(*) from $[plat].sys_application where parent_app=?  ",new String[]{rs[i][0]});
+				if (Integer.parseInt(rrss[0])>0)
+					hasChild = "1";
+				else
+					hasChild = "0";
+				if(jacper.getStr("view").equals("create")||user_id<2){
+					<?<e _id="?>rs[i][0]<?" _hasChild ="?>hasChild<?" icon0="/themes/icon/xp/menu.gif" icon1="/themes/icon/xp/menu.gif" title="?>rs[i][1]<?"  program="menu"  type="view" params="app_type=?>app_type<?&amp;portal_id=?>rs[i][6]<?&amp;parent_app=?>rs[i][0]<?" url="/bin/menu/tree.jcp?level=3&amp;id=?>rs[i][0]<?&amp;parent_app=?>rs[i][0]<?&amp;app_type=application&amp;root=?>root<?"/>?>;
+				}
+			}
+		}
+	}else if(level.equals("3")&&app_type.equals("portal")){
+
+		rs = conPlat.get("select top_id,top_title,icon_url,portal_id from $[plat].sys_top where portal_id=? and parent_top='0' order by top_seq ",new String[]{id+""},0);		
+
+		if(rs!=null){				
+			for(int i=0;i<rs.length;i++){
+				rrss = conPlat.getRow("select count(*) from $[plat].sys_application where parent_app=?  ",new String[]{rs[i][0]});
+				String[] rrss1 = conPlat.getRow("select count(*) from $[plat].sys_top where parent_top=?  ",new String[]{rs[i][0]});
+
+				if (Integer.parseInt(rrss[0])+Integer.parseInt(rrss1[0])>0)
+					hasChild = "1";
+				else
+					hasChild = "0";
+
+				<?<e _id="?>rs[i][0]<?" _hasChild ="?>hasChild<?" icon0="/themes/icon?>rs[i][2]<?" icon1="/themes/icon?>rs[i][2]<?" title="?>rs[i][1]<?"  program="top"  type="view" params="isSystem=n&amp;from=menu&amp;id=?>rs[i][0]<?&amp;portal_id=?>rs[i][3]<?" url="/bin/menu/tree.jcp?level=3&amp;id=?>rs[i][0]<?&amp;parent_app=?>rs[i][0]<?&amp;app_type=application&amp;root=?>root<?"/>?>;
+			}
+		}
+	}else if(level.equals("3")&&app_type.equals("application")){
+		rs = conPlat.get("select max(a.top_id),max(a.top_title),max(a.icon_url),count(b.app_id),max(a.portal_id)  from $[plat].sys_top a left outer join $[plat].sys_application b on a.top_id=b.parent_app where  parent_top=? group by a.top_seq,a.top_id order by a.top_seq ,a.top_id",new String[]{id+""},0);		
+		if(rs!=null){				
+			for(int i=0;i<rs.length;i++){
+				if (Integer.parseInt(rs[i][3])>0)
+					hasChild = "1";
+				else
+					hasChild = "0";
+
+				<?<e _id="?>rs[i][0]<?" _hasChild ="?>hasChild<?" icon0="/themes/icon?>rs[i][2]<?" icon1="/themes/icon?>rs[i][2]<?" title="?>rs[i][1]<?"  program="top"  type="view" params="isSystem=y&amp;from=menu&amp;id=?>rs[i][0]<?&amp;portal_id=?>rs[i][4]<?" url="/bin/menu/tree.jcp?level=2&amp;id=?>rs[i][0]<?&amp;parent_app=?>rs[i][0]<?&amp;app_type=top&amp;root=?>root<?"/>?>;
+			}
+		}	
+		rs = conPlat.get("select app_id,app_title,son,app_name,app_path,object_id,portal_id from $[plat].sys_application where parent_app=? order by app_seq",new String[]{id+""},0);	
+		if(rs!=null){				
+			for(int i=0;i<rs.length;i++){			
+				rrss = conPlat.getRow("select count(*) from $[plat].sys_application where parent_app=?  ",new String[]{rs[i][0]});
+				if (Integer.parseInt(rrss[0])>0)
+					hasChild = "1";
+				else
+					hasChild = "0";
+
+				if(jacper.getStr("view").equals("create")||user_id<2){
+					<?<e _id="?>rs[i][0]<?" _hasChild ="?>hasChild<?" icon0="/themes/icon/xp/menu.gif" icon1="/themes/icon/xp/menu.gif" title="?>rs[i][1]<?"  program="menu" type="view" params="app_type=?>app_type<?&amp;portal_id=?>rs[i][6]<?&amp;parent_app=?>rs[i][0]<?" url="/bin/menu/tree.jcp?level=3&amp;id=?>rs[i][0]<?&amp;parent_app=?>rs[i][0]<?&amp;app_type=application&amp;root=?>root<?"/>?>;
+				}
+			}
+		}
+	}else if(level.equals("4")&&app_type.equals("application")){
+		rs = conPlat.get("select app_id,app_title,son,app_name,app_path,object_id,portal_id from $[plat].sys_application where portal_id=? order by app_seq",new String[]{id+""},0);	
+
+		if(rs!=null){				
+			for(int i=0;i<rs.length;i++){			
+				rrss = conPlat.getRow("select count(*) from $[plat].sys_application where parent_app=?  ",new String[]{rs[i][0]});
+				if (Integer.parseInt(rrss[0])>0)
+					hasChild = "1";
+				else
+					hasChild = "0";
+
+				if(jacper.getStr("view").equals("create")||user_id<2){
+					<?<e _id="?>rs[i][0]<?" _hasChild ="?>hasChild<?" icon0="/themes/icon/xp/menu.gif" icon1="/themes/icon/xp/menu.gif" title="?>rs[i][1]<?" program="menu" type="view" params="app_type=?>app_type<?&amp;portal_id=?>rs[i][6]<?&amp;parent_app=?>rs[i][0]<?" url="/bin/menu/tree.jcp?level=3&amp;id=?>rs[i][0]<?&amp;parent_app=?>rs[i][0]<?&amp;app_type=application&amp;root=?>root<?"/>?>;
+				}
+			}
+		}
+	}
+	conPlat.close();
+	<?</forder>?>;
+	<?</root>?>;
+}
+}
+

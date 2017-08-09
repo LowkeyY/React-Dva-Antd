@@ -1,0 +1,39 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<HTML> 
+<HEAD> 
+  <TITLE>GO-Global for UNIX</TITLE>
+
+</HEAD>
+<BODY>
+<CENTER> 
+<IMG SRC="splash.gif" ALT="GraphOn Logo"> 
+</CENTER>
+
+
+<SCRIPT SRC ="globals.js" LANGUAGE="JavaScript">
+<! --
+// -->
+</SCRIPT>
+<SCRIPT LANGUAGE=javascript >
+<!--
+
+
+if ( is_gecko )
+
+    if (  AlreadyInstalled() ) 
+        location.replace("NPviewer.html")
+    else 
+        location.replace("NPinstall.html")
+
+else if ( is_ie4up && is_win32 )
+    location.replace("IPviewer.html")
+else
+    location.replace("PluginList.html")
+
+// -->
+</SCRIPT>
+
+Switching to appropriate page...
+</BODY>
+</HTML>
+

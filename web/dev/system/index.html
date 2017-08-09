@@ -1,0 +1,54 @@
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+<title>职位管理</title>
+<script type="text/javascript">
+document.write(['<style type="text/css">',top.window._STYLES,'</style>'].join('\r'));
+</script>
+<script type="text/javascript">
+window.eval.call(window, top.window._SCRIPTS);
+</script>
+
+<script>using("lib.jsvm.MenuTree");</SCRIPT>
+<tree_store style="behavior:url(#default#userdata);" id="tree_store"/>
+
+<link rel="stylesheet" type="text/css" href="/lib/select/Select.css">
+<script type="text/javascript" src="/lib/select/Select.js"></script>
+<script type="text/javascript" src="/lib/alert/alert.js"></script>
+
+<script type="text/javascript" src="/lib/ListValueField/ListValueField.js"></script>
+<script type="text/javascript" src="/lib/IconPicker/IconPicker.js"></script>
+<link rel="stylesheet" type="text/css" href="/lib/IconPicker/IconPicker.css" />
+<script type="text/javascript" src="/lib/radiogroup/radiogroup.js"></script>
+
+<script type="text/javascript" src="BasePanel.js"></script>
+<script type="text/javascript" src="SystemNavPanel.js"></script>
+<script type="text/javascript" src="PortalPanel.js"></script>
+<script type="text/javascript" src="GroupPanel.js"></script>
+<script type="text/javascript" src="RolePanel.js"></script>
+<script type="text/javascript" src="TopMenuPanel.js"></script>
+<script type="text/javascript" src="ApplicationPanel.js"></script>
+<script type="text/javascript" src="AuthPanel.js"></script>
+<script type="text/javascript">
+  var System={};
+  Ext.onReady(function(){
+		System.mainPanel=new Ext.Panel({
+				id:'systemMain',
+				region:'center',
+				collapsible: false,
+				split:true,
+				layout:'card',
+				margins:'3 3 3 0'
+		});   
+		System.navPanel = new SystemNavPanel();
+		System.Frame=new Ext.Viewport({
+						layout:'border',
+						items:[
+									System.navPanel,System.mainPanel
+						 ]
+		});
+		System.navPanel.init();
+});
+</script>
+</head>
+</html>

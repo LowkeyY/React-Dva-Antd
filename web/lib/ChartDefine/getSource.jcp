@@ -1,0 +1,128 @@
+
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.bi.*;
+import com.kinglib.bi.chart.*;
+import com.kinglib.util.json.*;
+import com.kinglibx.query.*;
+import com.kinglib.workbench.*;
+import com.kinglib.unit.*;
+import com.kinglib.bi.*;
+
+@class{
+	                                    
+public void doPost(Jacper jacper) {
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	String type = jacper.getStr("type");
+	String parent_id = jacper.getStr("parent_id");
+	String object_id = jacper.getStr("object_id");
+
+	jacper.getResponse().setContentType("application/x-json");
+	try{
+
+		JSONObject optionJSON = new JSONObject();
+		String[][] styles=null;
+		if(type.equals("database")){
+			try{
+				JSONArray jarr=new JSONArray();
+				ObjectNode node=ObjectManager.getObject(object_id);
+				for(ObjectNode query:node.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.QUERY)){
+					JSONObject items = new JSONObject();
+					
+					items.put("text",query.getName());
+					items.put("value",query.getId());
+					jarr.put(items);
+				}
+				optionJSON.put("items",jarr);
+			}catch(Exception e){}
+			jacper.print(optionJSON);
+		}else if(type.equals("yvalue")){
+
+			String query_id = jacper.getStr("query_id");
+			styles =conPlat.get("select column_name,order_id from $[plat].app_query_column  where query_id=?",new String[]{query_id});					
+
+            String[] qtitles=new String[styles.length];
+					for(int i=0;i<styles.length;i++){
+						qtitles[i]=styles[i][0];
+					}
+			MetaColumn[] mcsa = getMetaColumns(conPlat, query_id, qtitles);
+			Unit u;
+			String dataUnit="";
+			
+			JSONArray jarr=new JSONArray();
+			try{
+			for(int i=0;i<styles.length;i++){
+				JSONObject items = new JSONObject();
+				items.put("text",styles[i][0]);
+				items.put("value",styles[i][0]);
+				
+				if(mcsa[i]!=null && mcsa[i].getUnit().length()>0){
+				  	u=UnitFactory.getInstance().getUnit(conPlat, mcsa[i].getUnit());
+				    if(u!=null)
+				    	dataUnit=u.getName();
+				    else
+				  		dataUnit="";
+				} 
+				else
+				    dataUnit="";	
+				items.put("dataUnit",dataUnit);
+				jarr.put(items);
+			}
+			
+		//	resultJSON = new JSONObject();
+		//	resultJSON.put("items",jarr);
+		//	extra.put("yvalue",resultJSON);	
+			//---------------------------------------
+/*
+			String query_id = jacper.getStr("query_id");
+			styles =conPlat.get("select column_name,order_id from $[plat].app_query_column  where query_id=?",new String[]{query_id});
+			JSONArray jarr=new JSONArray();
+			try{
+				for(int i=0;i<styles.length;i++){
+					JSONObject items = new JSONObject();
+					items.put("text",styles[i][0]);
+					items.put("value",styles[i][0]);
+					jarr.put(items);
+				}
+				*/
+				optionJSON.put("items",jarr);
+			}catch(Exception e){}
+			<??>optionJSON.toString()<??>;
+		}
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+//get data unit	
+	private MetaColumn[] getMetaColumns(Connection con,String query_id,String[] titles){
+		MetaColumn[] columns=new MetaColumn[titles.length];
+		
+		for(int i=0;i<titles.length;i++){
+			try{
+				String colName=QueryExtend.getFinalItem(con,query_id,titles[i]);
+				if(colName!=null && colName.length()>0){
+					String[] np=colName.split("\\.");
+					MetaTable mt=MetaFactory.getObjectWithFullName(np[0]+"."+np[1]);
+					if(mt!=null){
+						for(MetaColumn mc:mt.getColumns()){
+							if(mc.getPname().toUpperCase().equals(np[2].toUpperCase())){
+								columns[i]=mc;
+							}
+						}
+					}
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+		return columns;
+	}
+}

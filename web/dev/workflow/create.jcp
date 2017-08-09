@@ -1,0 +1,161 @@
+
+import java.io.IOException;
+import com.kinglib.*;
+
+import java.util.*; 
+import com.kinglib.util.json.*;
+import com.kinglib.dictionary.*;
+import com.kinglib.workbench.*;
+
+import com.kinglib.workflow.InvalidWorkflowDescriptorException;
+import com.kinglib.workflow.config.*;
+import com.kinglib.workflow.FactoryException;
+import com.kinglib.workflow.FunctionProvider;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String parent_id = jacper.getStr("parent_id");
+	String type = jacper.getStr("type");
+	
+	Connection conPlat = jacper.getConnection("plat");
+	String WorkflowTypeArray = DictFactory.getInstance().getDict(conPlat,3313).getJavascriptArray();
+
+	jacper.getResponse().setContentType("application/x-json");
+	try{	
+			JSONObject workflowJSON = new JSONObject();
+			String[] rs = conPlat.getRow("select a.workflowlogic_name,a.workflowphy_name,a.save_record,program_init,note from $[plat].workflow_base a where  a.object_id=?",new String[]{parent_id});
+			workflowJSON.put("workflowlogic_name",rs[0]);
+			workflowJSON.put("workflowphy_name",rs[1]);
+			workflowJSON.put("save_record",rs[2]);
+			workflowJSON.put("program_init",rs[3]);
+			workflowJSON.put("note",rs[4]);
+			workflowJSON.put("WorkflowTypeArray",new JSONValue(WorkflowTypeArray));	
+			workflowJSON.put("object_id",parent_id);	
+			ObjectNode node=ObjectManager.getObject(parent_id);
+			if(node!=null){
+				workflowJSON.put("lastModifyTime",node.getLastModifyTime());
+				workflowJSON.put("lastModifyName",node.getLastModifyName());
+			}
+			jacper.print("{success:true,data:"+workflowJSON+"}");
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;   
+
+	String type = jacper.getStr("type");
+	
+	String workflowlogic_name = jacper.getStr("workflowlogic_name");
+	String workflowphy_name = jacper.getStr("workflowphy_name");
+	String note = jacper.getStr("note");
+
+	String parent_id = jacper.getStr("parent_id");
+	String save_record = jacper.getStr("save_record");
+	String program_init = jacper.getStr("program_init");
+	jacper.getResponse().setContentType("application/x-json");
+
+	ObjectManager OM=ObjectManager.getInstance();
+
+	if(type.equals("save")){
+		try{	
+			conPlat.setAutoCommit(false);	
+			String object_id="";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+
+			ObjectNode applicationNode=OM.getObject(parent_id);
+			applicationNode.addChild(conPlat,object_id,workflowlogic_name,ObjectType.WORKFLOW,user_id);		
+			conPlat.exec("INSERT INTO $[plat].workflow_base (workflowlogic_name, workflowphy_name, object_id,save_record,program_init,note) VALUES (?,?,?,?,?,?)",new String[]{workflowlogic_name,workflowphy_name,object_id+"",save_record,program_init,note});
+			conPlat.commit();
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.close();
+				conPlat.setAutoCommit(true);
+			}catch(Exception e2) {}
+		}
+	}else if(type.equals("updatesave")){
+		try{	
+			conPlat.setAutoCommit(false);	
+			ObjectNode workflowNode=OM.getObject(parent_id);
+			workflowNode.updateName(conPlat,workflowlogic_name);
+			conPlat.exec("UPDATE $[plat].workflow_base SET workflowlogic_name=?,workflowphy_name=?,save_record=?,program_init=? WHERE object_id=?",new String[]{workflowlogic_name,workflowphy_name,save_record,program_init,parent_id+""});
+			removeConfiguration(conPlat,parent_id);
+			conPlat.commit();
+			<?{success:true,id:'?>parent_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.close();
+				conPlat.setAutoCommit(true);
+			}catch(Exception e2) {}
+		}
+	}else if(type.equals("delete")){
+			try{	
+				conPlat.setAutoCommit(false);	
+				ObjectNode workflowNode=OM.getObject(parent_id);
+				workflowNode.destroy(conPlat);
+				conPlat.commit();
+				<?{success:true}?>;
+			}catch(Exception e){
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+	}
+}
+private void removeConfiguration(Connection conPlat,String parentId){
+		String[][] wfInstance = conPlat.get("select b.instance_id from $[plat].workflow_base a,$[plat].workflow_instance b where a.object_id=b.workflowid and  a.object_id=?",new String[]{parentId},0);
+		for(int i=0;i<wfInstance.length;i++){
+			try {
+				getConfiguration().removeWorkflow(wfInstance[i][0]);
+			} catch (FactoryException e) {}
+		}
+}
+private Configuration getConfiguration(){
+	Configuration config = DefaultConfiguration.INSTANCE;
+	if (!config.isInitialized()) {
+		try {
+			config.load();
+		} catch (FactoryException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	return config;
+}
+}
+
+

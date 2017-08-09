@@ -1,0 +1,230 @@
+import java.util.HashSet;
+import java.util.ArrayList;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.io.*;
+import com.kinglib.util.*;
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.database.DataType;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.Constraint;
+import com.kinglib.database.MetaTable;
+import com.kinglib.database.Constraint;
+import com.kinglib.database.ConstraintType;
+import com.kinglib.database.SpecialSet;
+import com.kinglib.ui.core.utils.CtrlType;
+import com.kinglib.ui.core.utils.CtrlTypeDivider;
+import com.kinglib.ui.core.utils.CtrlEvent;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONValue;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+import com.kinglib.workbench.program.ProgramFactory;
+import com.kinglib.workbench.program.Program;
+import com.kinglib.workbench.widget.WidgetFactory;
+import com.kinglib.workbench.widget.Widget;
+import com.kinglib.ui.core.CustomizeFactory;
+import com.kinglib.workbench.quality.*;
+import com.kinglib.dictionary.*;
+import com.kinglib.bi.*;
+
+@class{
+
+	public void doDelete(Jacper jacper){
+			Param param=new Param(jacper);
+			String quality_id=param.getStr("objectId");
+			Connection conPlat = param.getConnection("plat");
+			conPlat.exec("delete from $[plat].quality_rule where quality_id = ?",new String[]{quality_id});
+			try{			
+				jacper.print("{success:true}");
+			}catch(Exception e){
+				jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+			}finally{
+				conPlat.close();
+			}
+	}
+
+	public void doGet(Jacper jacper) {
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String quality_id = jacper.getStr("object_id");
+		Connection conPlat = jacper.getConnection("plat"); 
+		String[] tempArr = conPlat.getRow("select tab_id from quality_base where object_id =?",new String[]{quality_id});
+		String tabId = tempArr[0];
+		String[][] rows = conPlat.get("select COL_ID,MAX_VALUE,MIN_VALUE,$date_str(MAX_DATE,111),$date_str(MIN_DATE,111),IS_NULL,NOTE_TIP,REGEX_PATTERN,error_type,range_error_level,format_error_level from $[plat].quality_rule where quality_id=?",new String[]{quality_id});;
+		boolean isNew = rows.length == 0;
+		MetaTable mt = MetaFactory.getObject(tabId);
+		if(mt==null){
+			jacper.print("{success:false,message:'系统未找到表'"+tabId+"}");
+			return;
+		}
+		try {
+			Dict typeDict = DictFactory.getInstance().getDict(conPlat,"8");
+			String typeArray = typeDict.getJavascriptArray();
+			MetaColumn col = null;
+			String[] r = null;
+			JSONArray jarr = new JSONArray();
+			HashSet<MetaColumn> shown = new HashSet<MetaColumn>(rows.length);
+
+			int i = rows.length;
+			MetaColumn[] cols=mt.getColumnArray();
+			if(isNew){
+				for (MetaColumn c : cols) { 
+					if (!shown.contains(c)) {
+						r = new String[] { String.valueOf(c.getId()), String.valueOf(c.getLength()),"0",String.valueOf(c.getLength()),"0","","","","1","1","1"};
+						rowOptimize(jacper,c,r);
+						jarr.put(this.getJSONObject(c, r, typeArray));
+					}
+				}
+			}else{
+				for (String[] row : rows) {
+					col = MetaFactory.getColumn(tabId,row[0]);
+					if(col==null) continue;
+					shown.add(col);
+					jarr.put(this.getJSONObject(col, row,typeArray));
+					
+				}
+			}
+			JSONObject ret = new JSONObject("{success:true}");
+			ret.put("items", jarr);
+			jacper.print(ret.toString());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+
+	public void doPost(Jacper jacper) {
+		Connection conPlat = jacper.getConnection("plat");
+		String quality_id = jacper.getStr("object_id");
+		String fields = jacper.getStr("fields");
+		String maxValue="",minValue="",minDate="",maxDate="",dataType="";
+		
+		QualityFactory  QF=QualityFactory.getInstance();
+
+		if (fields.equals(""))
+			return;
+		try {
+			conPlat.setAutoCommit(false);
+			QF.remove(quality_id);
+			JSONArray jarr = new JSONArray(fields); 
+			conPlat.exec("delete from $[plat].quality_rule where quality_id = ?",new String[]{quality_id});
+			conPlat.commit();
+			for (int i = 0; i < jarr.length(); i++) {
+				JSONObject js = jarr.getJSONObject(i);
+				dataType = js.getString("data_type");
+				if(dataType.equals("date")){
+					maxValue = "null";
+					minValue = "null";
+					maxDate = "str_date('"+js.getString("max_value")+"',111)";
+					minDate = "str_date('"+js.getString("min_value")+"',111)";
+				}else{
+					maxValue = js.getString("max_value");
+					minValue = js.getString("min_value");
+					if(maxValue.equals(""))
+						maxValue = "null";
+					if(minValue.equals(""))
+						minValue = "null";
+					maxDate = "null";
+					minDate = "null";
+				}
+				
+				conPlat.exec("insert into $[plat].quality_rule (QUALITY_ID,COL_ID,MAX_VALUE,MIN_VALUE,MAX_DATE,MIN_DATE,IS_NULL,NOTE_TIP,REGEX_PATTERN,error_type,range_error_level,format_error_level) values ('"+quality_id+"','"+js.getString("col_id")+"',"+maxValue+","+minValue+","+maxDate+","+minDate+",'"+js.getString("is_null")+"','"+js.getString("note_tip")+"','"+js.getString("regex_pattern")+"','"+js.getString("error_type")+"','"+js.getString("range_error_level")+"','"+js.getString("format_error_level")+"')",new String[] {});
+
+			}
+			conPlat.commit();
+		} catch (Exception e) {
+			try {
+				conPlat.rollback();
+			} catch (Exception ecc) {
+			}
+			e.printStackTrace();
+		} finally {
+			try {
+				conPlat.setAutoCommit(true);
+			} catch (Exception ecc) {
+			}
+			conPlat.close();
+			
+		}
+		jacper.print("{success:true}");
+	}
+
+	public String digitModel = "999999999999999999999999999999999";// 38位
+	public String zeroModel = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";// 128位
+
+	public String[] rowOptimize(Jacper jacper,MetaColumn c, String[] r) throws Exception {
+		int len = c.getLength();
+		DataType type=c.getDataType();
+		if(type==DataType.INT){
+			len = (len == 0) ? 8 : Math.min(len, digitModel.length());
+			r[1] = digitModel.substring(0, len);
+			if(r[2].equals("0")) r[2]="0";
+		}else if(type==DataType.FLOAT){
+			len = (len == 0) ? 10 : Math.min(len, digitModel.length());
+			int dec = c.getDecimalDigits();
+			dec = (dec == 0) ? 2 : Math.min(dec, zeroModel.length());
+			if(len>dec){
+				r[1] =digitModel.substring(0, len-dec)+"."+digitModel.substring(0, dec);
+			}else{
+				r[1] ="0."+zeroModel.substring(0, dec-len)+digitModel.substring(0, len);
+			}
+			if(r[2].equals("0")) r[2]="0";
+		}else if(type==DataType.DATE){
+			r[3]="2100/12/31";
+			r[4]="1900/01/01";
+		}else if(type==DataType.CLOB || type==DataType.GEOMETRY){
+			if(r[1].equals("16") || r[1].equals("0")) r[1]="";
+		}else if(type==DataType.BLOB){
+			if(r[1].equals("16") || r[1].equals("0")) r[1]="";
+		}
+		return r;
+	}
+
+	public JSONObject getJSONObject(MetaColumn c, String[] col,String typeArray) throws JSONException {
+		DataType type=c.getDataType();
+		String strIsNull = "";
+		String textIsNull = "";
+		String maxValue,minValue;
+		if(col[5].equals("")){
+			strIsNull = String.valueOf(c.isNotNull());
+
+		}else{
+			strIsNull = col[5];
+			textIsNull = col[10];
+		}
+		if(type==DataType.DATE){
+			maxValue = col[3];
+			minValue = col[4];
+		}else{
+			maxValue = col[1];
+			minValue = col[2];
+		}
+		JSONObject jo = new JSONObject();
+		jo.put("col_id", col[0]);
+		jo.put("title", c.getLname());
+		jo.put("is_null", strIsNull);
+		jo.put("max_value", maxValue);
+		jo.put("min_value", minValue);
+		jo.put("data_type", type.toString());
+		jo.put("data_type_value", type.getValue());
+		jo.put("flength", c.getLength());
+		jo.put("special_set", c.getSpecialSet().getValue());	
+		jo.put("note_tip", col[6]);
+		jo.put("regex_pattern", col[7]);
+		jo.put("error_type", col[8]);
+		jo.put("range_error_level", col[9]);
+		jo.put("format_error_level", col[10]);
+		//jo.put("is_null_text", textIsNull);
+		jo.put("typeArray", typeArray);
+		return jo;
+	}
+}

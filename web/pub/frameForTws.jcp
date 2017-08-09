@@ -1,0 +1,389 @@
+
+
+import com.kinglib.*;
+import com.kinglib.ui.tree.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.workbench.*;
+
+import java.sql.SQLException;
+import java.util.Properties;
+import javax.servlet.http.*;
+import com.kinglib.Jacper;
+import com.susing.*;
+import com.susing.core.*;
+import com.kinglib.util.*;
+import com.kinglib.util.json.*;
+import com.social.api.core.model.*;
+
+
+import org.apache.axis.encoding.XMLType;
+import javax.xml.rpc.ParameterMode;
+import  org.apache.axis.client.Call;
+import  org.apache.axis.client.Service;
+import  javax.xml.namespace.QName;
+import  javax.xml.rpc.ServiceException;
+import  java.net.MalformedURLException;  
+import  java.rmi.RemoteException;
+
+@class{
+	public void doGet(Jacper jacper){	
+		boolean notLogin = jacper.setSession();  
+		if(notLogin){
+			String[][] result=new String[1][1];
+			KingleServletRequest request = jacper.getRequest();
+			KingleServletResponse response = jacper.getResponse();  
+			javax.servlet.http.HttpSession session = request.getSession();
+			String sessionID=request.getParameter("SessionID");
+			String email = "";
+
+			try{
+				String  url  ="http://10.76.19.138/A2Extension/Security/LoginService.asmx";  
+				Service  service  =  new  Service();  
+				Call  call  =  (Call)  service.createCall();  
+				call.setTargetEndpointAddress(new java.net.URL(url)); 
+                call.setProperty(Call.SOAPACTION_USE_PROPERTY, new Boolean(true)); 
+				call.addParameter(new QName(url,"strSessionID"), XMLType.XSD_STRING, ParameterMode.IN);
+				call.setReturnType(org.apache.axis.Constants.XSD_STRING);
+				call.setUseSOAPAction(true); 
+				call.setOperationName(new QName("http://10.76.19.138/A2Extension/Security/LoginService.asmx","GetAD")); 
+				email = (String) call.invoke(new Object[] {sessionID});
+             }catch(Exception  ex){  
+					  ex.printStackTrace();  
+             };
+
+			boolean loginSucess=false;
+
+			if("root".equals(email)||"super".equals(email)){
+				<?<script>alert('?>jacper.trans("不允许超级用户直接访问")<?')</script>?>;
+			}else{
+				CertManager cc=CertManager.getInstance();
+				String userId=cc.findUserIdByName(email);
+				if(userId==null){
+					<?<script>alert('?>jacper.trans("登陆名")+"/"+jacper.trans("Email或密码错误")<?')</script>?>;
+					return;
+				}else{
+					User user=cc.getUser(userId);
+					result[0][0]=userId;
+					loginSucess=true;
+				}
+			}  
+			session.invalidate();
+			String usrId = result[0][0];
+			request.createSession(usrId,-1);//.setMaxInactiveInterval(100000000);
+			request.getSession().setAttribute("user_name",email);
+
+			notLogin = jacper.setSession();  
+		}
+		com.kinglib.HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+		String id = jacper.getStr("id");
+
+		<?<html  xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml">
+		<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>?>jacper.trans("大港油田数字油田")<?</title>
+		<tree_store style="behavior:url(#default#userdata);" id="tree_store"></tree_store>
+		<link rel="stylesheet" type="text/css" href="/Ext/resources/css/ext-all.css"/>
+		<link rel="stylesheet" type="text/css" href="/home/resources/css/desktop.css"/>
+		<link rel="stylesheet" type="text/css" href="/lib/jsvm/jsvm.css"/>
+		<script type="text/javascript" src="/Ext/ext-base.js"></script>
+		<script type="text/javascript" src="/Ext/ext-all.js"></script>
+		<script type="text/javascript" src='/home/FixExt.jss'></script>
+		<script type="text/javascript" src="/pub/systemForFrame.js"></script>
+		<script type="text/javascript" src="/Ext/locale/zh_CN.js"></script>
+		<script type="text/javascript" src="/lib/swfobject/swfobject.js"></script>
+		<script type="text/javascript" src="/lib/chart/js/AnyChart.js"></script>
+		<script type="text/javascript" src="/bin/exe/CPM.jss"></script>
+		<script type="text/javascript">
+		Ext.QuickTips.init();
+
+		var WorkBench = {};
+		WorkBench.Desk = {
+		  getDesktop:function(){
+		     return {showNotification:function(){}}
+		  }
+		}
+		WorkBench.baseNode=function(){
+			this.frames=new Ext.ux.FrameParams();
+		};
+		Ext.onReady(function(){
+			if(swfobject.getFlashPlayerVersion().major==0){
+				Ext.msg(
+					"confirm",
+					"&nbsp;&nbsp;&nbsp;&nbsp;?>jacper.trans("您的浏览器尚未安装Adobe Flash Player,这可能会影响您无法正常使用系统.")<?<br>?>jacper.trans("您需要现在安装Adobe Flash Player吗?")<?",
+					{
+						fn:function(id){
+							if(id=='yes'){
+								var div=Ext.getBody().createChild({
+									tag: "div",
+									style:"display:none;"
+								});
+								div.dom.innerHTML='<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" codebase="http://fpdownload.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=7,0,0,0" width="0" height="0" align="middle"> <param name="allowScriptAccess" value="sameDomain" /> <param name="movie" value="/lib/swfobject/expressInstall.swf" /> <param name="quality" value="high" /> <param name="bgcolor" value="#ffffff" /> <embed src="/lib/swfobject/expressInstall.swf" quality="high" bgcolor="#ffffff" width="0" height="0" name="mymovie" align="middle" allowScriptAccess="sameDomain" type="application/x-shockwave-flash" pluginspage="http://www.adobe.com/go/getflashplayer" /> </object>';
+							}
+						}
+					}
+				);
+			}else if(swfobject.getFlashPlayerVersion().major<9){
+				var div=Ext.getBody().createChild({
+							tag: "div",
+							style:"display:none;"
+						});
+				swfobject.showExpressInstall({data:"/lib/swfobject/expressInstall.swf"},{},div.id);
+			}
+		});
+		Ext.ux.FrameParams=function(){
+			this.params={};
+			this.win=null;
+			this.bindWin=function(win){
+				this.win=win;
+				win.on("destroy",function(){
+					delete(this.params);
+					delete(this.win);
+				},this);
+			}
+		}
+		Ext.ux.FrameParams.prototype={
+			createPanel:function(name,obj){
+				if(typeof(name)=='object'){
+					obj=name;
+					name=obj.id||obj.name;
+				}else if(typeof(obj)!='undefined'){
+					if(typeof(obj)=='function')
+						obj=new obj();
+				}else{
+					throw "?>jacper.trans("参数传递错误")<?";
+				}
+				this.set(name,obj);
+				obj.frames=this;
+				return obj;
+			},
+			set:function(key,value){
+				this.params[key]=value;
+			},
+			get:function(key){
+				return this.params[key];
+			},
+			remove:function(key){
+				delete(this.params[key]);
+			},
+			containsKey:function(key){
+				return typeof(this.params[key])!='undefined';
+			}
+		};
+		</script>
+	   </head>
+	   <script type="text/javascript">
+	      Ext.namespace("bin.exe");
+		  function getSubMenu(subMenuArray,windowId,MainFramePanel){
+			 var subMenu = new Ext.menu.Menu();
+			 if(subMenuArray){
+				var subMenuLength=subMenuArray.length;
+				for(var i=0;i<subMenuLength;i++){
+					var subMenuItem = subMenuArray[i];
+					var app_id=subMenuItem.id;
+					var app_title=subMenuItem.title;
+					var app_name=subMenuItem.path;
+					var object_id=subMenuItem.object_id;
+					var icon_url=subMenuItem.icon;
+					var isIFrame=subMenuItem.isIFrame;
+					var sub_menu=subMenuItem.submenu;	
+					var submenu=null;
+					if(sub_menu)
+						submenu=getSubMenu(sub_menu,windowId,MainFramePanel);
+					var iconUrl=null;
+					if (icon_url!='') iconUrl='/themes/icon/'+icon_url;
+					var subMenuItem=new Ext.menu.Item({
+						id:app_id,
+						text:app_title,
+						icon:iconUrl,
+						parent_id:object_id,
+						disabled:false,
+						hidden : false,
+						windowsId : windowId,
+						scope: this,
+						isIFrame:isIFrame,
+						menu:submenu,
+						hideOnClick:(submenu==null),
+						handler: function(btn){
+							if(btn.menu)
+								return false;
+							CPM.get({
+								method: 'GET',    
+								url:'/bin/exe/getFrame.jcp?parent_id='+btn.parent_id,
+								success:function(response,options){
+									var moduleJson=Ext.decode(response.responseText);
+									var cn=MainFramePanel.getComponent(0);
+									if(typeof(cn!=undefined)){
+										try{
+											MainFramePanel.remove(cn);
+										}catch(e){}
+									}
+									MainFramePanel.add(new Ext.Panel({
+										layout:'border',
+										border:false,
+										items:CPM.Frame.getFrame(moduleJson)
+									}));
+									MainFramePanel.doLayout();
+								}
+							
+							},true);
+						}
+					});
+					subMenu.addItem(subMenuItem);
+				}
+			 }
+			return subMenu;
+		}
+		 CPM.get({
+				method: 'GET',    
+				url:'/pub/getAllmenu.jcp?id=?>id<?',
+				success:function(response,options){
+				   var moduleJson=Ext.decode(response.responseText);
+				   var processModule=null;
+				   var mainParams={};
+				   using("bin.exe.NavPanel");
+				   if(moduleJson.topMenu.isIFrame!='true'){
+						var lib=moduleJson.topMenu.path;
+						var paramArray=lib.split('?');
+						lib=paramArray[0];
+						if(paramArray.length>1){
+							var paramString=paramArray[1].split('&');
+							for(var i=0;i<paramString.length;i++){
+								mainParams[paramString[i].split('=')[0]]=paramString[i].split('=')[1];
+							}	
+						}
+				    }
+					var pageMenuItemArray=moduleJson.pageMenu[0].menu;
+					var ButtonArray=[];
+
+					var MainFramePanel=new Ext.Panel({
+						layout: 'fit',
+						border:false
+				    });
+
+					if(pageMenuItemArray.length>0){
+						for(var i=0;i<pageMenuItemArray.length;i++){
+							var pageMenuItem = pageMenuItemArray[i];
+							var app_id=pageMenuItem.id;
+							var app_title=pageMenuItem.title;
+							var app_name=pageMenuItem.path;
+							var object_id=pageMenuItem.object_id;
+							var icon_url=pageMenuItem.icon;
+							var isIFrame=pageMenuItem.isIframe;
+
+							var subMenuArray=pageMenuItem.submenu;	
+							var subPageMenu=null;
+							if(i!=0){ 
+								ButtonArray.push(new Ext.Toolbar.Spacer());
+								ButtonArray.push(new Ext.Toolbar.Spacer());
+								ButtonArray.push(new Ext.Toolbar.Spacer());
+								ButtonArray.push(new Ext.Toolbar.Spacer());
+							}
+							
+							if(pageMenuItem.submenu){
+								subPageMenu=getSubMenu(subMenuArray,app_id,MainFramePanel);
+								ButtonArray.push(new Ext.Toolbar.Button({
+										id:app_id,
+										text: app_title,
+										cls: 'x-btn-text  bmenu',
+										disabled:false,
+										hidden : false,
+										scope: this,
+										app_name:app_name,
+										menu:subPageMenu
+								}));
+							}else{
+								if(pageMenuItem.path=='bin.exe.Frame'&&object_id){
+									ButtonArray.push(new Ext.Toolbar.Button({
+											id:app_id,
+											text: app_title,
+											cls: 'x-btn-text  bmenu',
+											disabled:false,
+											hidden : false,
+											scope: this,
+											parent_id:object_id,
+											isIFrame:isIFrame,
+											app_name:app_name,
+											handler:  function(btn){
+												if(btn.menu)
+													return false;
+												CPM.get({
+													method: 'GET',    
+													url:'/bin/exe/getFrame.jcp?parent_id='+btn.parent_id,
+													success:function(response,options){
+														var moduleJson=Ext.decode(response.responseText);
+														var cn=MainFramePanel.getComponent(0);
+														if(typeof(cn!=undefined)){
+															try{
+																MainFramePanel.remove(cn);
+															}catch(e){}
+														}
+														MainFramePanel.add(new Ext.Panel({
+															layout:'border',
+															border:false,
+															items:CPM.Frame.getFrame(moduleJson)
+														}));
+														MainFramePanel.doLayout();
+													}
+												
+												},true);
+											}
+									}));	
+								}else{
+									ButtonArray.push(new Ext.Toolbar.Button({
+											id:app_id,
+											text: app_title,
+											cls: 'x-btn-text  bmenu',
+											disabled:false,
+											hidden : false,
+											scope: this,
+											parent_id:object_id,
+											isIFrame:isIFrame,
+											app_name:app_name,
+											handler: this.menuClick
+									}));
+								}        
+							}
+						}
+					}
+			 	   var MainPanel=new Ext.Viewport({
+						 layout:'fit',
+						 border:true,
+						 frame:true,
+						 renderTo: 'mainFrame',
+						 tbar:ButtonArray,
+						 items:new Ext.Panel({
+								layout: 'fit',
+								border:false,
+								tbar:ButtonArray,
+								items:MainFramePanel
+						})
+				   });
+				  CPM.get({
+						method: 'GET',    
+						url:'/bin/exe/getFrame.jcp',
+						params : mainParams,
+						success:function(response,options){
+							var moduleJson=Ext.decode(response.responseText);
+							if(moduleJson.panels.length<1){
+								Ext.msg("error","?>jacper.trans("顶层导航或本模块主程序设置错误")<?");
+								return;
+							}
+							MainFramePanel.add(new Ext.Panel({
+								layout:'border',
+								border:false,
+								items:CPM.Frame.getFrame(moduleJson)
+							}));
+						//	MainFramePanel.doLayout();
+						}
+				},true);
+				}
+		},true);
+		</script>
+		<body><div id="mainFrame">
+		</div></body>
+		</html>?>;
+	}
+}
+

@@ -1,0 +1,24 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.bi.*;
+import java.io.*;
+import org.w3c.dom.*;
+import com.susing.core.*;
+
+@class{ 
+  public void doPost(Jacper jacper){
+    try{
+	
+      String filePath = jacper.getStr("filePath");
+	
+      File file = new File(filePath); 
+      file.delete();
+      <?{success:true}?>;
+    }catch(Exception e){
+      e.printStackTrace();
+      <?{success:false,message:"?>e.toString()<?"}?>;
+    }
+  }
+}

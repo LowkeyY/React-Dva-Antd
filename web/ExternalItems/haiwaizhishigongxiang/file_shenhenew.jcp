@@ -1,0 +1,61 @@
+import com.kinglib.*;
+import com.kinglib.ums.SendMail;
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.HWUnits.HWSpaceConfig;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import gpra.filesystem.HWUnits;
+@class{
+	public void doPost(Jacper jacper) {
+		try {
+			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");// 可以方便地修改日期格式
+			Connection conDocmgr = jacper.getConnection(HWUnits.HW_DBLINK);
+			String fileid = jacper.getString("fileid", "");
+			String yijian = jacper.getString("yijian", "");
+			HttpSession hs = jacper.getSession();
+
+			String userId = hs.uid + "";
+
+			String rs[][] = conDocmgr.get("select  FILE_AUDIT from DIR_DATUM_FILE_REVIEWED  where file_id='" + fileid + "'");
+			if (rs != null && rs.length != 0 && !rs[0][0].equals("0")) {
+				jacper.print("{success:false,message:'此文件的审核工作，已由其他审核人员处理完毕。'}");
+				return;
+			}
+
+			conDocmgr.exec("update DIR_DATUM_FILE_REVIEWED set FILE_AUDIT='3',FILE_INPUT_USER='"+ userId+ "',AUDIT_date=sysdate,AUDIT_MSG='"+ yijian + "' where file_id='" + fileid + "'");
+			
+			conDocmgr.exec("update dir_file_base set att_128='3' where file_id='" + fileid + "'");
+			
+
+			String[][] pushs = conDocmgr.get(
+					"select p.file_id , f.file_info_name, p.select_space, p.file_from_space ,p.push_userer from DIR_PUSH_MOVE p left outer join DIR_FILE_BASE f on p.file_id = f.file_id where p.file_id = ?"
+					, new String[]{fileid});
+			if(pushs != null && pushs.length > 0){
+				String mails = "";
+				if((mails = HWUnits.getUserEmail(pushs[0][4])).length() > 0)
+					HWUnits.sendMails(HWSpaceConfig.PUSH_FAILURE , mails , HWUnits.getSapceNameById(pushs[0][3]) , pushs[0][1] , HWUnits.getSapceNameById(pushs[0][2]) , dateFormat.format(new Date()));
+				jacper.print("{success:true}");
+				return;
+			}
+			
+			String users[][]=conDocmgr.get("select FILE_UPLOADER,FILE_INFO_NAME from DIR_FILE_BASE where file_id='"+fileid+"'");
+		String fileName=users[0][1];
+		String userid=users[0][0];
+
+			User user = CertManager.getUser(userid);
+			User userb = CertManager.getUser(userId);
+			String email = user.getEmail();
+			if (email != null && !email.equals("")) {
+				HWUnits.sendMails(HWSpaceConfig.SHENHE_FAILURE , email , fileName , yijian , userb.getRealName() , dateFormat.format(new Date()));
+			}
+			jacper.print("{success:true}");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+}

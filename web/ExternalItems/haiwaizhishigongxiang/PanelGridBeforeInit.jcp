@@ -1,0 +1,62 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.UserData;
+import com.kinglib.util.json.JSONPart;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.HWUserAuthUnit;
+import gpra.filesystem.search.SearchUnits.SearchSessions;
+//public class PanelGridBeforeInit{
+@class{
+	public void doPost(Jacper jacper) {
+		String fileId = jacper.getStr("file_id");
+		HttpSession hs = jacper.getSession();
+		String userId = String.valueOf(hs.uid);
+		Connection con = jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			JSONPart jp = new JSONPart().join("success", true).join("rep_collapsed", !HWUnits.isGuestUser(String.valueOf(hs.uid)) && "true".equals(UserData.get(String.valueOf(hs.uid) , SearchSessions.REPUSERSELF.name() , SearchSessions.REP_collapsed.name())));
+			if(HWUnits.isGuestUser(String.valueOf(hs.uid)))
+				jp.join("rep_guestuser" , true);
+			long begin = System.currentTimeMillis();
+			String[] row = HWUserAuthUnit.getAllowOptFilePath(con , fileId , userId);
+			System.out.println("权限耗时："+(System.currentTimeMillis() - begin)+"ms。");
+			// 0 跳转至申请，1 跳转至下载 ， 2 跳转至预览 , 3 已申请 审批中 , 4 已申请 审批未通过 5 文件错误 返回错误信息
+			if (row != null && row.length > 0) {
+				if(row.length == 1){
+					jp.join("showType", 5);
+					jp.join("message", row[0]);
+					jacper.print(jp.toString());
+					return;
+				}
+				String fileType = row.length >= 8 ? row[7].toLowerCase().trim() : "";
+				boolean directlyPreview = fileType.length() > 0 && fileType.matches("^(pdf|jpg|png|gif|bmp|tiff|jpeg|tga|mp4|mp3)$");
+				boolean preview = (row[0] != null && row[0].length() > 0);
+				if (preview || directlyPreview)
+					jp.join("previewPath", (directlyPreview ? row[1] : row[0]).replace("\\", "\\\\"));
+				jp.join("fileType", directlyPreview ? "."+fileType : "");
+				jp.join("isLocal", directlyPreview);
+				jp.join("showType", !(preview || directlyPreview) ? 1 : 2);
+				jacper.print(jp.toString());
+				return;
+			}
+			if(HWUnits.isGuestUser(userId)){
+				jp.join("showType", 6);
+				jp.join("message", "该资料属于处室内部共享，请登陆后查看。");
+				jacper.print(jp.toString());
+				return;
+			}
+			String[] userApply = con.getRow("select a.apply_status from DIR_APPLY_BASIC a where a.apply_status != ? and a.file_id = ? and a.apply_user = ?",
+							new String[] { "1", fileId, userId});
+			if(userApply !=null && userApply.length > 0)
+				jp.join("showType", userApply[0].equals("0") ? 3 : 4);
+			else
+				jp.join("showType", 0);
+			jacper.print(jp.toString());
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			con.close();
+		}
+	}
+}

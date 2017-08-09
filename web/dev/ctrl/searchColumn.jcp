@@ -1,0 +1,136 @@
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.Iterator;
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.SQLUtils;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.util.json.JSONValue;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.program.*;
+import com.kinglib.workbench.widget.WidgetFactory;
+import com.kinglib.workbench.widget.Widget;
+
+@class{
+	public void doGet(Jacper jacper) {
+		Connection conPlat = jacper.getConnection("plat");
+		String object_id = jacper.getString("object_id", "-1");
+		if (object_id.equals("-1"))
+			return;
+		
+		Program prg =ProgramFactory.getInstance().getProgram(conPlat,object_id);
+		String tab_id=prg.getTabId();
+		MetaTable mt = MetaFactory.getObject(tab_id);
+		if (mt == null) {
+			jacper.print("{success:false,message:'"+jacper.trans("系统中没有注册此表.")+"'}");
+			return;
+		}
+		String type=jacper.getStr("type");
+		if(type.equals("widget")){
+			String itemId=jacper.getStr("itemId");
+			MetaColumn col=mt.getColumn(itemId);
+			JSONObject form = null;
+			JSONObject js = null;
+			try{
+				form = new JSONObject("{success:true}");
+				JSONArray jarr = getWidgetType(jacper,conPlat,col);
+				form.put("dataItem", jarr);
+				form.put("totalCount", jarr.length());
+				jacper.print(form.toString());
+			} catch (Exception e) {
+			}finally{
+				conPlat.close();
+			}
+		}else{
+			JSONObject form = null;
+			JSONObject js = null;
+			try{
+				form = new JSONObject("{success:true}");
+				JSONArray jarr = new JSONArray();
+				for (MetaColumn col : mt.getColumns()) {
+					js = new JSONObject();
+					js.put("id", col.getId());
+					js.put("lname", col.getLname());
+					jarr.put(js);
+				}
+				form.put("dataItem", jarr);
+				form.put("totalCount", jarr.length());
+				jacper.print(form.toString());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}finally{
+				conPlat.close();
+			}
+		}
+	}
+	public void doPost(Jacper jacper) {
+		String object_id=jacper.getString("object_id","-1");
+		if(object_id.equals("-1")) return;
+		
+		Connection conPlat = jacper.getConnection("plat");
+		Program prg =ProgramFactory.getInstance().getProgram(conPlat,object_id);
+		String tab_id=prg.getTabId();
+
+		String[][] rss = conPlat.get("select search_item,tab_id,search_title,default_value,widget_id from $[plat].ctrl_search where module_id=? order by index_id",new String[]{object_id+""},0);
+
+		MetaTable mt=MetaFactory.getObject(tab_id);
+		
+		JSONObject form=null;
+		try{
+			form= new JSONObject("{success:true}");
+			JSONArray jarr=new JSONArray();
+			for (int i = 0; i < rss.length; i++) {
+				JSONObject js = new JSONObject("{}");
+				js.put("tab_id", rss[i][1]);
+				js.put("item_id", rss[i][0]);
+				MetaColumn c=mt.getColumn(rss[i][0]);
+				js.put("item_text", c.getLname());
+				js.put("search_title", rss[i][2]);
+				js.put("default_value", rss[i][3]);
+				if (!rss[i][4].equals("")){
+					js.put("widget_id", rss[i][4]);
+					Widget wid= WidgetFactory.getWidget(conPlat,rss[i][4]);
+					js.put("widget_text", wid.getWidgetlogicName());
+				}else{
+					js.put("widget_id", "");
+					js.put("widget_text", "");
+				}
+				jarr.put(js);
+			}	
+			form.put("dataItem",jarr);
+			form.put("totalCount",jarr.length());
+			jacper.print(form.toString());
+		}catch(Exception e){
+			e.printStackTrace(); 
+		}finally{
+			conPlat.close();
+		}
+	}
+	public JSONArray getWidgetType(Jacper jacper,Connection conPlat,MetaColumn column)throws Exception{
+			JSONArray ctrlJS =new JSONArray();
+			String rss[][] = null;
+			if(column.hasForeignKey()){
+				rss=conPlat.get("select object_id,widgetlogic_name from $[plat].widget_base where tab1_id in (select link_table from $[plat].meta_constraint where object_id=? and (constraint_type='F' or constraint_type='R')) ",new String[]{String.valueOf(column.getObjectId())});
+				JSONObject js = new JSONObject();
+				js.put("id","0");
+				js.put("lname", jacper.trans("无"));
+				ctrlJS.put(js);
+				for(int k=0;k<rss.length;k++){
+					js = new JSONObject();
+					js.put("id",String.valueOf(rss[k][0]));
+					js.put("lname",rss[k][1]);
+					ctrlJS.put(js);
+				}
+			}
+			return ctrlJS;
+	}
+}

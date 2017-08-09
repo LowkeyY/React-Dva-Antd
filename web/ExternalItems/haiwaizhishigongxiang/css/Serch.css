@@ -1,0 +1,18 @@
+.gxjlmain{width:1610px;height:500px; margin:0 auto;}
+.gxjldiv{width:400px;height:500px;float:left;/**border: 1px black solid;**/}
+.gxjlspan{color:red;text-align:center;font-style: normal;color: #c00;font-size: medium;font-weight:bold;}
+.gxjlbody{padding-top:30px;text-align:left;margin-left:20px;}
+.gxjlbody li{height: auto; min-height: 40px;}
+.gxjllibs{font-weight: bold;}
+.gxjllinr{color: RoyalBlue;font: 15px/18px arial;font-weight: bold;}
+.gxjllinr a{color: RoyalBlue;font: 15px/18px arial;font-weight: bold;text-decoration:none;}
+.gxjlrightmain{margin-left:15px;}
+.rightdiv{width:auto; border-radius:10px;text-align: left;padding: 10px;float: left;height: auto; margin-top:5px;padding-bottom:0px;}
+.rightdiv li{height: auto; min-height: 20px;}
+.rightdiv{font: 13px arial;}
+.rightdiv a{text-decoration:none;color: black; font: 12px arial;}
+.rightdivicon{height:15px;width:18px;background-color:#00BFFF;isplay:-moz-inline-box; display:inline-block;text-align:center;color:#FFFFFF;lin-height:18px; margin-right:10px;}
+.rightdivspan{text-align:center;font-style: normal;color: #c00;font-size: medium;font-weight:bold;}
+
+
+.topdiv{margin:0 auto;}

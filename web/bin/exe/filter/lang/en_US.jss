@@ -1,0 +1,1 @@
+bin.exe.filter.lang={"晚于":"Later than","载入中...":"Loading ...","早于":"Earlier than","输入过滤条件...":"Enter  filter criteria ...","等于":"Equal to","是":"Yes","否":"No","过滤条件":"Filter criteria ."}

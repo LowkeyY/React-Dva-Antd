@@ -1,0 +1,55 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+
+import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.UUID;
+import com.susing.core.KingleSystem;
+
+@class{
+public void doGet(Jacper jacper) {
+doPost(jacper);
+}
+	public void doPost(Jacper jacper) {
+	try {
+			HttpSession hs = jacper.getSession();
+			Connection conEdu = jacper.getConnection("education");
+			String startdate = jacper.getString("startdate");
+			String enddate=jacper.getString("enddate");
+			enddate+="  23:59:59";
+			JSONObject jbout=new JSONObject();
+			JSONArray ja = new JSONArray();
+			
+			
+			String sql="select count(*),count(distinct ip),count(distinct uesrid),to_char(shijian,'yyyy-mm-dd') from tongjiguanli  where shijian>=$str_date('"+startdate+"',111) and shijian<=$str_date('"+enddate+"',113) group by to_char(shijian,'yyyy-mm-dd') ";
+	        
+	        
+	        String[][]rs=conEdu.get(sql);
+	        for(int i=0;i<rs.length;i++){
+	        	JSONObject rsjb=new JSONObject();
+	        	rsjb.put("name",rs[i][3]);
+	        	rsjb.put("value",rs[i][0]);
+	        	ja.put(rsjb);
+	        }
+	        
+	        
+			
+			jbout.put("authArray",ja);
+			jacper.print(jbout);
+	} catch (Exception e) {
+			e.printStackTrace();
+	}
+	}}

@@ -1,0 +1,145 @@
+
+import java.util.*;
+import com.kinglib.*;
+import com.susing.sql.*;
+import com.susing.core.KingleSystem;
+
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+	                                              
+public void doPost(Jacper jacper) {
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	String type = jacper.getStr("type");
+	String parent_id = jacper.getStr("parent_id");
+	String object_id = jacper.getStr("object_id");
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+			JSONObject optionJSON = new JSONObject("{}");
+			if(type.equals("new")){
+				String option = jacper.getStr("option");
+				if(option.equals("query")){
+
+					ObjectNode queryNode=ObjectManager.getObject(object_id);
+					ObjectNode appNode=queryNode.upTo(1);
+					String appId=appNode.getId();
+
+					String[][] query  = conPlat.get("select f.query_id,f.query_name from $[plat].app_query f,$[plat].object_base e where f.query_id=e.object_id and e.parent_id=? order by f.query_name",new String[]{appId+""});
+					JSONArray jarr=new JSONArray();
+					try{
+						for(int i=0;i<query.length;i++){
+							JSONObject items = new JSONObject("{}");
+							items.put("id",query[i][0]);
+							items.put("title",query[i][1]);
+							jarr.put(items);
+						}
+						optionJSON.put("querys",jarr);
+					}catch(Exception e){}
+					<??>optionJSON.toString()<??>;
+				}else if(option.equals("querycolumn")){
+					String query_id=jacper.getStr("query_id");
+					String[][] query_column  = conPlat.get("select column_name,column_name from $[plat].app_query_column  where query_id=? order by order_id",new String[]{query_id});
+					JSONArray jarr=new JSONArray();
+					try{
+						for(int i=0;i<query_column.length;i++){
+							JSONObject items = new JSONObject("{}");
+							items.put("id",query_column[i][0]);
+							items.put("title",query_column[i][1]);
+							jarr.put(items);
+						}
+						optionJSON.put("queryColumns",jarr);
+					}catch(Exception e){}
+					<??>optionJSON.toString()<??>;
+				}else if(option.equals("datalink")){
+					String[] cs= KingleSystem.getConnectionNames();		
+					JSONArray jarr=new JSONArray();
+					for(int i=0;i<cs.length;i++){
+						if(cs[i].equals("plat") || cs[i].equals("utils")|| cs[i].equals("work")|| cs[i].equals("cert")) continue;
+							JSONObject items = new JSONObject("{}");
+							items.put("id",cs[i]);
+							items.put("title",cs[i]);
+							jarr.put(items);
+					}
+					optionJSON.put("datalink",jarr);
+					<??>optionJSON.toString()<??>;
+				}else if(option.equals("search")){	
+					ObjectNode pnode=ObjectManager.getObject(object_id);
+					if(pnode==null) return ;
+					ArrayList<String[]> al=new ArrayList<String[]>(20);
+					for(ObjectNode node:pnode.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.SEARCHCATEGORY)){
+						al.add(new String[]{node.getName(),String.valueOf(node.getId())});		
+					}
+					String[][] rs = al.toArray(new String[al.size()][2]);
+					JSONArray jarr=new JSONArray();
+					for(int i=0;i<rs.length;i++){
+						JSONObject items = new JSONObject("{}");
+						items.put("id",rs[i][1]);
+						items.put("title",rs[i][0]);
+						jarr.put(items);
+					}
+					optionJSON.put("searchTypes",jarr);
+					<??>optionJSON.toString()<??>;
+				}
+			}else{
+				JSONObject mapLayerJSON = new JSONObject("{}");
+
+				String[] rs = conPlat.getRow("select object_id,name,logicname,layer_type,query_id,data_column,id_column,name_column,exp_item,active,style_column,min_scale,max_scale,dblink,row_num,is_default,spatial_store_type,search_id,layer_method from $[plat].map_poi where object_id=?",new String[]{object_id});
+		
+				if(rs!=null){
+					mapLayerJSON.put("object_id",rs[0]);
+				
+					mapLayerJSON.put("name",rs[1]);
+					mapLayerJSON.put("logicname",rs[2]);
+
+					mapLayerJSON.put("layer_type",rs[3]);
+					mapLayerJSON.put("query_id",rs[4]);
+
+					mapLayerJSON.put("data_column",rs[5]);
+					mapLayerJSON.put("id_column",rs[6]);
+					mapLayerJSON.put("name_column",rs[7]);
+					
+					if(rs[8].length()!=0){
+						JSONArray jarr=new JSONArray();
+						String[] expArray=rs[8].split(",");
+						for(int i=0;i<expArray.length;i++){
+							jarr.put(expArray[i]);
+						}
+						mapLayerJSON.put("exp_item",jarr);
+					}else{
+						mapLayerJSON.put("exp_item",rs[8]);
+					}
+
+					mapLayerJSON.put("active",rs[9]);
+					mapLayerJSON.put("style_column",rs[10]);
+					mapLayerJSON.put("min_scale",rs[11]);
+					mapLayerJSON.put("max_scale",rs[12]);
+					mapLayerJSON.put("dblink",rs[13]);
+					mapLayerJSON.put("rownum",rs[14]);
+					mapLayerJSON.put("isDefault",rs[15]);
+					mapLayerJSON.put("searchId",rs[17]);
+					mapLayerJSON.put("storeType",rs[16]);
+					mapLayerJSON.put("layerMethod",rs[18]);
+					ObjectNode node=ObjectManager.getObject(object_id);
+					if(node!=null){
+						mapLayerJSON.put("lastModifyTime",node.getLastModifyTime());
+						mapLayerJSON.put("lastModifyName",node.getLastModifyName());
+					}
+				}
+			   <?[?>mapLayerJSON.toString()<?]?>;
+		}
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+}

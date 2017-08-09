@@ -1,0 +1,54 @@
+
+import java.io.IOException;
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.database.DataType;
+import com.kinglib.database.SpecialSet;
+
+@class{
+	public void doPost(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		
+		boolean isLogin = jacper.setSession();
+		HttpSession hs=jacper.getSession();
+		String user_id=(int)hs.uid+"";	
+
+		String objectId=jacper.getString("object_id","-1");
+		int totalNum=jacper.getInt("totalNum",1);
+
+		try{	
+			MetaTable mt = MetaFactory.getObject(objectId);
+			Boolean canBeRandom=true;
+			if (mt != null){
+				Column[] columns = mt.getColumnArray();
+				for(int i=0;i<columns.length;i++){
+				if((columns[i].getSpecialSet()==SpecialSet.GeoPoint||columns[i].getSpecialSet()==SpecialSet.GeoLine
+					||columns[i].getSpecialSet()==SpecialSet.GeoCurve||columns[i].getSpecialSet()==SpecialSet.GeoPembroke
+						||columns[i].getSpecialSet()==SpecialSet.GeoSurface||columns[i].getSpecialSet()==SpecialSet.FileName
+							||columns[i].getSpecialSet()==SpecialSet.FileType||columns[i].getSpecialSet()==SpecialSet.FileSize
+								||columns[i].getDataType()==DataType.BLOB||columns[i].getDataType()==DataType.CLOB
+									||columns[i].getDataType()==DataType.UNSUPPORT)&&columns[i].isNotNull()==true){
+										canBeRandom=false;
+										break;
+									}
+				}
+			}
+			if(canBeRandom){
+				Param param=new Param(jacper);
+				RandomSave randomSave=new RandomSave(param);
+				randomSave.save(param,objectId,totalNum);
+				<?{success:true,totalNum:?>totalNum<?}?>;
+			}else{
+				<?{success:false,message:"?>jacper.trans("表中定义了不可随机生成的非空字段,因此不能生成随机数据!")<?"}?>;
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}

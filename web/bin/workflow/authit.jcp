@@ -1,0 +1,60 @@
+
+import java.io.IOException;
+
+
+import com.kinglib.*;
+import java.util.*;
+
+import com.kinglib.workflow.Workflow;
+import com.kinglib.workflow.basic.BasicWorkflow;
+import com.kinglib.workflow.query.WorkflowQuery;
+import com.kinglib.workflow.InvalidActionException;
+import com.kinglib.workflow.InvalidEntryStateException;
+import com.kinglib.workflow.InvalidInputException;
+import com.kinglib.workflow.InvalidRoleException;
+import com.kinglib.workflow.WorkflowException;
+import com.kinglib.workflow.config.DefaultConfiguration;
+import com.kinglib.workflow.spi.Step;
+
+import com.kinglib.propertyset.PropertySet;
+import com.kinglib.propertyset.PropertySetManager;
+
+@class{
+	public void doPost(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String user_id = hs.uid+"";
+
+		long entryId = jacper.getLong("entryId",-1);
+		int actionId = jacper.getInt("actionId", 0);
+		String workflowId = jacper.getStr("workflowId");
+		String objectId = jacper.getStr("objectId");
+		String comment = jacper.getStr("comment");
+		String dataId=jacper.getStr("dataId");
+
+		Workflow wf = new BasicWorkflow(user_id);
+		DefaultConfiguration config = new DefaultConfiguration();
+		wf.setConfiguration(config);
+	
+		try{
+			if(actionId!=0){
+				  if (comment.equals("")){
+					  wf.doAction(entryId, actionId, null);	
+				  }else{
+					  wf.doAction(entryId, actionId, null,comment);			  
+				  }
+			 }
+			<?{success:true}?>;
+		}catch (InvalidActionException e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}catch (InvalidRoleException e) {
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}catch (InvalidInputException e) {
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}catch (InvalidEntryStateException e) {
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}catch (WorkflowException e) {
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}
+  }
+}

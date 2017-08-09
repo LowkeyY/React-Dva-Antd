@@ -1,0 +1,97 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONObject;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.OutputStreamWriter;
+import java.util.UUID;
+
+
+
+		//public class test{
+@class{
+	public void doGet(Jacper jacper){
+		doPost(jacper);
+	}
+
+	public void doPost(Jacper jacper){
+		try {
+			String type=jacper.getString("type","");
+			if(type.equals("delete")){
+				String id=jacper.getString("id");
+				Connection con = jacper.getConnection("plat");
+				con.exec("delete from  potal_menu where application_id=?",new String[]{id});
+				File file = new File("D:\\Platform\\Project_Portal\\web\\potal\\menu\\"+id+".json");
+				if (file.exists()) {
+					file.delete();
+				}
+				jacper.print("{success:true,id:'"+id+"'}");	
+			}else{
+				String data=jacper.getString("data");
+				JSONObject jo = new JSONObject(data);
+				String sys_app_id ="";
+				if(data.indexOf("sys_app_id")>-1){
+					sys_app_id = jo.getString("sys_app_id");
+				}
+				if (sys_app_id==null || sys_app_id.equals("0")) {
+					sys_app_id=UUID.randomUUID().toString();
+					type="save";
+				}
+				jo.put("default_token", sys_app_id.replaceAll("-", ""));
+				
+				String default_seq=jo.getString("default_seq");
+				String default_title=jo.getString("default_title");
+				String default_has_auth=jo.getString("default_has_auth");
+				String default_isValid=jo.getString("default_isValid");
+				String default_icon_url=jo.getString("default_icon_url");
+				
+				Connection con = jacper.getConnection("plat");
+				if (type.equals("save")) {
+					con.exec("insert into potal_menu values(?,?,?,?,?,?)",new String[]{sys_app_id,default_seq,default_title,default_has_auth,default_isValid,default_icon_url});
+				}else{
+					con.exec("update potal_menu set default_seq=?,default_title=?,default_has_auth=?,default_isValid=?,default_icon_url=? where application_id=? ",new String[]{default_seq,default_title,default_has_auth,default_isValid,default_icon_url,sys_app_id});
+				}
+				
+				inputUtf("D:\\Platform\\Project_Portal\\web\\potal\\menu\\"+sys_app_id+".json", jo.toString());
+				
+				jacper.print("{success:true,id:'"+sys_app_id+"',type : '"+type+"'}");	
+			}
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			jacper.print("{success:false}");	
+			// TODO: handle exception
+		}
+	}
+	
+	public static void inputUtf(String path , String data) throws java.io.IOException{
+		FileOutputStream fos = new FileOutputStream(path); 
+		OutputStreamWriter osw = new OutputStreamWriter(fos, "UTF-8"); 
+		osw.write(data); 
+		osw.flush(); 
+	}
+	
+	public void inputTxt(String path , String data) throws java.io.IOException{
+		File file = new File(path);
+		if (file.exists()) {
+			file.delete();
+		}
+		FileWriter fw = null;
+		BufferedWriter writer = null;
+		try {
+			fw = new FileWriter(file);
+			writer = new BufferedWriter(fw);
+				writer.write(data);
+				writer.newLine();//换行
+				writer.flush();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}finally{
+			writer.close();
+			fw.close();
+		}
+	}
+}

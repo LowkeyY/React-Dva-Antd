@@ -1,0 +1,1 @@
+lib.Wizard.lang={"保存...":"Save ...","前一步":"Previous Step","第{0}步,共{1}步: {2}":"{ 0} step,total  {1} steps : {2}","下一步":"Next step","完成":"Done","取消":"Cancel"}

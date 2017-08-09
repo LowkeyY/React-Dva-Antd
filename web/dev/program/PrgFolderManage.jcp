@@ -1,0 +1,101 @@
+            
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.util.json.*;
+import com.kinglib.database.*;
+import java.util.*;
+import javax.servlet.http.*;
+import com.kinglib.*;
+import com.kinglib.ui.folder.*;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+@class{
+	public void doGet(Jacper jacper){  
+		Param param=new Param(jacper);
+		String id = param.getStr("node");
+		String objectId = param.getStr("objectId");
+		Connection conPlat=param.getConnection("plat");
+		try {
+				JSONObject js = new JSONObject();
+				String[] rs=conPlat.getRow("select id,dir_name,seq,start_icon,end_icon,note from $[plat].prg_folder   where object_id=? and id=?",new String[]{objectId,id});
+                js.put("dirName",rs[1]);
+				js.put("Seq",rs[2]);
+				js.put("start_icon",rs[3]);
+				js.put("end_icon",rs[4]);
+				js.put("note",rs[5]);
+				 <?{success:true,data:?>js.toString()<?}?>;
+		} catch (Exception e) {
+			jacper.getResponse().setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR );
+			jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+	public void doPost(Jacper jacper){  
+		String node = jacper.getStr("node");
+		String objectId = jacper.getStr("objectId");
+		String type = jacper.getStr("type");
+
+		String dirName = jacper.getStr("dirName");
+		int seq = jacper.getInt("Seq",0);
+		String startIcon = jacper.getStr("start_icon");
+		String endIcon = jacper.getStr("end_icon");
+		String note = jacper.getStr("note");
+
+		Connection conPlat=jacper.getConnection("plat");
+		ProgramFolder pf=ProgramFolderFactory.getInstance().getProgramFolder(objectId);
+
+		if(type.equals("save")){
+			String dirId  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				dirId = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				dirId =UUID.randomUUID().toString();
+			}
+			try{	
+				 String sqlstr="insert into $[plat].prg_folder(id,object_id,parent_id,dir_name,seq,start_icon,end_icon,note,entry_date) values (?,?,?,?,?,?,?,?,$getdate())";
+				 conPlat.exec(sqlstr,new String[]{dirId+"",objectId,node,dirName,seq+"",startIcon,endIcon,note});
+				 FolderNode nodeItem=new FolderNode(dirId+"",dirName,seq,startIcon,endIcon,note,null);
+				 FolderNode parentItem=pf.getNode(node);
+				 pf.addToCache(nodeItem);
+				 nodeItem.hang(parentItem);
+				 <?{success:true,node:'?>dirId<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(type.equals("updatesave")){
+			try{	
+				conPlat.exec("update  $[plat].prg_folder set dir_name=?,seq=?,start_icon=?,end_icon=?,note=? where id=?",new String[]{dirName,seq+"",startIcon,endIcon,note,node});	
+				FolderNode nodeItem=pf.getNode(node);
+				nodeItem.setTitle(dirName);
+				nodeItem.setSequence(seq);
+				nodeItem.setStartIcon(startIcon);
+				nodeItem.setEndIcon(endIcon);
+				nodeItem.setNote(note);
+				<?{success:true,node:'?>node<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(type.equals("delete")){
+			try{	
+				conPlat.exec("delete from $[plat].prg_folder where id=?",new String[]{node});
+				pf.removeNode(node);
+				<?{success:true,node:'?>node<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}
+	}
+}

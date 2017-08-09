@@ -1,0 +1,56 @@
+
+import java.util.*;
+import com.kinglib.*;
+import com.susing.sql.*;
+import com.susing.core.KingleSystem;
+import com.kinglib.database.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+	public void doPost(Jacper jacper) {
+	
+		Connection conPlat = jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		String type = jacper.getStr("type");
+		String parent_id = jacper.getStr("parent_id");
+		String object_id = jacper.getStr("object_id");
+
+		jacper.getResponse().setContentType("application/x-json");
+
+		try{	
+				JSONObject searchJSON = new JSONObject("{}");
+				String[] rs = conPlat.getRow("select object_id,logic_name,phy_name,search_type,index_database,main_table,tooltip_text,advanced_search,note from $[plat].search_category where object_id=?",new String[]{object_id});
+				if(rs!=null){
+					searchJSON.put("object_id",rs[0]);
+					searchJSON.put("logic_name",rs[1]);
+					searchJSON.put("phy_name",rs[2]);
+					searchJSON.put("search_type",rs[3]);
+					searchJSON.put("index_database",rs[4]);
+					searchJSON.put("main_table",rs[5]);
+					String tabId=rs[5];
+					MetaTable mt = MetaFactory.getObject(tabId);
+					String tableName=mt.getLname();
+					searchJSON.put("tableName",tableName);
+					searchJSON.put("tooltip_text",rs[6]);
+					searchJSON.put("advanced_search",rs[7]);
+					searchJSON.put("note",rs[8]);
+
+					ObjectNode node=ObjectManager.getObject(object_id);
+					if(node!=null){
+						searchJSON.put("lastModifyTime",node.getLastModifyTime());
+						searchJSON.put("lastModifyName",node.getLastModifyName());
+					}
+				}
+			   <?[?>searchJSON.toString()<?]?>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+}

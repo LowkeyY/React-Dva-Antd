@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config charset="UTF-8">
+	<var-def name="content">
+		<html-to-xml omithtmlenvelope="False">
+			<shell return="ret.toString()"><![CDATA[
+				String ret=html.toString();				
+				String clen="";
+				String cdec="";
+				//ret=ret.substring(ret.indexOf("<p class=\"1"));
+				ret=ret.replaceAll("\\<p\\sclass\\=\\\"1[^\\\"]+","<p class=\"1");
+				
+				
+				int epos = ret.indexOf("<!--[if supportFields]>");
+				if(epos != -1){
+					StringBuilder sb = new StringBuilder(ret.length());
+					int bpos = 0;
+					while (epos != -1) {
+						if (epos > bpos)
+							sb.append(ret.substring(bpos, epos));
+						bpos = ret.indexOf("<![endif]-->", epos);
+						if (bpos == -1)
+							epos = -1;
+						else{
+							bpos+=12;
+							epos = ret.indexOf("<!--[if supportFields]>",epos+1);
+						}
+					}
+					if (bpos > -1)
+						sb.append(ret.substring(bpos));
+					ret=sb.toString();
+				}
+			]]></shell>
+		</html-to-xml>
+	</var-def> 
+<<<<<<< .mine
+=======
+		<file action="write" path="F:\\test\\$content.xml">
+			<var name="content"/>
+		</file>
+>>>>>>> .r315
+	<var-def name="result">
+		<loop item="table" index="i">
+			<list>
+				<xpath expression="//table">
+					<var name="content"/>
+				</xpath>
+			</list>
+             
+			<body>
+
+						<shell return="col.toString()"><![CDATA[
+							String col="";
+							String tab=table.toString().trim().replaceAll("[\\t|\\s]","");
+							String[] titles=tab.split("#");
+							col="<table name=\""+titles[2]+"\" title=\""+titles[1]+"\">";
+						    System.out.println("col==========="+col);
+							/*if(tab.length()>0){
+								int b=tab.indexOf("("),e=tab.indexOf(")");
+								if(e==-1){
+									e=tab.indexOf("）");
+								}
+								if(b==-1){
+									b=tab.indexOf("（");
+								}
+								if(b>0 && e>0 && e>b){
+									String name=tab.substring(b+1,e).trim();
+									e=tab.indexOf('\240');
+									if(e<0 || e>=b){
+										e=0;
+									}
+									if(e>-1 && e<b){
+										String title=tab.substring(e,b).trim();
+										title=title.replaceAll("\\xa0","");
+										col="<table name=\""+name+"\" title=\""+title+"\">";
+									}
+								}
+							}*/
+						]]></shell>
+						<loop item="tr" index="j" filter="2-">
+							<list>
+								<xpath expression="//tr">
+									<var name="table"/>
+								</xpath>
+							</list>
+							<body>
+								<template>
+										&lt;row&gt;
+									<loop item="td" index="k">
+										<list>
+											<xpath expression="//td">
+												<var name="tr"/>
+											</xpath>
+										</list>
+										<body>
+											<empty>
+												<xtrim name="td" />
+											</empty>
+											<shell return="col.toString()"><![CDATA[
+												String col=k.toString();
+												String ct=td.toString().trim();
+												switch(Integer.parseInt(col)){
+													case 3:
+														col="name";
+														ct=ct.replaceAll("[\\t|\\s]","");	
+														break;
+													case 2:
+													
+														col="title";
+														ct=ct.replaceAll("[\\t|\\s]","");
+														break;
+													case 4:
+														//包含长度和小数位--常量
+														col="type";
+														ct=ct.replaceAll("[\\t|\\s]","").toLowerCase();	
+														int pos=ct.indexOf("(");
+														if(pos==-1){
+															clen="0";
+															cdec="0";
+														}else{
+															String rs=ct;
+															ct=ct.substring(0,pos);
+															String rest=rs.substring(pos+1,rs.length()-1);
+															int pp=rest.indexOf(",");
+															
+															if(pp==-1){
+																clen=rest;
+																cdec="0";
+															}else{
+																String[] mmn=rest.split(",");
+																clen=mmn[0];
+																cdec=mmn[1];
+															}
+														}
+														break;					
+													case 5:
+														col="length";	
+														//ct=clen.toString();;
+														break;	
+													case 6:
+														col="digitalDecimals";
+														//ct=cdec.toString();
+														break;
+													case 7:
+														col="notNull";	
+														if(ct.length()==0){
+															ct="false";
+														}else{
+															ct=ct.replaceAll("[\\t|\\s]","").toLowerCase();
+															if(ct.equals("y") || ct.equals("yes")|| ct.equals("1")|| ct.equals("true")|| ct.equals("是")){
+																ct="true";
+															}else{
+																ct="false";
+															}
+														}
+														break;
+													case 8:
+														col="primaryKey";
+														if(ct.length()==0){
+															ct="false";
+														}else{
+															ct=ct.toLowerCase();
+															if(ct.equals("y") || ct.equals("yes")|| ct.equals("1")|| ct.equals("true")|| ct.equals("是")){
+																ct="true";
+															}else{
+																ct="false";
+															}
+														}
+														break;													
+													case 9:
+														col="unit";	
+														break;						
+													case 10:
+														col="memo";	
+														break;
+													default:
+														col="";
+												}
+												if(!col.equals(""))
+												col="<"+col+">"+ct+"</"+col+">";
+											]]></shell>
+										
+										</body>
+									</loop>
+										&lt;/row&gt;
+								</template>
+							</body>
+						</loop>
+						<text>&lt;/table&gt;</text>
+			</body>
+		</loop>
+	</var-def>
+<shell>
+	System.out.println(result.toString());
+	
+</shell>
+	<var-def name="returnValue">
+		<text>&lt;tables&gt;</text>
+		<var name="result"/>
+		<text>&lt;/tables&gt;</text>
+	</var-def>  
+</config>

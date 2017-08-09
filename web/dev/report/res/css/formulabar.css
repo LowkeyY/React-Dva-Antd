@@ -1,0 +1,39 @@
+#formulaBar{
+    width:auto;height:25px;background-color:#bbd4f9
+}
+.formula-bar-table{
+    width:100%;border-spacing:1px
+}
+#currCoord{
+    width:170px;height:24px
+}
+#formulaTlb{
+    width:75px;height:24px
+}
+#formulaTlb .x-toolbar{
+    background:#bbd4f9 repeat-x scroll left top;border-style:solid;border-width:0;display:block;padding:2px;position:relative
+}
+.cancel_formula_icon{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -118px!important
+}
+.enter_formula_icon{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -134px!important
+}
+.insert_formula_icon{
+    background-image:url('/ui/wss/res/img/sprites/toolbar-sprite.png')!important;background-position:left -150px!important
+}
+#formulaInfo{
+    width:100%;max-width:100%;height:22px
+}
+#formulaInfo textarea.x-form-field{
+    padding:2px 0
+}
+#expandBtn{
+    width:16px;height:22px
+}
+.formula-info-exp-icon{
+    background:transparent url(/ui/wss/res/img/formula/formula_info_exp_icon.png) no-repeat 0 0
+}
+.formula-info-clps-icon{
+    background:transparent url(/ui/wss/res/img/formula/formula_info_clps_icon.png) no-repeat 0 0
+}

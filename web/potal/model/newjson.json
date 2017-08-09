@@ -1,0 +1,579 @@
+{	
+    "sys_attributes": {
+        "version": 1
+    },
+    "default_attributes": [
+        {
+            "title": "导航标题",
+            "name": "default_title",
+            "width": 350,
+            "maxLength": 50,
+            "allowBlank": false,
+            "blankText": "导航标题必须提供.",
+            "maxLengthText": "导航标题不能超过{0}个字符!"
+        },
+        {
+            "cntype": "numberfield",
+            "title": "顺序",
+            "name": "default_seq",
+            "minValue": 0,
+            "minText": "程序版本最小值不能小于{0}",
+            "maxValue": 100000,
+            "maxText": "程序版本最大值不能大于 {0}",
+            "width": 80,
+            "allowDecimals": false,
+            "nanText": "{0} 对于程序版本是无效数字",
+            "value": 1000
+        },
+        {
+            "title": "token",
+            "name": "default_token",
+            "width": 350,
+            "maxLength": 50,
+            "disabled": true,
+            "emptyText": "系统自动生成",
+            "cncolumn": 0.6
+        },
+        {
+            "title": "权限模式",
+            "name": "default_has_auth",
+            "width": 200,
+            "items": [
+                {
+                    "boxLabel": "无权限控制",
+                    "name": "default_has_auth",
+                    "inputValue": "false"
+                },
+                {
+                    "boxLabel": "权限控制",
+                    "name": "default_has_auth",
+                    "inputValue": "true",
+                    "checked": true
+                }
+            ],
+            "cntype": "radiogroup",
+            "cncolumn": 0.6
+        },
+        {
+            "name": "default_icon_url",
+            "height": 48,
+            "width": 58,
+            "qtip": {
+                "title": "提示",
+                "dismissDelay": 10000,
+                "text": "只能选择48x48的图标, 需要在桌面显示"
+            },
+            "defaultImage": "/themes/icon/xp48c/paper.gif",
+            "title": "默认图标(48x48)",
+            "cntype": "iconpicker",
+            "cncolumn": 0.6
+        },
+        {
+            "title": "打开方式",
+            "name": "default_open_type",
+            "width": 300,
+            "items": [
+                {
+                    "boxLabel": "新建系统窗口",
+                    "name": "default_open_type",
+                    "inputValue": "true",
+                    "checked": true
+                },
+                {
+                    "boxLabel": "新建浏览器标签页",
+                    "name": "default_open_type",
+                    "inputValue": "false"
+                }
+            ],
+            "cntype": "radiogroup",
+            "cncolumn": 1
+        },
+        {
+            "title": "起始位置",
+            "name": "default_postion",
+            "width": 300,
+            "belongName": "default_open_type",
+            "belongValue": "true",
+            "items": [
+                {
+                    "boxLabel": "左",
+                    "name": "default_postion",
+                    "inputValue": "true",
+                    "checked": true
+                },
+                {
+                    "boxLabel": "右",
+                    "name": "default_postion",
+                    "inputValue": "false"
+                }
+            ],
+            "cntype": "radiogroup",
+            "cncolumn": 1
+        },
+        {
+            "title": "起始位置(x)",
+            "name": "default_x",
+            "belongName": "default_open_type",
+            "belongValue": "true",
+            "minValue": -1,
+            "minText": "程序版本最小值不能小于{0}",
+            "maxValue": 2048,
+            "maxText": "程序版本最大值不能大于 {0}",
+            "width": 80,
+            "qtip": {
+                "text": "以像素为单位的窗口左上角x坐标, 如果填写的值为0到1之间的小数, 则表示当前浏览器的宽度的百分比, 如果填写-1则表示居中"
+            },
+            "nanText": "{0} 对于程序版本是无效数字",
+            "cntype": "numberfield"
+        },
+        {
+            "cntype": "numberfield",
+            "title": "起始位置(y)",
+            "name": "default_y",
+            "belongName": "default_open_type",
+            "belongValue": "true",
+            "minValue": -1,
+            "minText": "程序版本最小值不能小于{0}",
+            "maxValue": 4096,
+            "maxText": "程序版本最大值不能大于 {0}",
+            "width": 80,
+            "qtip": {
+                "text": "以像素为单位的窗口左上角y坐标, 如果填写的值为0到1之间的小数, 则表示当前浏览器的高度的百分比, 如果填写-1则表示居中"
+            },
+            "nanText": "{0} 对于程序版本是无效数字"
+        },
+        {
+            "cntype": "numberfield",
+            "title": "窗口宽度",
+            "name": "default_width",
+            "belongName": "default_open_type",
+            "belongValue": "true",
+            "minValue": 0,
+            "minText": "程序版本最小值不能小于{0}",
+            "maxValue": 2048,
+            "maxText": "程序版本最大值不能大于 {0}",
+            "width": 80,
+            "qtip": {
+                "text": "以像素为单位的窗口宽度, 如果填写的值为0到1之间的小数, 则表示宽度是当前浏览器的宽度的百分比, 如果填写0则表示将窗口最大化"
+            },
+            "allowNegative": false,
+            "nanText": "{0} 对于程序版本是无效数字"
+        },
+        {
+            "cntype": "numberfield",
+            "title": "窗口高度",
+            "name": "default_height",
+            "belongName": "default_open_type",
+            "belongValue": "true",
+            "minValue": 0,
+            "minText": "程序版本最小值不能小于{0}",
+            "maxValue": 1600,
+            "maxText": "程序版本最大值不能大于 {0}",
+            "qtip": {
+                "text": "以像素为单位的窗口高度, 如果填写的值为0到1之间的小数, 则表示宽度是当前浏览器的高度的百分比, 如果填写0则表示将窗口最大化"
+            },
+            "width": 80,
+            "allowNegative": false,
+            "nanText": "{0} 对于程序版本是无效数字"
+        },
+        {
+            "title": "窗口位置",
+            "name": "default_win_postion",
+            "width": 300,
+            "belongName": "default_open_type",
+            "belongValue": "true",
+            "items": [
+                {
+                    "boxLabel": "可拖拽",
+                    "name": "default_win_postion",
+                    "inputValue": "true",
+                    "checked": true
+                },
+                {
+                    "boxLabel": "固定",
+                    "name": "default_win_postion",
+                    "inputValue": "false"
+                }
+            ],
+            "cntype": "radiogroup",
+            "cncolumn": 1
+        },
+        {
+            "title": "窗口大小",
+            "name": "default_win_size",
+            "width": 300,
+            "belongName": "default_open_type",
+            "belongValue": "true",
+            "items": [
+                {
+                    "boxLabel": "可伸缩",
+                    "name": "default_win_size",
+                    "inputValue": "true",
+                    "checked": true
+                },
+                {
+                    "boxLabel": "固定",
+                    "name": "default_win_size",
+                    "inputValue": "false"
+                }
+            ],
+            "cntype": "radiogroup",
+            "cncolumn": 1
+        },
+        {
+            "cntype": "radiogroup",
+            "title": "实时更新页面",
+            "name": "default_isUpdate",
+            "belongName": "default_open_type",
+            "belongValue": "true",
+            "width": 80,
+            "items": [
+                {
+                    "boxLabel": "是",
+                    "name": "default_isUpdate",
+                    "inputValue": "true",
+                    "checked": true
+                },
+                {
+                    "boxLabel": "否",
+                    "name": "default_isUpdate",
+                    "inputValue": "false"
+                }
+            ]
+        },
+        {
+            "cntype": "numberfield",
+            "title": "更新时间间隔(秒)",
+            "name": "default_update_timer",
+            "belongName": "default_isUpdate",
+            "belongValue": "true",
+            "minValue": 0,
+            "maxValue": 1600,
+            "width": 80,
+            "allowNegative": false,
+            "minText": "程序版本最小值不能小于{0}",
+            "maxText": "程序版本最大值不能大于 {0}",
+            "nanText": "{0} 对于程序版本是无效数字",
+            "value": 60
+        },
+        {
+            "cntype": "radiogroup",
+            "name": "default_isValid",
+            "title": "启用",
+            "width": 80,
+            "items": [
+                {
+                    "boxLabel": "是",
+                    "name": "default_isValid",
+                    "inputValue": "true",
+                    "checked": true
+                },
+                {
+                    "boxLabel": "否",
+                    "name": "default_isValid",
+                    "inputValue": "false"
+                }
+            ]
+        },
+        {
+            "cntype": "radiogroup",
+            "title": "自动运行",
+            "name": "default_autoRunRG",
+            "width": 80,
+            "items": [
+                {
+                    "boxLabel": "是",
+                    "name": "default_autoRunRG",
+                    "inputValue": "true"
+                },
+                {
+                    "boxLabel": "否",
+                    "name": "default_autoRunRG",
+                    "inputValue": "false",
+                    "checked": true
+                }
+            ]
+        },
+        {
+            "title": "链接地址",
+            "name": "default_url",
+            "width": 550
+        }
+    ],
+    "show_attributes": [
+        {
+            "title": "桌面",
+            "items": [
+                {
+                    "cntype": "radiogroup",
+                    "name": "show_desktop_isValid",
+                    "title": "是否显示",
+                    "width": 80,
+                    "items": [
+                        {
+                            "boxLabel": "是",
+                            "name": "show_desktop_isValid",
+                            "inputValue": "true",
+                            "checked": true
+                        },
+                        {
+                            "boxLabel": "否",
+                            "name": "show_desktop_isValid",
+                            "inputValue": "false"
+                        }
+                    ]
+                },
+                {
+                    "name": "show_desktop_icon_url",
+                    "height": 48,
+                    "width": 58,
+                    "qtip": {
+                        "title": "提示",
+                        "dismissDelay": 10000,
+                        "text": "只能选择48x48的图标, 需要在桌面显示"
+                    },
+                    "defaultImage": "/themes/icon/xp48c/paper.gif",
+                    "title": "图标",
+                    "cntype": "iconpicker",
+                    "belongName": "show_desktop_isValid",
+                    "belongValue": "true"
+                }
+            ]
+        },
+        {
+            "title": "快捷方式",
+            "items": [
+                {
+                    "cntype": "radiogroup",
+                    "name": "show_fastlink_isValid",
+                    "title": "是否显示",
+                    "width": 80,
+                    "items": [
+                        {
+                            "boxLabel": "是",
+                            "name": "show_fastlink_isValid",
+                            "inputValue": "true",
+                            "checked": true
+                        },
+                        {
+                            "boxLabel": "否",
+                            "name": "show_fastlink_isValid",
+                            "inputValue": "false"
+                        }
+                    ]
+                },
+                {
+                    "name": "show_fastlink_icon_url",
+                    "height": 16,
+                    "width": 24,
+                    "qtip": {
+                        "title": "提示",
+                        "dismissDelay": 10000,
+                        "text": "只能选择16x16的图标, 需要在快捷方式"
+                    },
+                    "defaultImage": "/themes/icon/all/transparent.gif",
+                    "title": "图标",
+                    "cntype": "iconpicker",
+                    "belongName": "show_fastlink_isValid",
+                    "belongValue": "true"
+                }
+            ]
+        },
+        {
+            "title": "开始菜单",
+            "items": [
+                {
+                    "cntype": "radiogroup",
+                    "name": "show_startmenu_isValid",
+                    "title": "是否显示",
+                    "width": 80,
+                    "items": [
+                        {
+                            "boxLabel": "是",
+                            "name": "show_startmenu_isValid",
+                            "inputValue": "true",
+                            "checked": true
+                        },
+                        {
+                            "boxLabel": "否",
+                            "name": "show_startmenu_isValid",
+                            "inputValue": "false"
+                        }
+                    ]
+                },
+                {
+                    "name": "show_startmenu_icon_url",
+                    "height": 16,
+                    "width": 24,
+                    "qtip": {
+                        "title": "提示",
+                        "dismissDelay": 10000,
+                        "text": "只能选择16x16的图标, 需要在快捷方式"
+                    },
+                    "defaultImage": "/themes/icon/all/transparent.gif",
+                    "title": "图标",
+                    "cntype": "iconpicker",
+                    "belongName": "show_startmenu_isValid",
+                    "belongValue": "true"
+                }
+            ]
+        }
+    ],
+    "face_attributes": [
+        {
+            "title": "接收推送(由门户系统发送)",
+            "items": [
+                {
+                    "cntype": "radiogroup",
+                    "name": "face_sys_isValid",
+                    "title": "是否启用",
+                    "width": 80,
+                    "items": [
+                        {
+                            "boxLabel": "是",
+                            "name": "face_sys_isValid",
+                            "inputValue": "true",
+                            "checked": true
+                        },
+                        {
+                            "boxLabel": "否",
+                            "name": "face_sys_isValid",
+                            "inputValue": "false"
+                        }
+                    ]
+                },
+                {
+                    "cntype": "textarea",
+                    "title": "链接地址",
+                    "name": "face_sys_url",
+                    "width": 220,
+                    "height": 50,
+                    "belongName": "face_sys_isValid",
+                    "belongValue": "true"
+                }
+            ]
+        },
+        {
+            "title": "获取信息(由集成系统发送)",
+            "items": [
+                {
+                    "cntype": "radiogroup",
+                    "name": "face_app_isValid",
+                    "title": "是否启用",
+                    "width": 80,
+                    "items": [
+                        {
+                            "boxLabel": "是",
+                            "name": "face_app_isValid",
+                            "inputValue": "true",
+                            "checked": true
+                        },
+                        {
+                            "boxLabel": "否",
+                            "name": "face_app_isValid",
+                            "inputValue": "false"
+                        }
+                    ]
+                },
+                {
+                    "cntype": "textarea",
+                    "title": "链接地址",
+                    "name": "face_app_url",
+                    "width": 220,
+                    "height": 50,
+                    "belongName": "face_app_isValid",
+                    "belongValue": "true"
+                }, {
+                    "cntype": "radiogroup",
+                    "title": "实时更新页面",
+                    "name": "face_app_isUpdate",
+                    "belongName": "face_app_isValid",
+                    "belongValue": "true",
+                    "width": 80,
+                    "items": [
+                        {
+                            "boxLabel": "是",
+                            "name": "face_app_isUpdate",
+                            "inputValue": "true",
+                            "checked": true
+                        },
+                        {
+                            "boxLabel": "否",
+                            "name": "face_app_isUpdate",
+                            "inputValue": "false"
+                        }
+                    ]
+                },
+                {
+                    "cntype": "numberfield",
+                    "title": "更新时间间隔(秒)",
+                    "name": "face_app_update_timer",
+                    "belongName": "face_app_isUpdate",
+                    "belongValue": "true",
+                    "minValue": 0,
+                    "maxValue": 1600,
+                    "width": 80,
+                    "allowNegative": false,
+                    "minText": "程序版本最小值不能小于{0}",
+                    "maxText": "程序版本最大值不能大于 {0}",
+                    "nanText": "{0} 对于程序版本是无效数字",
+                    "value": 60
+                },
+                {
+                    "cntype": "radiogroup",
+                    "title": "接口类型",
+                    "name": "face_app_types",
+                    "belongName": "face_app_isValid",
+                    "belongValue": "true",
+                    "width": 220,
+                    "items": [
+                        {
+                            "boxLabel": "webservice",
+                            "name": "face_app_types",
+                            "inputValue": "true",
+                            "checked": true
+                        },
+                        {
+                            "boxLabel": "其它",
+                            "name": "face_app_types",
+                            "inputValue": "false"
+                        }
+                    ]
+                },
+                {
+                    "title": "接口名称",
+                    "name": "face_app_ws_name",
+                    "width": 220,
+                    "belongName": "face_app_types",
+                    "belongValue": "true"
+                },
+                {
+                    "title": "参数名称",
+                    "name": "face_app_ws_p_name",
+                    "width": 220,
+                    "belongName": "face_app_types",
+                    "belongValue": "true"
+                },
+                {
+                    "title": "参数类型",
+                    "name": "face_app_ws_p_type",
+                    "width": 220,
+                    "belongName": "face_app_types",
+                    "belongValue": "true"
+                },
+                {
+                    "title": "参数值",
+                    "name": "face_app_ws_p_value",
+                    "width": 220,
+                    "belongName": "face_app_types",
+                    "belongValue": "true"
+                }
+            ]
+        }
+    ],
+    "app_remarks": [
+        {
+            "text": "（系统提供默认参数值(自动替换链接地址和参数值中匹配的内容)：用户账户: @[username] ; 用户密码(加密后) ：@[userpwd] ; 集成应用ID ：@[appid];token : @[apptoken]）"
+        }
+    ]
+}

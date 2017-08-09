@@ -1,0 +1,105 @@
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.HWUnits.HWSpaceConfig;
+import gpra.filesystem.space.HWSpaceFactory;
+import gpra.filesystem.space.HWSpaceNode;
+import gpra.filesystem.space.HWSpaceFactory.HWSessions;
+import gpra.filesystem.upload.HWBulkUploadExcelFiles;
+import gpra.filesystem.upload.HWBulkUploadUnits;
+
+import java.sql.SQLException;
+import java.util.HashMap;
+
+import com.susing.EFile;
+import com.susing.upload.FileUpload;
+
+//public class HWBUEFile{
+@class{
+	public void doPost(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		String uuid = jacper.getString("lastKey", "");
+		
+		if(uuid.length() > 0){
+			HWBulkUploadExcelFiles hwf = HWBulkUploadUnits.getCache(uuid);
+			boolean isCommit = jacper.getString("isCommit", "").equals("true");
+			if(isCommit && hwf == null){
+				jacper.print("{success:false , message:'未找到已存储数据，请刷新页面重试或联系管理员。' , types : 'error'}");
+				return;
+			}
+			boolean isCover = jacper.getString("isCover", "").equals("true");
+			if(isCommit){
+				hwf.setCoverSameFilename(isCover);
+				hwf.start();
+				jacper.print("{success:true}");
+			} else {
+				HWBulkUploadUnits.removeCache(uuid);
+				jacper.print("{success:false , message:'上传操作已取消。' , types : 'info'}");
+			}
+		} else {
+			Param param =new Param(jacper);
+			FileUpload upload = new FileUpload(hs.uid);
+			try {
+				upload.parseRequest(jacper.getRequest());
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			}
+			upload.appendParamToMap(param);
+			EFile excelFile = param.getEFile("EXCEL");
+			
+			String spaceId = String.valueOf(param.getFromSession(HWSessions.HW_BASE_SPACEID.name()));
+			HWSpaceNode space = HWSpaceFactory.getSpaceById(spaceId);
+			if("null".equals(spaceId) || "".equals(spaceId) || space == null){
+				jacper.print("{success:false , message:'未找到所选空间，请刷新页面重试。'}");
+				return;
+			}
+			String exportDirId = param.getString("exportData","");
+			exportDirId = exportDirId.length() > 0 ? exportDirId.split("::")[0] : space.getDefaultDirId();
+			
+			HashMap<String , String> defaultParam = new HashMap<String , String>();
+			for(String att : HWBulkUploadExcelFiles.fromWebTableColumns)
+				defaultParam.put(att.toLowerCase(), param.getString(att,""));
+			if(param.getString("file_remarks","").length() > 0)
+				defaultParam.put("file_remarks" , param.getString("file_remarks",""));
+			HWBulkUploadExcelFiles hwf;
+			try {
+				boolean isReview = !(param.getString("SHENPI" , "").equals("0"));
+				defaultParam.put("att_128" , isReview ? "0" : "1");
+				String solrURL = "http://"+param.getRequest().getServerName()+":"+param.getRequest().getServerPort()+"/"+HWUnits.getSolrWebName()+"/"+HWSpaceConfig.SOLR_NAME.toString()+"/";
+				int lastIndex = -1;
+				String excelFileName = excelFile.getAttribute("file-name");
+				if((lastIndex = excelFileName.lastIndexOf("\\")) != -1)
+					excelFileName = excelFileName.substring(lastIndex + 1);
+
+
+				String excelFilenameRegex = "^.*_(.+?)\\.(xls|xlsx|xlsm)$";
+				if(excelFileName.matches(excelFilenameRegex))
+					excelFileName = excelFileName.replaceAll(excelFilenameRegex, "$1"+"."+"$2");
+
+				hwf = new HWBulkUploadExcelFiles(space , String.valueOf(hs.uid) , exportDirId , HWUnits.HW_DBLINK ,excelFileName , excelFile.getFile(), defaultParam , isReview , solrURL);				
+				hwf.setFilesRealPosition("F:\\海外知识共享系统共享盘\\演示使用资料\\");
+				hwf.setSavePosition("Z:\\upload\\");
+				String result = hwf.checkExcelFileFormats();
+				if(result.startsWith("error::")){
+					hwf.destroy();
+					jacper.print(new JSONObject().put("success", false).put("message", result.substring(7)).toString());
+				} else {
+					HWBulkUploadUnits.add2Cache(hwf);
+					//System.out.println(hwf.getExcelRowCount() + "," + hwf.getExcelCellCount() + "," +hwf.getIndexOfFileinfoname() + "," +hwf.getIndexOfFilepath());
+					jacper.print("{success:true, message:'文件校验成功，"+(hwf.getExcelRowCount() > 0 ? "共"+hwf.getExcelRowCount()+"个待上传文件，":"")+"确认上传?' , warnMsg:'"
+							+(hwf.isHasSameFilename() ? result.substring(6) : "")+"' , lastKey:'"
+							+hwf.getThreadUUID()+"',rowCount:"+hwf.getExcelRowCount()+",createDir:"+hwf.isCreateDirNode()+"}");
+				}
+			} catch (JSONException e) {
+				e.printStackTrace();
+				jacper.print("{success:false, message:'返回信息格式错误，请联系管理员。'}");
+			} catch (SQLException e) {
+				jacper.print("{success:false, message:'获取文件失败，请联系管理员。'}");
+			}
+		}
+	}
+}

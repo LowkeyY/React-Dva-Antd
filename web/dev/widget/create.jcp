@@ -1,0 +1,163 @@
+
+import com.kinglib.*;    
+import java.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.widget.*;
+
+@class{
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String parent_id = jacper.getStr("parent_id");
+	String type = jacper.getStr("type");
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+		JSONObject widgetJSON = new JSONObject("{}");
+		
+		String[] rs = conPlat.getRow(
+		"select a.widgetlogic_name,a.widgetphy_name,a.widget_type,widget_width,widget_height,widget_x,widget_y,tab1_id,tab2_id,import_column,export_column,titleItem,a.object_id,orderByItem,orderBy from $[plat].widget_base a,$[plat].object_base b where a.object_id=b.object_id and a.object_id=?",
+		new String[]{parent_id});
+		
+		widgetJSON.put("parent_id",parent_id);
+		widgetJSON.put("widgetlogic_name",rs[0]);
+		widgetJSON.put("widgetphy_name",rs[1]);
+		widgetJSON.put("but",rs[2]);
+		widgetJSON.put("widget_width",rs[3]);
+		widgetJSON.put("widget_height",rs[4]);
+		widgetJSON.put("widget_X",rs[5]);
+		widgetJSON.put("widget_Y",rs[6]);
+		widgetJSON.put("but2",rs[7]);
+		widgetJSON.put("but4",rs[8]);
+		widgetJSON.put("importitem",rs[9]);
+		widgetJSON.put("exportitem",rs[10]);
+		widgetJSON.put("titleItem",rs[11]);
+		widgetJSON.put("object_id",rs[12]);
+		widgetJSON.put("orderByItem",rs[13]);
+		widgetJSON.put("orderBy",rs[14]);
+		ObjectNode node=ObjectManager.getObject(parent_id);
+		if(node!=null){
+			widgetJSON.put("lastModifyTime",node.getLastModifyTime());
+			widgetJSON.put("lastModifyName",node.getLastModifyName());
+		}
+	   <?[?>widgetJSON.toString()<?]?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+	public void doPost(Jacper jacper){
+
+		Connection conPlat=jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		int user_id = (int)hs.uid;
+
+		String type = jacper.getStr("type");
+		String widgetlogic_name = jacper.getStr("widgetlogic_name");
+		String widgetphy_name = jacper.getStr("widgetphy_name");
+		String note = jacper.getStr("note");
+		String view = jacper.getStr("view");
+		String widget_width = jacper.getStr("widget_width");
+		String widget_height = jacper.getStr("widget_height");
+		String widget_x = jacper.getStr("widget_X");
+		String widget_y = jacper.getStr("widget_Y");
+		String tab1_id = jacper.getStr("but2");
+		String tab2_id = jacper.getStr("but4");
+		String parent_id = jacper.getString("parent_id","0");
+		String widgettype = jacper.getStr("but");
+		String can_edit=jacper.getStr("can_edit");
+		String can_delete=jacper.getStr("can_delete");
+		String can_append=jacper.getStr("can_append");
+		String activity=jacper.getStr("activity");
+		String import_item = jacper.getStr("importitem");
+		String export_item = jacper.getStr("exportitem");
+		String titleItem = jacper.getStr("titleItem");
+		String orderByItem = jacper.getStr("orderByItem");
+		String orderBy = jacper.getStr("orderBy");
+
+		String code_id="";
+
+		if(jacper.checkError()) return;
+
+		ObjectManager OM=ObjectManager.getInstance();
+
+		if(type.equals("save")){
+			try{	
+				conPlat.setAutoCommit(false);	
+				String object_id="";
+				String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+				if(idType==null||idType.equals("0")){
+					object_id = SQLUtils.getNextVal(conPlat,1)+"";
+				}else{
+					object_id =UUID.randomUUID().toString();
+				}
+				ObjectNode applicationNode=OM.getObject(parent_id);
+				applicationNode.addChild(conPlat,object_id,widgetlogic_name,ObjectType.WIDGET,user_id);	
+				conPlat.exec("INSERT INTO $[plat].widget_base (application_id,widgetlogic_name,widgetphy_name,object_id,widget_type,widget_width,widget_height,widget_x,widget_y,tab1_id,tab2_id,import_column,export_column,titleItem,orderByItem,orderBy) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",new String[]{parent_id+"",widgetlogic_name,widgetphy_name,object_id+"",widgettype+"",widget_width,widget_height,widget_x,widget_y,tab1_id+"",tab2_id+"",import_item,export_item,titleItem,orderByItem,orderBy});
+				<?{success:true,id:'?>object_id<?'}?>;
+				conPlat.commit();
+			}catch(Exception e){
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}	
+		}else if(type.equals("updatesave")){
+			try{	
+				conPlat.setAutoCommit(false);	
+				ObjectNode widgetNode=OM.getObject(parent_id);
+				widgetNode.updateName(conPlat,widgetlogic_name);
+				WidgetFactory.remove(parent_id);
+				conPlat.exec("UPDATE $[plat].widget_base SET widgetlogic_name=?,widgetphy_name=?,widget_x='"+widget_x+"',widget_y='"+widget_y+"',widget_width='"+widget_width+"',widget_height='"+widget_height+"',tab1_id=?,tab2_id=?,import_column=?,export_column=?,titleItem=?,orderByItem=?,orderBy=? WHERE object_id=?",new String[]{widgetlogic_name,widgetphy_name,tab1_id,tab2_id,import_item,export_item,titleItem,orderByItem,orderBy,parent_id+""});
+				<?{success:true,id:'?>parent_id<?'}?>;
+				conPlat.commit();
+			}catch(Exception e){
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+		}else if(type.equals("delete")){
+			try{	
+				conPlat.setAutoCommit(false);	
+				String[][] tmp = conPlat.get("SELECT a.OBJECT_ID,b.prglogic_name from $[plat].ctrl_input a,$[plat].prg_base b where a.OBJECT_ID=b.object_id and a.LINK_WIDGET=?",new String[]{parent_id+""},0);
+				if (tmp.length != 0){
+					<?{success:false,message:'?>jacper.trans("该控件已被引用,不能删除")<?!'"}?>;
+				}else {
+					ObjectNode widgetNode=OM.getObject(parent_id);
+					widgetNode.destroy(conPlat);
+				}
+				<?{success:true,id:'?>parent_id<?'}?>;
+				conPlat.commit();
+			}catch(Exception e){
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+		}
+	}
+}

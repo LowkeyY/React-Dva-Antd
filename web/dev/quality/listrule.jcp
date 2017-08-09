@@ -1,0 +1,106 @@
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+
+
+import com.kinglib.*;
+import com.kinglib.database.*;
+import java.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+	this.doPost(jacper);
+}
+public void doPost(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String type = jacper.getString("type");
+	//String tabId = jacper.getString("object_id");
+	String tabId = "54290";
+	jacper.getResponse().setContentType("application/x-json");
+	try{	
+		if(type.equals("get")){
+			JSONObject ruleListJSON = new JSONObject("{success:true}");
+			JSONArray jarr=new JSONArray();
+			String[][] rs= conPlat.get("select a.TAB_ID,a.COL_ID,a.ERROR_TYPE,a.OPERATOR,a.char_value||a.num_value||$date_str(a.date_value,12),a.NOTE_TIP,b.lname,decode(a.error_type,'0','错误','1','警告'),b.data_type,a.rule_id from $[plat].quality_rule a,$[plat].meta_column b where a.tab_id=b.object_id and a.col_id=b.id and a.TAB_ID=? order by a.rule_id",new String[]{""+tabId});
+			if(rs!=null){
+				for (int i = 0; i < rs.length; i++) {
+					JSONObject js = new JSONObject("{}");
+					js.put("col_id", rs[i][1]);
+					js.put("error_type", rs[i][2]);
+					js.put("operator", rs[i][3]);
+					if(rs[i][3].equals("IS NULL")||rs[i][3].equals("IS NOT NULL")){
+						js.put("values", rs[i][3]);
+					}else{
+						js.put("values", rs[i][4]);
+					}
+					js.put("note_tip", rs[i][5]);
+					js.put("lname", rs[i][6]);
+					js.put("error_type_name", rs[i][7]);
+					js.put("data_type", DataType.parseDataType(rs[i][8]).toString());
+					js.put("rule_id", rs[i][9]);
+					jarr.put(js);
+				}
+				ruleListJSON.put("tab_id",tabId);
+				ruleListJSON.put("dataItem",jarr);
+				ruleListJSON.put("totalCount",jarr.length());
+			    jacper.print(ruleListJSON.toString());
+		   }else{
+				 ruleListJSON.put("totalCount","0");
+				 jacper.print(ruleListJSON.toString());
+		   }
+		}else if(type.equals("save")){
+			String fields=jacper.getStr("fields");
+			String charV,numV,dateV,colId,dt;
+			conPlat.setAutoCommit(false);
+			conPlat.exec("delete from  $[plat].quality_rule where TAB_ID=?",new String[]{tabId});
+			JSONArray jarr=new JSONArray(fields);
+			for(int i=0;i<jarr.length();i++){
+				charV="";
+				numV="";
+				dateV="";
+				colId="";
+				dt="";
+				JSONObject js=jarr.getJSONObject(i);
+				//System.out.println(js.getString("col_id"));
+				String[] arrTemp = js.getString("col_id").split("&");
+				if(arrTemp.length>1){
+					colId = arrTemp[0];
+					dt = arrTemp[1];
+				}else{
+					colId = js.getString("col_id");
+					dt = js.getString("data_type");
+				}
+				if(dt.equals("date")){
+					dateV = js.getString("values");
+					if(dateV.equals("IS NULL")||dateV.equals("IS NOT NULL"))
+						dateV = "";
+				}else if(dt.equals("varchar")){
+					charV = js.getString("values");
+				}else{
+					numV = js.getString("values");
+					if(numV.equals("IS NULL")||numV.equals("IS NOT NULL"))
+						numV = "";
+				}
+				conPlat.exec("insert into $[plat].quality_rule (TAB_ID,COL_ID,ERROR_TYPE,OPERATOR,char_value,num_value,date_value,NOTE_TIP,rule_id) values (?,?,?,?,?,?,$str_date(?,12),?,?)",new String[]{tabId,colId,js.getString("error_type"),js.getString("operator"),charV,numV,dateV,js.getString("note_tip"),js.getString("rule_id")});
+			}
+			conPlat.commit();
+			jacper.print("{success:true,id:"+tabId+"}");	
+		}else if(type.equals("reset")){
+			conPlat.setAutoCommit(false);
+			conPlat.exec("delete from  $[plat].quality_rule where TAB_ID=?",new String[]{tabId});
+			conPlat.commit();
+			jacper.print("{success:true,id:"+tabId+"}");	
+		}
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+}

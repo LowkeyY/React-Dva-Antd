@@ -1,0 +1,107 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.workbench.ApplicationNode;
+import com.kinglib.workbench.ModuleNode;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+
+import java.io.UnsupportedEncodingException;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+@class{
+	public void doGet(Jacper jacper){
+	
+	Connection conPlat = jacper.getConnection("plat");
+   	
+	String type = jacper.getStr("type");
+	String fromType = jacper.getStr("fromType");
+	String cn_name = jacper.getString("cn_name","");
+	String phy_name = jacper.getStr("phy_name");
+	String object_id = jacper.getStr("object_id");
+	boolean isC = true;
+	ObjectManager OM=ObjectManager.getInstance();
+	ObjectNode objectNode =null;
+	
+	if(type.equals("toXml")){
+		if("mod".equals(fromType))
+			objectNode=(ModuleNode) OM.getObject(object_id);
+		else if("app".equals(fromType))
+			objectNode=(ApplicationNode) OM.getObject(object_id);
+		else
+			objectNode=OM.getObject(object_id);
+		if(objectNode==null){
+			isC = false;
+			cn_name = "无效的下载文件";
+		}
+		StringBuffer sb = new StringBuffer();
+		HttpServletResponse res = jacper.getResponse();
+		
+		String name = getName(jacper.getRequest(),cn_name,"zip",object_id);
+		
+		res.setHeader("Content-disposition", String.format("attachment; filename=\"%s\"", name)); 
+		
+		//res.setHeader("Content-Disposition", "attachment;filename="+object_id+".cpk");
+		res.setContentType("application/zip");	
+		
+		if(!isC)
+			return;
+		
+	 	if (sb.length()==0) sb.append("<"+"?xml version=\"1.0\" encoding=\"utf-8\"?"+">");
+		 	sb.append("\n<iworkbench>");
+			
+		try {
+			conPlat.setAutoCommit(false);
+			sb=objectNode.toXML(conPlat,sb);
+			conPlat.commit();
+		}catch(Exception e) {
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {
+				e1.printStackTrace();
+				return;
+			}
+			e.printStackTrace();
+			return;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+			}catch(Exception e) {
+			}
+		}
+		sb.append("</iworkbench>");
+		try{
+			ZipOutputStream zipOut = new ZipOutputStream(res.getOutputStream());
+			zipOut.putNextEntry(new ZipEntry("SQL/"));
+			zipOut.putNextEntry(new ZipEntry("IMPORT/"));
+			zipOut.putNextEntry(new ZipEntry("IMPORT/" + phy_name + ".xml"));
+			byte[] b = sb.toString().getBytes("UTF-8");
+			zipOut.write(b);
+			zipOut.putNextEntry(new ZipEntry("ANT/"));
+			zipOut.putNextEntry(new ZipEntry("UPDATE/"));
+			zipOut.close();
+		}catch(Exception e){
+			e.printStackTrace();
+			return;
+		}	
+	}
+}
+	public String getName(HttpServletRequest re,String n,String z,String o){
+		if(n.length()==0)
+			return o+"."+z;
+		String name = n+"."+z;  
+		String userAgent = re.getHeader("User-Agent");  
+		byte[] bytes;
+		try {
+			bytes = userAgent.contains("MSIE") ? name.getBytes() : name.getBytes("UTF-8");
+			name = new String(bytes, "ISO-8859-1");
+		} catch (UnsupportedEncodingException e) {
+			name = "";
+			e.printStackTrace();
+		}
+		return name.length()>0?name:(o+"."+z);
+	}
+}

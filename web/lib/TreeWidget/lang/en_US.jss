@@ -1,0 +1,1 @@
+lib.TreeWidget.lang={"清空":"Clear","取消":"Cancel"}

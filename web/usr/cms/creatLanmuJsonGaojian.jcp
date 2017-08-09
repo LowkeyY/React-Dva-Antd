@@ -1,0 +1,161 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.UUID;
+import com.susing.core.KingleSystem;
+
+@class{
+public void doGet(Jacper jacper) {
+doPost(jacper);
+}
+	public void doPost(Jacper jacper) {
+		try {
+			HttpSession hs = jacper.getSession();
+			Connection conEdu = jacper.getConnection("education");
+			JSONObject jb=new JSONObject();
+			JSONArray ja = new JSONArray();
+			String sql="select id,mingcheng from CMS_ZHANDIAN where fuzhandianid is null";
+			String[][]rs=conEdu.get(sql);
+			
+			if(rs!=null){
+				for(int i=0;i<rs.length;i++){
+					JSONObject fujb=new JSONObject();
+					fujb.put("text",rs[i][1]);
+					fujb.put("id",rs[i][0]+"zhandian");
+					fujb.put("pid","-1");
+					fujb.put("cls","folder");
+					fujb.put("selectable",false);
+					ja.put(fujb);
+					getzizhandian(rs[i][0],conEdu,ja);
+					getlanmu(rs[i][0],conEdu,ja);
+				}
+			}
+			
+			
+			
+			jb.put("root",ja);
+			jacper.print(jb);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public JSONArray getzizhandian(String id,Connection conEdu,JSONArray ja){
+		try {
+			
+			String sql1="select id,mingcheng from CMS_ZHANDIAN where fuzhandianid='"+id+"'";
+			String[][]rs1=conEdu.get(sql1);
+			if(rs1!=null&&rs1.length>0){
+					JSONObject zizhandiangen=new JSONObject();
+					zizhandiangen.put("text","子站点");
+					zizhandiangen.put("id",id+"zizhandian");
+					zizhandiangen.put("pid",id+"zhandian");
+					zizhandiangen.put("cls","folder");
+					zizhandiangen.put("selectable",false);
+					ja.put(zizhandiangen);
+				for(int i=0;i<rs1.length;i++){
+					JSONObject zizhandian=new JSONObject();
+					zizhandian.put("text",rs1[i][1]);
+					zizhandian.put("id",rs1[i][0]+"zhandian");
+					zizhandian.put("pid",id+"zizhandian");
+					zizhandian.put("cls","folder");
+					zizhandian.put("selectable",false);
+					ja.put(zizhandian);
+					getzizhandian(rs1[i][0],conEdu,ja);
+					getlanmu(rs1[i][0],conEdu,ja);
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	public JSONArray getlanmu(String id,Connection conEdu,JSONArray ja){
+		try {
+			String sql1="select id,mingcheng,jieshoutougao from CMS_LANMU where zhandianid='"+id+"' and fulanmuid is null";
+			String[][]rs1=conEdu.get(sql1);
+			if(rs1!=null&&rs1.length>0){
+					JSONObject zilanmugen=new JSONObject();
+					zilanmugen.put("text","栏目");
+					zilanmugen.put("id",id+"zilanmu");
+					zilanmugen.put("pid",id+"zhandian");
+					zilanmugen.put("cls","folder");
+					
+					zilanmugen.put("selectable",false);
+					ja.put(zilanmugen);
+					
+					
+
+				for(int i=0;i<rs1.length;i++){
+					JSONObject zizhandian=new JSONObject();
+					zizhandian.put("text",rs1[i][1]);
+					zizhandian.put("id",rs1[i][0]+"lanmu");
+					zizhandian.put("pid",id+"zilanmu");
+					zizhandian.put("cls","folder");
+					if(rs1[i][2].equals("true")){
+						zizhandian.put("selectable",true);
+					}else{
+						zizhandian.put("selectable",false);
+					}
+					ja.put(zizhandian);
+					getzilanmu(rs1[i][0],conEdu,ja);
+					
+				}
+			}
+				
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	
+
+	public JSONArray getzilanmu(String id,Connection conEdu,JSONArray ja){
+		try {
+			String sql1="select id,mingcheng,jieshoutougao from CMS_LANMU where fulanmuid='"+id+"'";
+			String[][]rs1=conEdu.get(sql1);
+			if(rs1!=null &&rs1.length>0){
+					JSONObject zilanmugen=new JSONObject();
+					zilanmugen.put("text","子栏目");
+					zilanmugen.put("id",id+"zilanmu");
+					zilanmugen.put("pid",id+"lanmu");
+					zilanmugen.put("cls","folder");
+					zilanmugen.put("selectable",false);
+					ja.put(zilanmugen);
+					
+					
+					
+				for(int i=0;i<rs1.length;i++){
+					JSONObject zizhandian=new JSONObject();
+					zizhandian.put("text",rs1[i][1]);
+					zizhandian.put("id",rs1[i][0]+"lanmu");
+					zizhandian.put("pid",id+"zilanmu");
+					zizhandian.put("cls","folder");
+					
+					if(rs1[i][2].equals("true")){
+						zizhandian.put("selectable",true);
+					}else{
+						zizhandian.put("selectable",false);
+					}
+					ja.put(zizhandian);
+					getzilanmu(rs1[i][0],conEdu,ja);
+					
+				}
+			}
+				
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+}

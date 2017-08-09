@@ -1,0 +1,101 @@
+import com.kinglib.ui.folder.*;
+import com.kinglib.database.*;
+
+import com.social.api.core.model.*;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.dictionary.*;
+import java.sql.SQLException;
+import com.kinglib.ui.core.utils.Param;
+
+@class{
+	public void doGet(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String type=jacper.getStr("type");
+		String dept_id=jacper.getStr("dept_id");
+		Connection conPlat = jacper.getConnection("plat");
+
+		jacper.getResponse().setContentType("application/x-json");
+
+		try{
+			JSONObject orgJSON = new JSONObject("{}");
+			Dict df=DictFactory.getInstance().getDict(conPlat,4014);
+			//String deptjs=df.getJavascriptArray();  
+
+			if(type.equals("new")){
+				//orgJSON.put("dept",deptjs);      
+				orgJSON.put("shortName","");
+				orgJSON.put("name","");
+				orgJSON.put("orgType","1");
+				orgJSON.put("webpage","");
+				orgJSON.put("note","");
+				jacper.print(orgJSON);
+			}else{
+				Organization orga=Organization.getOrg(dept_id);
+				orgJSON.put("shortName",orga.getShortName());
+				orgJSON.put("orgName",orga.getName());
+				orgJSON.put("orgType",orga.getType());
+				orgJSON.put("webpage",orga.getWebpage());
+				orgJSON.put("note",orga.getDescription());
+				//orgJSON.put("dept",deptjs);
+				orgJSON.put("createDate",orga.getCreateDate());
+				if(orga.getCreateDate().equals("")){
+					orgJSON.put("createDateModify","");
+				}else{
+					orgJSON.put("createDateModify",orga.getCreateDate());
+				}
+				jacper.print(orgJSON);
+			}
+		}catch(Exception e){
+			e.printStackTrace(); 
+		}finally{
+			conPlat.close();
+		}
+	}
+
+	public void doPost(Jacper jacper){
+
+ 		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid; 
+		String type = jacper.getStr("type");
+		String dept_id = jacper.getStr("dept_id");
+		String trueStr="";
+		Param param=new Param(jacper);
+		
+
+		try{
+			if(type.equals("save")||type.equals("updatesave")){
+				String shortName = jacper.getStr("shortName");
+				String orgType = jacper.getStr("orgType");
+				String orgName = jacper.getStr("orgName");
+				if(type.equals("save")){
+					//Dept dept=CertManager.createDept(param);	
+					//trueStr="dept_id:"+dept.getDeptId()+",deptName:'"+deptName+"',shortName:'"+shortName+"'";
+				}else if(type.equals("updatesave")){
+					Organization orga=Organization.getOrg(param.getStr("dept_id"));
+					//Dept depts=Dept.getDept(param.getStr("dept_id"));
+					if(user_id==0||user_id==1){
+						param.set("primary","1");
+					}else{
+						param.set("primary","0");
+					}
+					orga.update(param);				
+					trueStr="dept_id:"+param.getStr("dept_id")+",orgName:'"+orgName+"',shortName:'"+shortName+"'";
+				}
+			}else if(type.equals("delete")){
+				//Dept deptt=Dept.getDept(param.getStr("dept_id"));
+				//String parent_dept = deptt.getParent().getDeptId();
+				//deptt.delete(param);
+				//trueStr = "dept_id:" + parent_dept;
+			}
+			jacper.print("{success:true,"+trueStr+"}");		
+		}catch(Err e){
+			jacper.print(e.toJSON(hs.uid+""));
+		}finally{
+				param.closeAllConnection();
+		}  
+	}
+}

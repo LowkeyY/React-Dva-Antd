@@ -1,0 +1,89 @@
+
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+
+
+import com.kinglib.*;
+import java.util.*;
+import org.w3c.dom.*;
+import com.susing.core.KingleSystem;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.database.*;
+
+@class{
+   
+public void doPost(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String type = jacper.getStr("type");
+	String objectId=jacper.getStr("id");
+ 
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+			JSONObject portalJSON = new JSONObject("{}");	
+			String option = jacper.getStr("optionType");
+			JSONObject optionJSON = new JSONObject("{}");
+			if(option.equals("datalink")){
+				String[] cs= KingleSystem.getConnectionNames();		
+				JSONArray jarr=new JSONArray();
+				for(int i=0;i<cs.length;i++){
+					if(cs[i].equals("plat") || cs[i].equals("work")|| cs[i].equals("cert")) continue;
+						JSONObject items = new JSONObject("{}");
+						items.put("id",cs[i]);
+						items.put("title",cs[i]);
+						jarr.put(items);
+				}
+				optionJSON.put("datalink",jarr);
+				<??>optionJSON.toString()<??>;
+			}else if(option.equals("table")){
+				ObjectNode currentNode=ObjectManager.getObject(objectId);
+				ObjectNode  systemNode=currentNode.upTo(ObjectType.SYSTEM);
+
+				ObjectNode[] nodes=systemNode.findAllChildsByType(ObjectType.METATABLE);
+				JSONArray jarr=new JSONArray();
+				try{
+					for(int i=0;i<nodes.length;i++){
+						JSONObject items = new JSONObject("{}");
+						items.put("id",String.valueOf(nodes[i].getId()));
+						items.put("title",String.valueOf(nodes[i].getName()));
+						jarr.put(items);
+					}
+					optionJSON.put("table",jarr);
+				}catch(Exception e){}
+				<??>optionJSON.toString()<??>;
+			}else if(option.equals("column")){
+				String tabId=jacper.getString("tabId","-1");
+				if(!tabId.equals("-1")){
+					MetaTable mt=MetaFactory.getObject(tabId);
+					JSONArray jarr=new JSONArray();
+					try{
+						for(MetaColumn col:mt.getColumns()){
+							JSONObject items = new JSONObject();
+							items.put("id",col.getId());
+							items.put("title",col.getLname());
+							jarr.put(items);
+						}
+						optionJSON.put("column",jarr);
+					}catch(Exception e){}
+				}else{
+					JSONArray jarr=new JSONArray();
+					try{
+						optionJSON.put("column",jarr);
+					}catch(Exception e){}
+				}
+				<??>optionJSON.toString()<??>;
+			}
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+}

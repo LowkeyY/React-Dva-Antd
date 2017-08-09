@@ -1,0 +1,280 @@
+
+
+
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.database.AttributeDict;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.util.Search;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.Dept;
+import com.social.api.core.model.User;
+
+
+@class{
+
+	HashMap<String,Integer> deptsMap;
+	HashSet<String> usersMap;
+	
+	public void doGet(Jacper jacper){  
+
+		HttpSession hs = jacper.getSession();
+		deptsMap = new HashMap<String,Integer>();
+		usersMap = new HashSet<String>();
+	    String id=jacper.getString("node");
+	    String tabId=jacper.getString("tabId","");
+	    String groupByCol=jacper.getString("groupByCol","");
+	    String selectType=jacper.getString("selectType","");
+	    initHasDatas(jacper.getString("hasDatas",""));
+	    int nowCase = Integer.parseInt(selectType);
+
+	    if("mail_list_id".equals(id)){
+	    	JSONArray roots = new JSONArray();
+	    	JSONObject rn = null;
+	    	try{
+		    	if(!"".equals(tabId) && !"".equals(groupByCol) && !"".equals(selectType)){
+					MetaTable mta = MetaFactory.getMetaTable(tabId);
+					String sql = "select count(*) from "+mta.getName()+" where user_id = ?";
+					
+					String[] rs = jacper.getConnection(mta.getDblink()).getRow(sql,new String[]{String.valueOf(hs.uid)});
+					if(rs.length>0 && Integer.parseInt(rs[0])>0){
+						rn = new JSONObject();
+						rn.put("id","myMailList::jsonRoot");
+						rn.put("text", "我的联系人");
+						rn.put("leaf", false);
+						rn.put("checked","none");
+						rn.put("canRead", false);
+						rn.put("icon", "/themes/icon/all/group.gif");
+						roots.put(rn);
+					}
+		    	}
+				rn = new JSONObject();
+				String nchecked = usersMap.size() > 0 ? (CertManager.getAllUserID().length - 2 == usersMap.size()) ? "all"
+						: "part"
+						: "none";
+				rn.put("id","systemMailList::0");
+				rn.put("text", "内部通讯录");
+				rn.put("leaf", false);
+				rn.put("checked",nchecked);
+				rn.put("canRead", false);
+				rn.put("expanded", !"none".equals(nchecked));
+				rn.put("icon", "/themes/icon/all/group.gif");
+				roots.put(rn);
+				jacper.print(roots);
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+	    }
+	    
+	    if(id.startsWith("systemMailList::")){
+	    	String[] ids = id.split("::");
+			if(ids[1].equals("")) ids[1]="0";
+			Dept d = Dept.getDept(ids[1]);
+			
+			if (d == null)
+				return;
+				
+			JSONArray treeJSONArray = new JSONArray();
+			JSONObject js = null;
+			try {
+				for (Dept cd : d.getChilds()) {
+					js = new JSONObject();
+					String nchecked = currentDeptState(cd);
+					js.put("id", "systemMailList::"+cd.getDeptId());
+					js.put("text", cd.getShortName());
+					js.put("leaf", !(cd.hasChild() || cd.hasUser()));
+					js.put("icon", "/themes/icon/all/group.gif");
+					js.put("checked",nchecked);
+					js.put("expanded", !"none".equals(nchecked));
+					js.put("canRead", false);
+					treeJSONArray.put(js);	
+				}
+				for(User u:d.getUsers()){
+					if("01".indexOf(u.getUserId())!=-1) continue;
+					boolean canRead = false;
+					String rText = u.getRealName();
+					switch(nowCase){
+						case 0 :
+							canRead = !"".equals(u.getEmail());
+							if(!canRead)
+								rText +="(邮箱没有填写)";
+							break;
+						case 1 :
+							canRead = !"".equals(u.getCeller());
+							if(!canRead)
+								rText +="(手机号码没有填写)";
+							break;
+						case 2 :
+							canRead = true;
+							break;
+					}
+					js = new JSONObject();
+					String nchecked = (usersMap.size()>0 && usersMap.contains(u.getUserId())) ? "all" : "none";
+					js.put("id", "user_"+u.getUserId());
+					js.put("user_id", u.getUserId());
+					js.put("dept_id",d.getDeptId());
+					js.put("dept_name",d.getShortName());
+					js.put("text",rText);
+					js.put("leaf", true);
+					js.put("checked",nchecked);
+					js.put("icon", "/themes/icon/common/user.gif");
+					js.put("canRead", canRead);
+					js.put("email",u.getEmail());
+					js.put("celler",u.getCeller());
+					if(!canRead)
+						js.put("disabled",true);
+						
+						treeJSONArray.put(js);
+				}
+				jacper.print(treeJSONArray);
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}	    
+	    }else if(id.startsWith("myMailList")){
+	    	if(!"".equals(tabId) && !"".equals(groupByCol) && !"".equals(selectType)){
+	    		String[] ids = id.split("::");
+	    		
+	    		JSONArray treeJSONArray = new JSONArray();
+				JSONObject js = null;
+				try{
+					MetaTable mta = MetaFactory.getMetaTable(tabId);
+		    		MetaColumn col = mta.getColumnByName(groupByCol);
+		    		String colOpt = "";
+		    		if(col!=null){
+		    			AttributeDict att = (AttributeDict) col.getAttribute("option_id");
+		    			colOpt=att.getOptionId();
+		    		}
+	
+		    		if(ids[1].equals("jsonRoot")){
+		    			if(!"".equals(colOpt)){
+			    			String sql = "select option_code,option_value from second_dict where option_id = ? and option_code in ("+
+			    					"select distinct "+groupByCol+" from "+mta.getName()+" where user_id = ?) order by option_code";
+					    	
+					    	String[][] rs = jacper.getConnection(mta.getDblink()).get(sql,new String[]{colOpt,String.valueOf(hs.uid)});
+					    	
+					    	if(rs!=null && rs.length>0){
+					    		for(int i=0;i<rs.length;i++){
+					    			js = new JSONObject();
+									String nchecked = "none";
+									js.put("id", "myMailList::"+rs[i][0]);
+									js.put("text", rs[i][1]);
+									js.put("leaf", false);
+									js.put("icon", "/themes/icon/all/group.gif");
+									js.put("checked",nchecked);
+									js.put("canRead", false);
+									treeJSONArray.put(js);
+					    		}
+					    	}
+		    			}
+		    		}else{
+		    			String sql = "select id,name,mobile,email,sex from "+mta.getName()+" where user_id = ? and "+groupByCol+" = ?";
+		    			
+		    			String[][] rs = jacper.getConnection(mta.getDblink()).get(sql,new String[]{String.valueOf(hs.uid),ids[1]});
+		    			if(rs!=null && rs.length>0){
+		    				for(int i=0;i<rs.length;i++){
+		    					boolean canRead = false;
+								String rText = rs[i][1];
+								switch(nowCase){
+									case 0 :
+										canRead = !"".equals(rs[i][3]);
+										if(!canRead)
+											rText +="(邮箱没有填写)";
+										break;
+									case 1 :
+										canRead = !"".equals(rs[i][2]);
+										if(!canRead)
+											rText +="(手机号码没有填写)";
+										break;
+								}
+		    					js = new JSONObject();
+								String nchecked = "none";
+								js.put("id", rs[i][0]);
+								js.put("text",rText);
+								js.put("leaf", true);
+								js.put("checked",nchecked);
+								if("1".equals(rs[i][4])){
+									js.put("icon", "/themes/icon/all/user_female.gif");
+								}else{
+									js.put("icon", "/themes/icon/common/user.gif");
+								}
+								js.put("canRead", canRead);
+								js.put("email",rs[i][3]);
+								js.put("celler",rs[i][2]);
+								if(!canRead)
+									js.put("disabled",true);
+				
+								treeJSONArray.put(js);
+		    				}
+		    			}
+		    		}
+		    		jacper.print(treeJSONArray);
+	    		}catch(Exception e){
+					e.printStackTrace();
+				}	
+	    	}
+	    }
+	}
+	public String returnSql(String str,String type){
+		return returnSql(str,type,"");
+	}
+	
+	public String returnSql(String str,String type,String tab){
+		String s = str;
+		if("0".equals(type)){
+			s += " and "+tab+"email is not null";
+		}else if("1".equals(type)){
+			s += " and "+tab+"mobile is not null";
+		}
+		return s;
+	}
+	public String currentDeptState(Dept dp){
+		
+		String rs = "none";
+		
+		if(usersMap.size()==0 || deptsMap.size()==0)
+			return rs;
+		
+		if(deptsMap.containsKey(dp.getDeptId())){
+			ArrayList<User> al = new ArrayList<User>();
+			dp.getAllUsers(al);
+			return (al.size() == deptsMap.get(dp.getDeptId())) ? "all" : "part";
+		}
+
+		return rs;
+	}
+	public void initHasDatas(String datas){
+		if(datas.length()==0){
+			return;
+		}
+		String arr[] = Search.splitKey(datas, "<", ">");
+		ArrayList<String> list = new ArrayList<String>();
+		for (int i = 0; i < arr.length; i++) {
+			if (i % 2 != 0) {
+				list.add(arr[i]);
+				usersMap.add(arr[i]);
+			}
+		}
+		
+		String[] rs = list.toArray(new String[list.size()]);
+		
+		for (int i = 0; i < rs.length; i++) {
+			User u = CertManager.getUser(rs[i]);
+			for(String s : u.getAllDeptId().split(",")){
+				s = s.replace("'", "");
+				if(!"0".equals(s)){
+					deptsMap.put(s, deptsMap.containsKey(s)?deptsMap.get(s)+1:1);
+				}
+			}
+		}		
+	}
+}

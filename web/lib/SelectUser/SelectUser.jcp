@@ -1,0 +1,65 @@
+            
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.social.api.core.model.*;
+
+
+               
+@class{
+
+
+	public void doGet(Jacper jacper){  
+
+	    String id=jacper.getString("node");
+	    String others = jacper.getString("others","");
+		if(id==null || id.equals("")) id="0";
+		Dept d = Dept.getDept(id);
+		if (d == null)
+			return;
+		JSONArray treeJSONArray = new JSONArray();
+		JSONObject js = null;
+		try {
+			for (Dept cd : d.getChilds()) {
+				js = new JSONObject();
+				js.put("id", cd.getDeptId());
+				js.put("text", cd.getShortName());
+				js.put("leaf", !cd.hasChild() && !cd.hasUser());
+				js.put("icon", "/themes/icon/common/group.gif");
+				js.put("allowSelect", false);
+				treeJSONArray.put(js);
+			}
+			for(User u:d.getUsers()){
+				if("01".indexOf(u.getUserId())!=-1) continue;
+				js = new JSONObject();
+				js.put("id", "user_"+u.getUserId());
+				js.put("user_id", u.getUserId());
+				js.put("dept_id",d.getDeptId());
+				js.put("dept_name",d.getShortName());
+				js.put("text",u.getRealName());
+				js.put("leaf", true);
+				js.put("icon", "/themes/icon/common/user.gif");
+				js.put("allowSelect", true);
+				if(others.indexOf(",mail,")!=-1){
+					js.put("omail", u.getEmail());
+				}
+				if(others.indexOf(",phone,")!=-1){
+					js.put("ophone", u.getCeller());
+				}
+				treeJSONArray.put(js);
+			}
+			jacper.print(treeJSONArray);
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+	}
+	public void doPost(Jacper jacper){  
+		String userId=jacper.getString("userId");
+		User u=User.getUser(userId);
+		if(u!=null){
+			Dept d=u.getDept();
+			jacper.print("{success:true,value:'"+u.getRealName()+"',deptId:'"+d.getDeptId()+"',deptName:'"+d.getShortName()+"'}");
+		}else{
+			jacper.print("{success:false}");
+		}
+	}
+}

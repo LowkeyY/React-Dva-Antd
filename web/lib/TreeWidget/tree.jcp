@@ -1,0 +1,111 @@
+            
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.ui.tree.*;
+
+
+
+@class{
+
+	public void doGet(Jacper jacper){  	
+	
+		Connection conPlat = jacper.getConnection("plat"); 
+		Connection conCert = jacper.getConnection("cert");			
+		//Connection conTmp1 = null;
+		Connection conTmp2 = null;		
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		String temp_id=jacper.getString("_id");
+		String forder_id=null;
+
+		if (temp_id!=null){
+		  forder_id = temp_id.substring(0,temp_id.indexOf("__"));
+		}else{
+			temp_id="top";
+		}
+		String parent_id = jacper.getString("parent_id");
+		String parenttype= jacper.getStr("parenttype");
+		String type= jacper.getStr("type");
+		int level_num= jacper.getInt("level_num",1);		
+		int arrtree_length = 0;
+
+
+		String[][] arrtree=null;
+		String[][] arrtree1=null;
+		String hasChild ="1";   
+		String[] buf1=null;  
+		String pmk="";
+		String pmk2="";
+		String[][] PMK=null;
+		
+
+	 	Tree tempTree=TreeFactory.getInstance().getTree(conPlat,parent_id);	
+		arrtree=tempTree.getData(jacper,conPlat);
+		TreeConfig[] data=tempTree.getLevelConfig(level_num);
+		type=tempTree.getType();
+		String tree_herf="";
+		conPlat.close();
+
+
+//生成树XML数据
+	<?<root _id="?>temp_id<?">		
+	<forder _parent="?>temp_id<?" event="event1">?>; 
+		String sIcon="";
+		String eIcon="";		
+		for(int i=0;i<arrtree.length;i++){	
+				
+				level_num=Integer.parseInt(arrtree[i][6]);
+				type=arrtree[i][5];
+				if(data[0].getTreeType().equals("2")){		
+					sIcon=arrtree[i][7];
+					eIcon=arrtree[i][8];
+				}else{
+					sIcon=data[0].getStartIcon();
+					eIcon=data[0].getEndIcon();
+					level_num++;
+				}
+		
+
+			tree_herf+="herfs1=\""+arrtree[i][4]+"\"";
+			if (Integer.parseInt(arrtree[i][3])>1)	arrtree[i][3]="1";
+			parenttype=data[0].getTreeType();
+			String endicon="";
+			String starticon="";
+
+			String starticon1 = jacper.getStr("starticon");
+			
+				if (!arrtree[i][9].equals("0")&&!arrtree[i][9].equals("")) {
+					starticon=endicon="/themes/icon/"+arrtree[i][9];				
+				}else  if (!arrtree[i][7].equals("")&&!arrtree[i][8].equals("")) {
+					starticon="/themes/icon/"+arrtree[i][7];
+					endicon="/themes/icon/"+arrtree[i][8];				
+				}else if ( !sIcon.equals("") && !eIcon.equals("")) {
+					if ( arrtree_length <= i ) {
+							starticon="/themes/icon"+sIcon;
+							endicon="/themes/icon"+eIcon;
+						}
+						else {
+
+							if ( data.length == 1 ) {
+								starticon="/themes/icon"+sIcon;
+								endicon="/themes/icon"+eIcon;
+							}
+							else {
+								starticon="/themes/icon"+data[1].getStartIcon();
+								endicon="/themes/icon"+data[1].getEndIcon();
+							}
+					}					
+				}else if ( !starticon1.equals("") ){
+					starticon=endicon=starticon1;
+				}	
+                                             
+				<?<e _id="?>arrtree[i][1]<?__?>level_num<?" _hasChild ="?>arrtree[i][3]<?" icon0="?>starticon<?" icon1="?>endicon<?" title="?>arrtree[i][0]<?" ?>tree_herf<?  levelNum="?>level_num<?"  url="/lib/TreeWidget/tree.jcp?_id=?>arrtree[i][1]<?__?>level_num<?&amp;parent_id=?>parent_id<?&amp;type=?>type<?&amp;parenttype=?>parenttype<?&amp;level_num=?>level_num<?&amp;starticon=?>starticon<?"/>?>;
+			tree_herf="";
+		}
+		<?</forder>
+		</root>?>;
+	}
+}

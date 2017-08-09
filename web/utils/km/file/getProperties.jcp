@@ -1,0 +1,108 @@
+import java.io.IOException;      
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.smartkms.file.*;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import java.util.*;
+
+
+@class{
+public void doGet(Jacper jacper){
+
+	boolean isLogin = jacper.setSession();  
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	String[] folders=null;
+	String[] files=null;
+	Connection conUtils = jacper.getConnection("utils");
+	Connection conCert = jacper.getConnection("cert");
+	String folder=jacper.getStr("FolderID");
+	String folderString=jacper.getStr("Folders");
+	String fileString=jacper.getStr("Files");
+	if(!folderString.equals("")){
+		folders=folderString.split(",");
+	}
+	if(!fileString.equals("")){
+		files=fileString.split(",");
+	}
+	ArrayList<FileItem> fileList=new ArrayList<FileItem>();
+	ArrayList<DirItem> dirList=new ArrayList<DirItem>();
+	try{
+		JSONObject viewJson=new JSONObject();
+		if(!folder.equals("")){
+			FileConfig fileConf =FileConfigFactory.getInstance().getFileConfig(conUtils,conCert,user_id+"");
+			DirItem dir=fileConf.getDir(folder);
+			dir.getFamilyTree(dirList);
+			for (Iterator iterator = dirList.iterator(); iterator.hasNext();){
+				DirItem itm = (DirItem) iterator.next();
+				String dirId=itm.getDirId();
+				FileList cutFiles =FileListFactory.getInstance().getFileList(conUtils,dirId);
+				ArrayList<FileItem> subList=cutFiles.getFileArrayList();
+				for (Iterator ite = subList.iterator(); ite.hasNext();){
+					FileItem fitm = (FileItem) ite.next();
+					fileList.add(fitm);
+				}
+			}
+			int totalSize=0;
+			for (Iterator iterator = fileList.iterator(); iterator.hasNext();){
+				FileItem itm = (FileItem) iterator.next();
+				totalSize+=itm.getFileSize();
+			}
+			viewJson.put("sucess",true);
+			viewJson.put("Name",dir.getDirName());
+			viewJson.put("fileType",jacper.trans("文件夹"));
+			viewJson.put("Path",dir.getUrl());
+			viewJson.put("Size",totalSize);
+			viewJson.put("Files",fileList.size());
+			viewJson.put("Folders",dirList.size());
+			viewJson.put("CreateDate",dir.getCreateTime());
+			jacper.print(viewJson);
+		}else{
+			int totalSize=0;
+			FileConfig fileConf =FileConfigFactory.getInstance().getFileConfig(conUtils,conCert,user_id+"");
+			DirItem dir1=fileConf.getDir(fileConf.getCurrentFolderId());
+			if(folders!=null){
+				for(int i=0;i<folders.length;i++){
+					DirItem dir=fileConf.getDir(folders[i]);
+					dir.getFamilyTree(dirList);
+					for (Iterator iterator = dirList.iterator(); iterator.hasNext();){
+						DirItem itm = (DirItem) iterator.next();
+						String dirId=itm.getDirId();
+						FileList cutFiles =FileListFactory.getInstance().getFileList(conUtils,dirId);
+						ArrayList<FileItem> subList=cutFiles.getFileArrayList();
+						for (Iterator ite = subList.iterator(); ite.hasNext();){
+							FileItem fitm = (FileItem) ite.next();
+							fileList.add(fitm);
+						}
+					}
+				}
+			}
+			if(files!=null){
+				for(int i=0;i<files.length;i++){
+					 FileItem fitm=FileListFactory.getInstance().getFile(conUtils,files[i]);
+					 fileList.add(fitm);
+				}
+			}
+			for (Iterator iterator = fileList.iterator(); iterator.hasNext();){
+				 FileItem itm = (FileItem) iterator.next();
+				 totalSize+=itm.getFileSize();
+			}
+			viewJson.put("sucess",true);
+			viewJson.put("fileType",jacper.trans("多文件"));
+			viewJson.put("Path",dir1.getUrl());
+			viewJson.put("Size",totalSize);
+			viewJson.put("Files",fileList.size());
+			viewJson.put("Folders",dirList.size());
+			jacper.print(viewJson);
+		}
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conUtils.close();
+		conCert.close();
+	}
+}   
+}

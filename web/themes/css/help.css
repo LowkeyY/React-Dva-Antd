@@ -1,0 +1,14 @@
+.themes-css-help-title-t1 { font-size:20pt;font-weight:bold;font-family: "宋体";}
+.themes-css-help-title-t2 { font-size:14pt;font-weight:bold;font-family: "宋体";}
+.themes-css-help-table { border-left-style: none; border-right-style: none; border-top-style: none; 
+               border-bottom: 1.5pt solid black; background-color: silver ; font-size:12pt;font-family: "宋体";}
+			   
+.themes-css-help-table TH{ font-weight: bold; color: white; border-left-style: none; border-right-style: 
+               none; border-top-style: none; border-bottom: 1.5pt solid black; 
+               background-color: maroon ;text-align:center;height:30px;
+	}
+.themes-css-help-table .number-column{ text-align:center;}
+.themes-css-help-table TD{ color: black; border-style: none; background-color: #FFFFEF ; }
+.themes-css-help-button-img {margin-right:2px;}
+.themes-css-help-content-div{margin-left:15px;text-indent:2em;font-size:12pt;font-family: "宋体";}
+  

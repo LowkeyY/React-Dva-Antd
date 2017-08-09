@@ -1,0 +1,62 @@
+import org.apache.log4j.Logger;
+import java.sql.*;
+import java.util.*;
+import java.util.List;
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.util.json.*;
+
+@class{
+
+	protected  DatabaseMetaData md = null;
+	public void doPost(Jacper jacper){
+		com.kinglib.Connection conPlat = jacper.getConnection("plat");
+		
+		ResultSet rs = null;
+		String propertyName=jacper.getStr("propertyName");
+		String[] arrResult=null;
+		//ArrayList<String[]> al=new ArrayList<String[]>(20);
+		ArrayList<String> schemaNames = new ArrayList<String>();
+		try {
+			md = conPlat.getMetaData();
+            rs = md.getSchemas();
+            while (rs.next()) {
+                String schemaName = rs.getString("TABLE_SCHEM");
+                schemaNames.add(schemaName);
+            }
+			arrResult = schemaNames.toArray(new String[schemaNames.size()]);
+            //arrResult = al.toArray(new String[al.size()][2]);
+        } catch (Exception e) {
+			       
+        } finally {
+            try {
+                rs.close();
+                //closeConnection();
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        JSONObject form=null;
+			try{
+				//int aaa=schemaNames.size();
+				form= new JSONObject("{success:true}");
+				JSONArray jarr=new JSONArray();
+				for(int i=0;i<arrResult.length;i++){
+					JSONObject js=new JSONObject("{}");
+					js.put("text",arrResult[i]);
+					js.put("value",arrResult[i]);
+					jarr.put(js);
+				}
+				form.put("items",jarr);
+				form.put("totalCount",jarr.length());
+				jacper.print(form.toString());
+			}catch(Exception e){
+				e.printStackTrace(); 
+			}
+	}
+	
+	public void doGet(Jacper jacper){
+		this.doPost(jacper);
+	}
+
+}

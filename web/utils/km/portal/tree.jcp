@@ -1,0 +1,94 @@
+
+import java.io.IOException;
+
+
+import com.kinglib.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	Connection conUtils = jacper.getConnection("utils");
+	String level = jacper.getString("level");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = hs.uid+"";
+	
+	String id=jacper.getStr("id");
+	String root = jacper.getStr("root");
+	String app_type=jacper.getStr("app_type");
+	
+	String haschild = "";
+	String forder_id = id;
+	
+	String[][] rs = null;
+	String[] rrss=null;	
+	<?<root _id="?>forder_id<?">?>;
+		<?<forder _parent="?>forder_id<?" event="event1">?>;
+	if (level.equals("1")){
+			rs = conUtils.get("select a.portal_id,a.portal_name,a.portal_pname,a.lang,a.current_stat,a.portal_desc from $[utils].portal a ",new String[]{},0);
+			
+			if ( rs != null ) {
+					for ( int i=0; i<rs.length; i++ ) {	
+						rrss = conUtils.getRow("select count(*) from $[utils].portal_node where parent_id=?  ",new String[]{rs[i][0]});									
+						if (Integer.parseInt(rrss[0])>0) 
+							haschild = "1";
+						else 
+							haschild = "0";
+						<?<e _id="?>rs[i][0]<?" _hasChild ="?>haschild<?" title="?>rs[i][1]<?" program="top"  type="view" params="isSystem=y&amp;from=menu&amp;id=?>rs[i][0]<?&amp;portal_id=?>rs[i][0]<?" url="/utils/km/portal/tree.jcp?level=2&amp;id=?>rs[i][0]<?&amp;parent_id=?>rs[i][0]<?&amp;app_type=top&amp;root=?>root<?"/>
+						?>;
+					}
+			}
+			
+		
+	}else if (level.equals("2")){
+			
+			
+			rs = conUtils.get("select a.node_id,a.node_title,a.parent_id from $[utils].portal_node a where a.parent_id=? ",new String[]{id},0);
+
+			if ( rs != null ) {
+					for ( int i=0; i<rs.length; i++ ) {
+						String[] rrss1 = conUtils.getRow("select count(*) from $[utils].portal_content where node_id=?  ",new String[]{rs[i][0]});
+						rrss =  conUtils.getRow("select count(*) from $[utils].portal_node where parent_id=?  ",new String[]{rs[i][0]});
+						if (Integer.parseInt(rrss1[0])+Integer.parseInt(rrss[0])>0) 
+							haschild = "1";
+						else 
+							haschild = "0";
+
+						<?
+						<e _id="?>rs[i][0]<?" _hasChild ="?>haschild<?" title="?>rs[i][1]<?"  program="menu"  type="view" params="isSystem=y&amp;from=menu&amp;id=?>rs[i][0]<?" url="/utils/km/portal/tree.jcp?level=3&amp;id=?>rs[i][0]<?&amp;parent_id=?>rs[i][2]<?&amp;app_type=menu&amp;root=?>root<?" icon0="/themes/icon/xp/dhd.gif" icon1="/themes/icon/xp/dhd.gif"/>
+						?>;
+					}
+			}
+	}else if (level.equals("3")){
+			rs = conUtils.get("select max(a.node_id),max(a.node_title),count(b.node_id)+count(c.page_id) from $[utils].portal_node a left outer join $[utils].portal_node b on a.node_id=b.parent_id left outer join $[utils].portal_content c on a.node_id=c.node_id where a.parent_id=? group by a.node_id,a.seq order by a.seq",new String[]{id},0);
+
+			if ( rs != null ) {
+					for ( int i=0; i<rs.length; i++ ) {
+						if (Integer.parseInt(rs[i][2])>0) 
+							haschild = "1";
+						else 
+							haschild = "0";
+
+						<?
+						<e _id="?>rs[i][0]<?" _hasChild ="?>haschild<?" title="?>rs[i][1]<?"  program="menu"  type="view" params="isSystem=y&amp;from=menu&amp;id=?>rs[i][0]<?&amp;portal_id=?>rs[i][0]<?" url="/utils/km/portal/tree1.jcp?level=2&amp;id=?>rs[i][0]<?&amp;parent_app=?>rs[i][0]<?&amp;app_type=top&amp;root=?>root<?" icon0="/themes/icon/xp/dhd.gif" icon1="/themes/icon/xp/dhd.gif"/>
+						?>;
+					}
+			}
+			rs = conUtils.get("select page_id,title,node_id from $[utils].portal_content a where a.node_id=? ",new String[]{id},0);
+
+			if ( rs != null ) {
+					
+					for ( int i=0; i<rs.length; i++ ) {
+						haschild = "0";
+
+						<?
+						<e _id="?>rs[i][0]<?" _hasChild ="?>haschild<?" title="?>rs[i][1]<?" parent_id="?>rs[i][2]<?"  program="publish"  type="view" params="isSystem=y&amp;from=publish&amp;id=?>rs[i][0]<?" url="/utils/km/portal/tree.jcp?level=3&amp;id=?>rs[i][0]<?&amp;parent_id=?>rs[i][2]<?&amp;app_type=publish&amp;root=?>root<?" icon0="/themes/icon/xp/dhd.gif" icon1="/themes/icon/xp/dhd.gif"/>
+						?>;
+					}
+			}
+	}
+	<?</forder></root>?>;
+}}
+

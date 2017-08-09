@@ -1,0 +1,42 @@
+import gpra.filesystem.HWUnits;
+
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+
+//public class FolderMoveConfirm { 
+@class{
+	public void doPost(Jacper jacper) {
+		HttpSession hs = jacper.getSession();
+		Connection con = jacper.getConnection(HWUnits.HW_DBLINK);
+		String targetNodeId = jacper.getString("targetNodeId", "");
+		String newFilePath = jacper.getString("newFilePath","");
+		String sourceNodeId = jacper.getString("sourceNodeId","");
+		String oldFilePath = jacper.getString("oldFilePath","");
+		if (newFilePath.length() < 36 || oldFilePath.length() == 0 || sourceNodeId.length() == 0 || targetNodeId.length() == 0) {
+			jacper.print("{success:true,type:'warn',message:'参数错误 , 无法移动。'}");
+			return;
+		}
+		sourceNodeId = sourceNodeId.split("::")[0];
+		newFilePath = newFilePath + "/" + sourceNodeId;
+		String targetDirId = newFilePath.substring(0 , 36);
+		oldFilePath = targetDirId+"/"+oldFilePath;
+		if(newFilePath.equals(oldFilePath)){
+			jacper.print("{success:true,type:'info',message:'同一目录，移动成功。',nochange:true}");
+			return;
+		}
+		
+		String[] rs = con.getRow("select nb.space_id from dir_node_base nb where nb.dir_id = ? " , new String[]{targetDirId});
+		if(rs != null && rs.length > 0){
+			String parentNodeId = targetNodeId.equals(targetDirId) ? "" : targetNodeId;
+			con.exec("update dir_node_info i set i.p_node_id = ? where i.node_id  = ? ", new String[]{parentNodeId , sourceNodeId});
+			con.exec("update dir_file_base b set b.file_dir = replace(b.file_dir , ? , ?) where b.space_id = ?", new String[]{oldFilePath , newFilePath , rs[0]});
+			jacper.print("{success:true,type:'info',message:'移动成功。',path:'"+newFilePath.replaceAll("/", "__1/").replace(targetDirId+"__1", "top")+"__1'}");
+		} else{
+			jacper.print("{success:true,type:'warn',message:'参数错误(未找到所属空间) , 无法移动 , 请刷新页面重试。'}");
+		}
+	}
+	public void doGet(Jacper jacper) {
+		doPost(jacper);
+	}
+}

@@ -1,0 +1,29 @@
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.netdisk.NetdiskUnits;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.susing.core.KingleSystem;
+//public class downloadAtt{
+@class{
+
+	public void doGet(Jacper jacper) {
+		String id = jacper.getStr("fileid");
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		String[] configs;
+		if((configs = NetdiskUnits.getNetdiskfileConfigs(id)).length > 0){
+			id = "/netdisk/"+ configs[1];
+		} else {
+			if(service.isPageNeedCompile()){
+				Matcher m = Pattern.compile("^.+?\\.(.+?)\\..+?\\/(.*?)$", Pattern.CASE_INSENSITIVE).matcher(id);
+				if(m.find()){
+					id = (new StringBuilder()).append("/preview/"+m.group(1)+"/"+m.group(2)).toString();
+				}
+			}
+		}
+		jacper.getResponse().setStatus(301);   
+		jacper.getResponse().setHeader("Location",id);
+	}
+}

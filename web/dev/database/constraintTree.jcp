@@ -1,0 +1,126 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+import com.kinglib.util.json.*;
+import com.kinglib.database.*;
+
+
+@class{
+	public void doGet(Jacper jacper){  
+	
+		String id = jacper.getStr("node");
+		String object_id = jacper.getString("object_id","-1");
+		if(object_id.equals("-1")) return;
+
+		boolean  isGrid = jacper.getStr("grid").equals("true");
+		
+
+		MetaTable mt=MetaFactory.getObject(object_id);
+		String icon="";
+		JSONArray treeJSONArray=new JSONArray();
+		JSONObject resultJSON=null;
+
+		if(id.equals("0")){
+			String[][] rs=new String[][]{
+				{"P",jacper.trans("主键"),"0"},
+				{"F",jacper.trans("外键"),"0"},
+				{"U",jacper.trans("索引"),"0"},
+				{"R",jacper.trans("引用"),"0"}
+			};
+			for(Constraint c:mt.getConstraints()){
+				ConstraintType t=c.getConstraintType();
+				if(t==ConstraintType.PrimaryKey)
+					rs[0][2]="1";
+				else if(t==ConstraintType.ForeignKey)
+					rs[1][2]="1";
+				else if(t==ConstraintType.Unique)
+					rs[2][2]="1";
+				else if(t==ConstraintType.Reference)
+					rs[3][2]="1";			
+			}
+			try{
+				for(int i=0;i<rs.length;i++){
+					resultJSON = new JSONObject();
+					resultJSON.put("text",rs[i][1]);
+					resultJSON.put("leaf",rs[i][2].equals("0"));
+					resultJSON.put("id",rs[i][0]);
+					resultJSON.put("icon","/themes/icon/all/folder_key.gif");
+					resultJSON.put("type",rs[i][0]);
+					treeJSONArray.put(resultJSON);
+				}			
+				jacper.print(treeJSONArray.toString());
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}else{
+			ConstraintType t=ConstraintType.parseConstraintType(id);
+			if(t==ConstraintType.PrimaryKey)
+				icon="/themes/icon/all/key.gif";
+			else if(t==ConstraintType.ForeignKey)
+				icon="/themes/icon/all/key_go.gif";
+			else if(t==ConstraintType.Unique)
+				icon="/themes/icon/all/report_key.gif";
+			else if(t==ConstraintType.Reference)
+				icon="/themes/icon/all/table_sort.gif";
+
+			try{
+				String cname="";
+				for(Constraint c:mt.getConstraints()){
+					if(!isGrid && c.getConstraintName().equals(cname)) continue;
+					if(c.getConstraintType()!=t) continue;
+					cname=c.getConstraintName();
+					resultJSON = new JSONObject();
+					resultJSON.put("text",cname);
+					resultJSON.put("leaf",true);
+					resultJSON.put("id",cname);
+					resultJSON.put("icon",icon);
+					resultJSON.put("type",c.getConstraintType().toString());
+					treeJSONArray.put(resultJSON);
+				}			
+				jacper.print(treeJSONArray.toString());
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	}
+
+	public void doPost(Jacper jacper){ 
+		String object_id=jacper.getString("object_id","-1");
+		if(object_id.equals("-1")) return;
+
+		MetaTable mt=MetaFactory.getObject(object_id);
+		ConstraintType type=ConstraintType.parseConstraintType(jacper.getStr("type"));
+		String name=jacper.getStr("name");
+		
+		JSONObject form=null;
+		try{
+			form= new JSONObject("{success:true}");
+			
+			JSONArray treeJSONArray=new JSONArray();
+			for(Constraint c:mt.getConstraints(name)){
+				JSONObject resultJSON = new JSONObject();
+				resultJSON.put("item_id",c.getColumnId());
+				resultJSON.put("item_text",mt.getColumn(c.getColumnId()).getLname());
+				if((type==ConstraintType.ForeignKey || type==ConstraintType.Reference) && !c.getLinkTable().equals("-999")){
+					try{
+						MetaColumn lmt=MetaFactory.getColumn(c.getLinkTable(),c.getLinkColumn());
+						if(lmt!=null){
+							resultJSON.put("link_item_id",c.getLinkColumn());
+							resultJSON.put("link_item_text",lmt.getLname());
+						}
+					}catch(Exception e){
+						e.printStackTrace();
+					}
+				}
+				treeJSONArray.put(resultJSON);
+			}			
+			form.put("dataItem",treeJSONArray);
+			form.put("totalCount",treeJSONArray.length());
+			
+			jacper.print(form.toString());
+		}catch(Exception e){
+			e.printStackTrace(); 
+		}
+	}
+}  

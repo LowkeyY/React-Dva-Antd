@@ -1,0 +1,52 @@
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.HTMLPage;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+
+import java.util.ArrayList;
+import com.susing.core.KingleSystem;
+
+@class{
+	public void doPost(Jacper jacper) {
+
+		HttpSession hs = jacper.getSession();
+
+		String ids = jacper.getString("pmk");
+		
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		HTMLPage page = service.getCache(ids);
+		
+		if(page == null)
+			page = service.getZhanDian(ids);
+		
+		if (page == null) {
+			jacper.print("{success:false,message:'页面没有找到！'}");
+		} else {
+			ArrayList<HTMLPage> al = new ArrayList<HTMLPage>();
+			al.add(page);
+			for(LanMu lm : ((ZhanDian) page).getLanmu()){
+				getLMS(lm,al);
+			}
+			for(HTMLPage p : al.toArray(new HTMLPage[al.size()])){
+				p.updateRelationship();
+			}
+			jacper.print("{success:true}");
+		}
+	}
+	
+	public void getLMS(LanMu lanmu,ArrayList<HTMLPage> al){
+		al.add(lanmu);
+
+		if(lanmu.getTemplatePath().length()>0 && lanmu.getGaojian().length>0){
+			al.add(lanmu.getGaojian(1));
+		}
+		
+		if(lanmu.getZilanmu().length>0){
+			for(LanMu l:lanmu.getZilanmu()){
+				getLMS(l,al);
+			}
+		}
+	}
+}

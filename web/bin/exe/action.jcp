@@ -1,0 +1,32 @@
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+
+import com.kinglib.KingleException;
+import com.kinglib.Jacper;
+import com.kinglib.ui.core.Action;
+import com.kinglib.ui.core.utils.Param;
+import com.susing.KingleServletRequest;
+import com.susing.KingleServletResponse;
+
+import javax.servlet.http.*;
+@class{
+	public void service(ServletRequest request,ServletResponse response) throws IOException,ServletException{
+		try{
+			KingleServletRequest req=(KingleServletRequest) request;
+			KingleServletResponse res=(KingleServletResponse) response;
+			Param param=new Param(req);
+			param.put("jacper",new Jacper(req,res));//这条以后删掉--tz
+			Action.getInstance().doAction(res.getWriter(),param,req.getMethod());
+		}catch(KingleException e){
+			e.printStackTrace();
+			throw e;
+		}catch(Throwable t){
+			t.printStackTrace();
+			throw new ServletException(t);
+		}
+	}
+
+}

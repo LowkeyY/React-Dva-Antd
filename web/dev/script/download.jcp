@@ -1,0 +1,119 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+import java.io.*;
+import com.susing.*;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.regex.Pattern;
+import com.kinglib.util.image.*;
+import javax.activation.MimetypesFileTypeMap;
+
+@class{
+	public void doGet(Jacper jacper){
+		
+		boolean isLogin = jacper.setSession();  
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		String   filepath= jacper.getStr("filePath"); 
+		String   filename= jacper.getStr("fileName"); 
+		String thumbnail=jacper.getStr("thumbnail");
+
+		if(thumbnail.equals("true")){
+			if(filename.equals("")){
+				try{	
+					File subFile = new File(filepath); 
+					HttpServletResponse res = jacper.getResponse();
+					if(subFile.isDirectory()){
+						String hasChild = "0";
+						String subDirName=subFile.getName();
+						String[] subFileList=subFile.list(); 
+						if(subFileList.length>0){
+							for(int t=0;t<subFileList.length;t++){
+								File subFile1 = new File(filepath+"/"+subFileList[t]); 
+								EFile thumbnailFile=null;
+								Pattern pattern = Pattern.compile(".+\\.(gif|jpg|png|jpeg|bmp)$");
+								if(pattern.matcher(subFile1.getName()).matches()){
+									thumbnailFile=new EFile();
+									FileInputStream fin=new FileInputStream(subFile1);
+									FileOutputStream srcStream=thumbnailFile.getOutputStream();
+									ImageTools.encodeJpeg(srcStream,ImageTools.resizeIn(fin,80,60));
+								}
+								if(thumbnailFile!=null){
+									res.setContentType("image/jpeg");
+									res.setHeader("Content-Disposition", "attachment;filename=" + filename);
+									res.setHeader("Content-Length", thumbnailFile.length()+"");
+									res.setHeader("Accept-ranges", "bytes");
+									try{
+										Files.copyRange(thumbnailFile.getInputStream(), res.getOutputStream(),2048);
+									}catch(IOException ioe){
+										return;
+									}
+								}
+							}
+						}
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+			}else{
+				try{	
+				
+			        HttpServletResponse res = jacper.getResponse();
+					File uf=new File(filepath+filename);
+					EFile thumbnailFile=null;
+					Pattern pattern = Pattern.compile(".+\\.(gif|jpg|png|jpeg|bmp)$");
+					if(pattern.matcher(filename).matches()){
+						thumbnailFile=new EFile();
+						FileInputStream fin=new FileInputStream(uf);
+						FileOutputStream srcStream=thumbnailFile.getOutputStream();
+						ImageTools.encodeJpeg(srcStream,ImageTools.resizeIn(fin,80,60));
+					}
+					if(thumbnailFile!=null){
+						res.setContentType("image/jpeg");
+						res.setHeader("Content-Disposition", "attachment;filename=" + filename);
+						res.setHeader("Content-Length", thumbnailFile.length()+"");
+					    res.setHeader("Accept-ranges", "bytes");
+						try{
+							Files.copyRange(thumbnailFile.getInputStream(), res.getOutputStream(),2048);
+						}catch(IOException ioe){
+							return;
+						}
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+			}
+		}else{
+			try{	
+		
+				File uf=new File(filepath+filename);
+
+				try{
+					filename = new String(filename.getBytes(),"iso-8859-1");
+				}catch(Exception e){}
+
+				String fileType=new MimetypesFileTypeMap().getContentType(uf);
+				String fileSize = (int)uf.length()+"";
+				
+				FileInputStream fin=new FileInputStream(uf);
+				
+				HttpServletResponse res = jacper.getResponse();
+				res.setContentType(fileType);
+				res.setHeader("Content-Disposition", "attachment;filename=" + filename);
+				res.setHeader("Content-Length", fileSize+"");
+				res.setHeader("Accept-ranges", "bytes");
+				
+				OutputStream outStream=res.getOutputStream();
+				try{
+					Files.copyRange(fin,outStream,2048);
+				}catch(IOException ioe){
+					return;
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+
+	}
+}

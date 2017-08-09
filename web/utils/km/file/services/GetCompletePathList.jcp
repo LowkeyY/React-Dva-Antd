@@ -1,0 +1,12 @@
+import java.io.IOException;      
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+
+@class{
+public void doPost(Jacper jacper){
+	jacper.getResponse().setContentType("application/x-json");
+	<?[["20393","My Folders:"],["20396","My Folders:\\My Documents"],["20541","My Folders:\\My Documents\\test"],["20397","My Folders:\\My Videos"],["20394","My Photo Gallery:"],["20399","My Photo Gallery:\\My Album"],["PublishedItems","Published:"],["PublishedFiles","Published:\\Files"],["PublishedFolders","Published:\\Folders"],["MyNetwork","My Network:"]]?>;
+}
+}

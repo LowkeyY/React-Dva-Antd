@@ -1,0 +1,43 @@
+/**    
+ * 
+ *注销页面
+ *
+ * @version 1.0   
+ *
+ * @author  tianzhou
+ *
+ * @date: Oct 22, 2013日4:42:18 PM 
+ *
+ */
+import com.kinglib.Jacper;
+import com.kinglib.service.login.LoginService;
+
+import javax.servlet.http.HttpSession;
+
+import com.susing.KingleServletRequest;
+import com.susing.KingleServletResponse;
+import com.susing.core.KingleSystem;
+
+@class{
+
+  	public void doGet(Jacper jacper) {
+		
+		KingleServletRequest request = jacper.getRequest();
+		KingleServletResponse response = jacper.getResponse();
+		HttpSession session = request.getSession();
+		
+		try {
+			String userId=session.getAttribute("user_id").toString();
+			LoginService ls = (LoginService) KingleSystem.getService("登录服务");
+			ls.logout(userId, request, response);
+		} catch (Exception e) {
+			e.printStackTrace();
+			response.sendMessage(200, jacper.trans("注销失败"), e.getMessage());
+			try {
+				response.sendRedirect("/newlogin/index.html");
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			}
+		}
+	}
+} 

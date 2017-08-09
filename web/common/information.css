@@ -1,0 +1,14 @@
+HTML,BODY,TABLE,TD,TH,H1,H2,H3,H4,H5,H6,P,A,SPAN,DIV,CODE,BLOCKQUOTE,sus\:*{font-family:Verdana,宋体;}
+.system_info{color:#C0C0C0;font-size:xx-small;text-align:right};
+
+A {cursor:hand;color:black;text-decoration:none;white-space: nowrap}
+BLOCKQUOTE,BLOCKQUOTE *{color:#808080;white-space: nowrap}
+sus\:*,.exception_detail{font-size:x-small;color:#000000;white-space: nowrap}
+sus\:info_title,.info_title{font-size: x-large; font-weight: bold;}
+sus\:info_code,.info_code{font-size:medium;color:red}
+sus\:exception_name,sus\:exception_message,.exception_message{font-size: medium; font-weight: bold;}
+sus\:compile_error,.compile_error{font-family: 宋体;font-size:12px;white-space:nowrap};
+.more_info{font-size:xx-small;};
+.exception{padding:10;border:1 solid #C0C0C0;background-color:#F7F7F7}
+.jacper{color:red; font-weight: bold;}
+.kingle{color:blue; font-weight: bold;}

@@ -1,0 +1,65 @@
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.i18n.I18n;
+import com.kinglib.i18n.Local;
+import com.kinglib.ui.menu.Menu;
+import com.kinglib.ui.menu.MenuFactory;
+import com.kinglib.util.event.SystemEvent;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONPart;
+
+import java.util.ArrayList;
+
+import com.kinglib.portal.PotalUnits;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+
+@class{
+	public void doGet(Jacper jacper){ 
+
+		HttpSession hs = jacper.getSession();
+		String userId = String.valueOf(hs.uid);
+		String id = jacper.getString("id") , ret = PotalUnits.getUserMenuByString(jacper.getConnection("plat"), userId , id);
+		ArrayList<Menu> al=null;
+		
+/*		String id=jacper.getString("id");
+		int terminalType=jacper.getInt("type",0);
+		ArrayList<Menu> al=null;
+		MenuFactory mf=MenuFactory.getInstance();
+		
+		mf.setTerminalType(terminalType);
+		
+		if(id==null){
+			al = mf.getMenuList("0",String.valueOf(hs.uid),true);			
+		}else{		
+		    al = mf.getMenuList(id,String.valueOf(hs.uid),false);		    		   
+		}
+		String ret=mf.getMenuJson(al);*/
+		StringBuilder sret = new StringBuilder();
+		if(SystemEvent.fire("MENU_GET_MENUS", jacper , id==null ? "0" :id ,  al , ret , sret) == false){
+			ret = sret.length() > 0 ? sret.toString() : ret;
+		};
+		String userToken = "";
+		User u;
+		if((u = CertManager.getUser(String.valueOf(hs.uid))) != null){
+			userToken = (hs.uid <= 1 ? "admin" : u.getUserName()) + "::" + u.getPassword();
+		}
+		
+		if(ret.length() > 0){
+			//ret = ret.substring(0,ret.length()-1)+",\"isSuper\":" + (hs.uid <= 1) +",\"isLoggedUser\":" + !HWUnits.isGuestUser(String.valueOf(hs.uid))+ "}";
+			ret = ret.substring(0,ret.length()-1)+",\"userToken\":'" + userToken + "'}";
+		}
+		
+		if(I18n.needToTranslate(hs.getString("locale"))){
+			Local t=I18n.getLocal(jacper);
+			JSONPart jp=new JSONPart();
+			for(Menu m:al){
+				jp.join(m.getTitle(),t.trans(m.getTitle()));
+			}
+			jacper.print(ret.substring(0,ret.length()-1)+",\"i18n\":"+jp.toString()+"}");
+		}else{
+			jacper.print(ret);
+		}	
+	}
+}

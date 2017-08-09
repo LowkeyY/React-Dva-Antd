@@ -1,0 +1,103 @@
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.HTMLPage;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import com.susing.core.KingleSystem;
+
+
+/**
+用于选择栏目
+*/
+@class{
+
+	public void doGet(Jacper jacper) {
+
+		String id = jacper.getString("node");
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		JSONArray arr = new JSONArray();
+		try {
+			if (id.equals("root")) {
+				ZhanDian[] zhandian = service.getZhanDian();
+				for (ZhanDian zd : zhandian) {
+					arr.put(zhanDian2JSON(zd));
+				}
+			} else {
+				String[] ids = id.split("::");
+				HTMLPage hp = service.getCache(ids[0]);
+				if (hp instanceof ZhanDian) {
+					if ("1".equals(ids[1])) {
+						for (ZhanDian zzd : ((ZhanDian) hp).getZizhandian()) {
+							arr.put(zhanDian2JSON(zzd));
+						}
+					} else if ("2".equals(ids[1])) {
+						for (LanMu lm : ((ZhanDian) hp).getLanmu(false)) {
+							arr.put(lanMu2JSON(lm));
+						}
+					}
+				} else if (hp instanceof LanMu) {
+					for (LanMu lm : ((LanMu) hp).getZilanmu()) {
+						arr.put(lanMu2JSON(lm));
+					}
+				}
+			}
+		} catch (Exception e) {
+		}
+		jacper.print(arr);
+	}
+
+	public JSONObject lanMu2JSON(LanMu zlm) throws JSONException {
+		JSONObject js = new JSONObject();
+		boolean allow=zlm.getJieshoutougao().equals("true");
+		String mh=zlm.getMingcheng();
+		if(allow)
+			mh="<b>"+mh+"</b>";
+		js.put("text", mh);
+		js.put("type", "lanmu");
+		js.put("gaojiantype", zlm.getGaojianmoshi());
+		js.put("allowSelect",allow );
+		js.put("id", zlm.getId());
+		js.put("leaf", zlm.getZilanmu().length == 0);
+		js.put("isLanMu", true);
+		js.put("icon","/themes/icon/all/application_view_tile.gif");
+		return js;
+	}
+
+	public JSONObject zhanDian2JSON(ZhanDian zd) throws JSONException {
+		JSONObject json = new JSONObject();
+		JSONArray arrChild = new JSONArray();
+		json.put("text", zd.getMingcheng());
+		json.put("type", "zhandian");
+		json.put("id", zd.getId());
+		json.put("allowSelect", false);
+		json.put("leaf", !(zd.getZizhandian().length > 0 || zd.getLanmu().length > 0));
+		json.put("isZhanDian", true);
+		json.put("icon","/themes/icon/all/world.gif");
+		if (zd.getZizhandian().length > 0) {
+			JSONObject js = new JSONObject();
+			js.put("text", "子站点");
+			js.put("id", zd.getId() + "::1");
+			js.put("allowSelect", false);
+			js.put("type", "mulu");
+			js.put("leaf", false);
+			arrChild.put(js);
+		}
+		if (zd.getLanmu().length > 0) {
+			JSONObject js = new JSONObject();
+			js.put("text", "栏目");
+			js.put("type", "mulu");
+			js.put("allowSelect", false);
+			js.put("id", zd.getId() + "::2");
+			js.put("leaf", false);
+			arrChild.put(js);
+		}
+		if (arrChild.length() > 0) {
+			json.put("children", arrChild);
+		}
+		return json;
+	}
+}

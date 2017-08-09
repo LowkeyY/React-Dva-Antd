@@ -1,0 +1,64 @@
+
+import java.util.*;
+import com.kinglib.*;
+
+import com.kinglib.bi.*;
+import com.kinglib.util.json.*;
+import com.kinglibx.query.*;
+import com.kinglib.workbench.*;
+
+
+@class{
+	                                    
+public void doPost(Jacper jacper) {
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	String type = jacper.getStr("type");
+
+	jacper.getResponse().setContentType("application/x-json");
+	try{
+		JSONObject optionJSON = new JSONObject("{}");
+		if(type.equals("query")){
+			ObjectManager OM=ObjectManager.getInstance();
+			String query_id = jacper.getStr("query_id");
+			ObjectNode wfNode=OM.getObject(query_id);
+			ObjectNode appNode=wfNode.upTo(ObjectType.APPLICATION);
+			ObjectNode[] styles=appNode.getChilds(ObjectType.QUERY);
+			JSONArray jarr=new JSONArray();
+			try{
+				if(styles!=null){
+					for(int i=0;i<styles.length;i++){
+						JSONObject items = new JSONObject("{}");
+						items.put("text",String.valueOf(styles[i].getName()));
+						items.put("value",String.valueOf(styles[i].getId()));
+						jarr.put(items);
+					}
+				}
+				optionJSON.put("items",jarr);
+			}catch(Exception e){}
+			<??>optionJSON.toString()<??>;
+		}else if(type.equals("queryCol")){
+			String query_id = jacper.getStr("query_id");
+			String[][] styles =conPlat.get("select order_id,column_name from $[plat].app_query_column where query_id=? order by column_name",new String[]{query_id});
+			JSONArray jarr=new JSONArray();
+			try{
+				for(int i=0;i<styles.length;i++){
+					JSONObject items = new JSONObject("{}");
+					items.put("text",styles[i][1]);
+					items.put("value",styles[i][0]);
+					jarr.put(items);
+				}
+				optionJSON.put("items",jarr);
+			}catch(Exception e){}
+			<??>optionJSON.toString()<??>;
+		}
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+}

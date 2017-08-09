@@ -1,0 +1,151 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+@class{
+
+	public void doGet(Jacper jacper){
+
+	String parent_id=jacper.getStr("id");
+	String type = jacper.getStr("type");
+	Connection conUtils = jacper.getConnection("utils");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id=String.valueOf(hs.uid);
+
+	if(type.equals("create")){
+		String forder_name=jacper.getStr("folderName");
+		String dir_id=SQLUtils.getNextVal(conUtils,10)+"";
+		conUtils.exec("insert into $[utils].image_forder (dir_id,parent_id,dir_name,son,entry_user) values (?,?,?,0,?)",new String[]{dir_id+"",parent_id+"",forder_name,user_id});
+		conUtils.exec("update $[utils].image_forder set son=son+1 where dir_id=?",new String[]{parent_id});
+		<?<script>?>;
+			<?self.location.replace("frmcreatefolder.jcp?parent_id=?>parent_id<?");?>;
+			<?window.open("frmfolders.jcp?&ran="+Math.random(),"frmFolders","");</script>?>;
+	}else if(type.equals("deleteFolder")){
+
+			String out_id=conUtils.getRow("select parent_id from $[utils].image_forder where dir_id="+parent_id,null)[0];
+
+			String[][] dir2 = conUtils.getTree("$[utils].image_forder","dir_id","dir_id","parent_id","",new String[]{parent_id+""});
+			String s = ","+parent_id;
+			if(dir2!=null)
+			for(int i=0;i<dir2.length;i++)	
+				s+=","+dir2[i][0];
+
+			String[][] dir = conUtils.get("select dir_id from $[utils].image_forder where dir_id in("+s.substring(1)+")",null,0);
+
+			for(int i=0;i<dir.length;i++){
+				conUtils.exec("delete from $[utils].image_forder where dir_id=?",new String[]{dir[i][0]});
+				conUtils.exec("delete from $[utils].image_files where forder_id=?",new String[]{dir[i][0]});
+			}	
+			conUtils.exec("update $[utils].image_forder set son=son-1 where dir_id=?",new String[]{out_id});
+
+		<?<script>?>;
+			<?self.location.replace("frmcreatefolder.jcp?parent_id=?>parent_id<?");?>;
+			<?window.open("frmfolders.jcp?&ran="+Math.random(),"frmFolders","");</script>?>;
+	}
+<?
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+	<head>
+		<link href="browser.css" type="text/css" rel="stylesheet">
+		<script type="text/javascript" src="js/common.js"></script>
+		<script language="javascript">
+
+function SetCurrentFolder( resourceType, folderPath )
+{
+	oConnector.ResourceType = resourceType ;
+	oConnector.CurrentFolder = folderPath
+}
+
+function CreateFolder()
+{
+	var sFolderName ;
+	while ( true ) 
+	{
+		sFolderName = prompt( '?>jacper.trans("输入文件夹名称")<?:', '' ) ;	
+		if ( sFolderName == null )
+			return ;
+		else if ( sFolderName.length == 0 )
+			alert( '?>jacper.trans("请输入文件夹名称")<?' ) ;
+		else
+			break ;
+	}	
+	self.location.replace('frmcreatefolder.jcp?type=create&id=?>parent_id<?&folderName='+sFolderName);
+}
+
+function DeleteFolder(){
+		var agree=confirm("?>jacper.trans("警告:删除目录将一起删除目录下文件,并将导致原来图片连接丢失,确认吗?")<?");					
+		if(agree){;
+				 self.location.replace('frmcreatefolder.jcp?type=deleteFolder&id=?>parent_id<?');
+		}else{
+			return;
+		}
+}
+function CreateFolderCallBack( fckXml )
+{
+	if ( oConnector.CheckError( fckXml ) == 0 )
+		window.parent.frames['frmResourcesList'].Refresh() ;	
+}
+
+function DeleteFile() {
+	if ( parent.frmResourcesList.file_id == -1 ) {
+		alert('?>jacper.trans("没有要删除文件!")<?');
+		return false;
+	}
+	else {
+		window.open("frmresourceslist.jcp?file_id="+parent.frmResourcesList.file_id+"&id=?>parent_id<?&ran="+Math.random(),"frmResourcesList");
+	}
+}
+window.onload = function()
+{
+	window.top.IsLoadedCreateFolder = true ;
+}
+		</script>
+	</head>
+	<body bottomMargin="0" topMargin="0">
+		<table height="100%" cellSpacing="0" cellPadding="0" width="100%" border="0">
+			<tr>
+				<td width='20%'>
+					<button type="button" style="WIDTH: 100%" onclick="CreateFolder();">
+						<table cellSpacing="0" cellPadding="0" border="0">
+							<tr>
+								<td><img height="16" alt="" src="/themes/icon/common/create.gif" width="16"></td>
+								<td>&nbsp;</td>
+								<td nowrap>?>jacper.trans("新建文件夹")<?</td>
+							</tr>
+						</table>
+					</button>
+				</td>
+				<td width='10px'>&nbsp;</td>
+				<td width='20%'>
+					<button type="button" style="WIDTH: 100%" onclick="DeleteFolder();">
+						<table cellSpacing="0" cellPadding="0" border="0">
+							<tr>
+								<td><img height="16" alt="" src="/themes/icon/common/delfolder.gif" width="16"></td>
+								<td>&nbsp;</td>
+								<td nowrap>?>jacper.trans("删除文件夹")<?</td>
+							</tr>
+						</table>
+					</button>
+				</td>
+				<td width='10px'>&nbsp;</td>
+				<td width='20%'>
+					<button type="button" style="WIDTH: 100%" onclick="DeleteFile();">
+						<table cellSpacing="0" cellPadding="0" border="0">
+							<tr>
+								<td><img height="16" alt="" src="/themes/icon/common/del.gif" width="16"></td>
+								<td>&nbsp;</td>
+								<td nowrap>?>jacper.trans("删除文件")<?</td>
+							</tr>
+						</table>
+					</button>
+				</td>
+				<td width='100%'>&nbsp;</td>
+			</tr>
+		</table>
+	</body>
+</html>
+?>;
+}}

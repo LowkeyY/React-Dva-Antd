@@ -1,0 +1,261 @@
+                                                                                     
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.database.util.*;
+import com.kinglib.workbench.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.util.json.*;
+import java.sql.Types;
+import java.util.*;
+import com.kinglib.workbench.application.*;
+import com.social.api.core.model.*;
+                                
+@class{
+
+	public void doGet(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		User u = CertManager.getUser(String.valueOf(hs.uid));
+		UserType utype=u.getUserType();
+		if ( utype!= UserType.SUPER && utype!= UserType.DEVELOPER && utype!= UserType.DESIGNER) {
+			jacper.print("{success:false,message:'非法操作'}");
+		}
+
+
+		String object_id=jacper.getString("object_id","-1");
+		String type=jacper.getStr("ctype");
+		boolean metaOnly=jacper.getStr("metaOnly").equals("true");
+		
+		boolean success=true;
+		String message="";
+		Connection conPlat=null;
+		if(!object_id.equals("-1") && type.equals("delete")){		
+			conPlat=jacper.getConnection("plat");
+			try{
+				if(metaOnly){
+					Hashtable itemHash=new Hashtable();
+					StringBuffer sb=new StringBuffer();
+					((MetaTableNode) ObjectManager.getObject(object_id)).drop(conPlat,itemHash,sb,metaOnly);
+				}else{
+					ObjectManager.getObject(object_id).destroy(conPlat);
+				}
+			}catch(NullPointerException ne){
+				success=false;
+				message=jacper.trans("无法删除表,此表未被系统正确加载");
+			}catch(Exception e){
+				e.printStackTrace();
+				success=false;
+				message=jacper.trans("无法删除表,错误是")+e.getMessage();
+			}finally{
+				conPlat.close();
+			}
+		}else if(type.equals("rdelete")){
+		
+			String pname = jacper.getStr("name").toUpperCase();
+			String schema = jacper.getStr("schema");
+			String dbLink = jacper.getStr("dbLink");
+			Connection conLocal = jacper.getConnection(dbLink);
+			PersistTable ptab = new PersistTable(conLocal.getType());
+			String[] dropTable = ptab.dropTable("", schema, pname);
+			for (int i = 0; i < dropTable.length; i++) {
+				conLocal.exec(dropTable[i]);
+			}
+			
+		}else{
+			success=false;
+			message=jacper.trans("参数错误");
+		}	
+		jacper.print("{success:"+success+",message:'"+message+"'}");	
+	}
+
+	/*
+		修改表物理名和逻辑名
+	*/
+	public void doPut(Jacper jacper) {
+	
+		HttpSession hs = jacper.getSession();
+		User u = CertManager.getUser(String.valueOf(hs.uid));
+		UserType utype=u.getUserType();
+		if ( utype!= UserType.SUPER && utype!= UserType.DEVELOPER && utype!= UserType.DESIGNER) {
+			jacper.print("{success:false,message:'非法操作'}");
+		}
+		
+		Param param=new Param(jacper);
+
+		String objectId = param.getStr("objectId");
+		String lname = param.getStr("lname");
+		String pname = param.getStr("pname");
+		Connection conPlat=jacper.getConnection("plat");
+
+		try{
+			MetaTable mt=MetaFactory.getObject(objectId);
+			MetaTableDesigner mdt=MetaFactory.getObjectDesigner(objectId);
+			if(lname!=null && lname.length()>0 && !mt.getLname().equals(lname)){
+				mdt.updateLname(conPlat, lname);
+			}
+			if(pname!=null && pname.length()>0 && !mt.getPname().equals(pname)){
+				mdt.updatePname(conPlat, pname);
+			}
+			boolean isAuth=param.getStr("haveAuth").equals("true");
+			mdt.alterAuthTable(conPlat,isAuth);
+			MetaFactory.notifyCache(mt);
+			jacper.print("{success:true,id:'"+objectId+"'}");
+		}catch(Exception e){
+			jacper.print("{success:false,message'"+e.getMessage()+"'}");
+		}finally{
+			conPlat.close();
+		}
+	}
+
+	public void doPost(Jacper jacper){
+	
+			boolean isLogin = jacper.setSession();
+			HttpSession hs = jacper.getSession();
+		   	String fields=jacper.getStr("fields");
+		   	String lname=jacper.getStr("lname");
+		   	String pname=jacper.getStr("pname");
+		   	boolean metaDataOnly=jacper.getStr("isCreate").equals("false");
+
+			String parent_id=jacper.getStr("parent_id");
+			String application_id=jacper.getStr("application_id");
+			String ppid=jacper.getStr("ppid");
+		    boolean isAuth=jacper.getStr("haveAuth").equals("true");
+
+			if(!application_id.equals("-1")) ppid=application_id;
+			Connection conPlat=jacper.getConnection("plat");
+			String[][] column =null;
+			String notNull="true";
+			int item_id=0;
+			boolean success=true;
+			String message="";
+			String database_link="";
+			
+			//外键配置
+			String constraintConfig=jacper.getStr("constraintConfig");
+			String primaryKeyName="";
+			JSONObject cc=null;
+			if(metaDataOnly){
+				try{
+					cc=new JSONObject(constraintConfig);
+					primaryKeyName=cc.getString("primaryKeyName");
+				}catch(Exception ec){
+				}
+			}
+			
+			ArrayList<String[]> atts=new ArrayList<String[]>(10);
+			try{
+				JSONArray jarr=new JSONArray(fields);
+					
+				ApplicationFactory appFactory=ApplicationFactory.getInstance();
+				Application app=appFactory.getApplication(conPlat,ppid+"");
+				database_link=app.getDatabaseLink();
+
+				if(metaDataOnly && MetaFactory.getObjectWithFullName("$["+database_link+"]."+pname)!=null){
+					jacper.print("{success:false,message:'"+jacper.trans("该表已在库中描述过,同一个表只能描述一次")+"'}");
+					return;
+				}	
+				String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+				if(idType==null||idType.equals("0")){
+					parent_id = SQLUtils.getNextVal(conPlat,1)+"";
+				}else{
+					parent_id =UUID.randomUUID().toString();
+				}
+				item_id=SQLUtils.getNextVal(conPlat, 3);
+				column=new String[jarr.length()][12];
+				StringBuffer pmk=new StringBuffer(30);
+
+				String pmkstr="";
+				String columnID="";
+				String specialSet="";
+				for(int i=0;i<jarr.length();i++){
+					JSONObject js=jarr.getJSONObject(i);
+					notNull=js.getString("not_null");
+					if(!notNull.equals("true")) notNull="false";
+					columnID=String.valueOf(i+item_id+1);
+					specialSet=js.optString("special_set","");
+					column[i]=new String[]{columnID,js.getString("lname"),js.getString("pname"),String.valueOf(DataType.parseByName(js.getString("data_type")).getValue()),js.getString("length"),notNull, js.optString("default_value",""),specialSet, "", js.getString("decimal_digits"),String.valueOf((i))};
+					pmkstr=js.optString("pmk","");
+					if(pmkstr.equals("true")){
+						pmk.append(columnID);
+						pmk.append(",");
+					}
+					if(specialSet.equals("1") || specialSet.equals("2") || specialSet.equals("25")){
+						JSONObject cfg=null;
+						try{
+							cfg=js.getJSONObject("cfg");
+						}catch(Exception e){}
+						if(cfg!=null){
+							if(specialSet.equals("1")){
+								atts.add(new String[]{parent_id,columnID,"option_id","12",cfg.optString("option_id","")});
+							}else if(specialSet.equals("2")){
+								atts.add(new String[]{parent_id,columnID,"start","4",cfg.optString("start","")});
+								atts.add(new String[]{parent_id,columnID,"step","4",cfg.optString("step","")});
+							}else if(specialSet.equals("25")){
+								atts.add(new String[]{parent_id,columnID,"INTEGRATE_ID","4",cfg.optString("INTEGRATE_ID","")});
+							}
+						}
+					}
+				}
+				String[][] attributes=null;
+				if(atts.size()>0){
+					attributes=atts.toArray(new String[atts.size()][6]);
+				}
+				pmkstr=(pmk.length()>0)?","+pmk.toString():"";
+				if(conPlat.isClosed())
+					conPlat=jacper.getConnection("plat");
+				MetaTable mt=MetaTableDesigner.create(conPlat,ppid,parent_id,lname,pname,database_link,isAuth,column,attributes,pmkstr,metaDataOnly,hs.uid,primaryKeyName);
+				//已有表描述--外键描述
+				if(metaDataOnly && cc!=null){
+					
+					String 	schema=conPlat.parseObjectName(database_link);	
+					JSONObject importKeys=cc.optJSONObject("importKeys");
+					if(importKeys!=null){
+					
+						Iterator its = importKeys.keys();
+						while (its.hasNext()) {
+							String fkName=(String) its.next();
+							JSONObject fk=importKeys.getJSONObject(fkName);
+							if(fk.getString("schema").equalsIgnoreCase(schema)){//暂时不支持跨库外键
+								MetaTable referenceTable=MetaFactory.getObjectWithFullName("$["+database_link+"]."+fk.getString("table"));
+								if(referenceTable!=null){
+									MetaTableDesigner mtd=MetaFactory.getObjectDesigner(mt.getObjectId());	
+									String[] columnNames=fk.getString("column8").substring(1).split(",");
+									String[] referenceColumnNames=fk.getString("column4").substring(1).split(",");
+									mtd.addForeignKey(conPlat,fkName,columnNames,referenceTable,referenceColumnNames,metaDataOnly);
+								}
+							}
+						}
+					}
+					
+					JSONObject exportKeys=cc.optJSONObject("exportKeys");
+					if(exportKeys!=null){
+						Iterator its = exportKeys.keys();
+						while (its.hasNext()) {
+							String fkName=(String) its.next();
+							JSONObject fk=exportKeys.getJSONObject(fkName);
+							if(fk.getString("schema").equalsIgnoreCase(schema)){//暂时不支持跨库外键
+								MetaTable referenceTable=MetaFactory.getObjectWithFullName("$["+database_link+"]."+fk.getString("table"));
+								if(referenceTable!=null){
+									MetaTableDesigner mtd=MetaFactory.getObjectDesigner(referenceTable.getObjectId());
+									String[] columnNames=fk.getString("column8").substring(1).split(",");
+									String[] referenceColumnNames=fk.getString("column4").substring(1).split(",");
+									mtd.addForeignKey(conPlat,fkName,columnNames,mt,referenceColumnNames,metaDataOnly);
+								}
+							}
+						}
+					}
+				}
+				jacper.print("{success:true,id:'"+parent_id+"'}");		
+			}catch(BaseException be){
+				be.printStackTrace();
+				jacper.print(be.toJSONString());
+				return;
+			}catch(Exception e){
+				e.printStackTrace();
+				success=false;
+				message=e.getMessage();
+				jacper.print("{success:"+success+",message:'"+message+"'}");	
+			}finally{
+				conPlat.close();
+			}
+	}	
+}

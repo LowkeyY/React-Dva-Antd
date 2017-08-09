@@ -1,0 +1,154 @@
+
+import java.util.*;
+import com.kinglib.*;
+import com.susing.sql.*;
+import com.susing.core.KingleSystem;
+
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+	                                              
+public void doPost(Jacper jacper) {
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+
+	String type = jacper.getStr("type");
+	String parent_id = jacper.getStr("parent_id");
+	String object_id = jacper.getStr("object_id");
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+			JSONObject optionJSON = new JSONObject("{}");
+
+			if(type.equals("new")){
+			
+				String option = jacper.getStr("option");
+				if(option.equals("query")){
+					ObjectNode queryNode=ObjectManager.getObject(parent_id);
+					ObjectNode appNode=queryNode.upTo(1);
+					String appId=appNode.getId();
+
+					String[][] query  = conPlat.get("select f.query_id,f.query_name from $[plat].app_query f,$[plat].object_base e where f.query_id=e.object_id and e.parent_id=? order by f.query_name",new String[]{appId+""});
+					JSONArray jarr=new JSONArray();
+					try{
+						for(int i=0;i<query.length;i++){
+							JSONObject items = new JSONObject("{}");
+							items.put("id",query[i][0]);
+							items.put("title",query[i][1]);
+							jarr.put(items);
+						}
+						optionJSON.put("querys",jarr);
+					}catch(Exception e){}
+					<??>optionJSON.toString()<??>;
+				}else if(option.equals("querycolumn")){
+					String query_id=jacper.getStr("query_id");
+					String[][] query_column  = conPlat.get("select column_name,column_name from $[plat].app_query_column  where query_id=? order by order_id",new String[]{query_id});
+					JSONArray jarr=new JSONArray();
+					try{
+						for(int i=0;i<query_column.length;i++){
+							JSONObject items = new JSONObject("{}");
+							items.put("id",query_column[i][0]);
+							items.put("title",query_column[i][1]);
+							jarr.put(items);
+						}
+						optionJSON.put("queryColumns",jarr);
+					}catch(Exception e){}
+					<??>optionJSON.toString()<??>;
+				}else if(option.equals("queryexpcolumn")){
+					String query_id=jacper.getStr("query_id");
+					String[][] query_column  = conPlat.get("select column_name,column_name from $[plat].app_query_column  where query_id=? order by order_id",new String[]{query_id});
+					JSONArray jarr=new JSONArray();
+					try{
+						for(int i=0;i<query_column.length;i++){
+							JSONObject items = new JSONObject("{}");
+							items.put("id",query_column[i][0]);
+							items.put("title",query_column[i][1]);
+							jarr.put(items);
+						}
+						optionJSON.put("queryExpColumns",jarr);
+					}catch(Exception e){}
+					<??>optionJSON.toString()<??>;
+				}else if(option.equals("datalink")){
+					String[] cs= KingleSystem.getConnectionNames();		
+					JSONArray jarr=new JSONArray();
+					for(int i=0;i<cs.length;i++){
+						if(cs[i].equals("plat") || cs[i].equals("utils")|| cs[i].equals("work")|| cs[i].equals("cert")) continue;
+							JSONObject items = new JSONObject("{}");
+							items.put("id",cs[i]);
+							items.put("title",cs[i]);
+							jarr.put(items);
+					}
+					optionJSON.put("datalink",jarr);
+					<??>optionJSON.toString()<??>;
+				}else if(option.equals("searchType")){
+					String[][] groups = conPlat.get("SELECT b.option_code, b.option_value from $[plat].second_dict b WHERE b.option_id=5",new String[]{});
+					JSONArray jarr=new JSONArray();
+					try{
+						for(int i=0;i<groups.length;i++){
+							JSONObject items = new JSONObject("{}");
+							items.put("id",groups[i][0]);
+							items.put("title",groups[i][1]);
+							jarr.put(items);
+						}
+						optionJSON.put("searchTypes",jarr);
+					}catch(Exception e){}
+					<??>optionJSON.toString()<??>;
+				}
+			}else{
+				JSONObject searchJSON = new JSONObject("{}");
+
+				String[] rs = conPlat.getRow("select object_id,LOGICNAME,NAME,sub_category,QUERY_ID,ACTIVE,INDEX_COLUMN,NAME_COLUMN,COUNT_COLUMN,START_COLUMN,END_COLUMN,EXP_ITEM,NOTE,start_name,end_name,data_source from $[plat].search_base where object_id=?",new String[]{object_id});
+
+				if(rs!=null){
+					searchJSON.put("object_id",rs[0]);
+				
+					searchJSON.put("logicname",rs[1]);
+					searchJSON.put("name",rs[2]);
+					searchJSON.put("sub_category",rs[3]);
+					
+					searchJSON.put("query_id",rs[4]);
+					searchJSON.put("is_active",rs[5]);
+					searchJSON.put("index_column",rs[6]);
+					
+					searchJSON.put("name_column",rs[7]);
+					searchJSON.put("count_column",rs[8]);
+					searchJSON.put("start_column",rs[9]);
+					searchJSON.put("end_colunm",rs[10]);
+
+					if(rs[11].length()!=0){
+						JSONArray jarr=new JSONArray();
+						String[] expArray=rs[11].split(",");
+						for(int i=0;i<expArray.length;i++){
+							jarr.put(expArray[i]);
+						}
+						searchJSON.put("exp_item",jarr);
+					}else{
+						searchJSON.put("exp_item",rs[11]);
+					}
+							
+					searchJSON.put("note",rs[12]);
+					searchJSON.put("startname",rs[13]);
+					searchJSON.put("endname",rs[14]);
+					searchJSON.put("datasource",rs[15]);
+
+					ObjectNode node=ObjectManager.getObject(object_id);
+					if(node!=null){
+						searchJSON.put("lastModifyTime",node.getLastModifyTime());
+						searchJSON.put("lastModifyName",node.getLastModifyName());
+					}
+				}
+			   <?[?>searchJSON.toString()<?]?>;
+		}
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+}

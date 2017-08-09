@@ -1,0 +1,125 @@
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.ButtonFactory;
+import java.util.*;
+import com.susing.core.KingleSystem;
+
+@class{
+
+	static String[] rowSet={"module_id","button_name","button_action","button_class","button_img","target_type","","","","page_type","workflow_id","targetText","button_class_text","button_js","seq","constraint_type"};
+	
+	public void doGet(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		String type=jacper.getStr("type");
+		String[][] rs=null;
+		if(type.equals("columns")){
+			String object_id=jacper.getString("object_id","-1");
+			if(object_id.equals("-1")) return;
+			rs=conPlat.get("SELECT module_id, button_name, button_action, button_class,button_img,target_type,target,target_id,target_task,page_type,workflow_id,targetText,button_class_text,button_js,seq,CONSTRAINT_TYPE  FROM $[plat].ctrl_button where module_id=? order by seq ",new String[]{object_id+""},0);
+		}else if(type.equals("subTable")){
+
+		}
+		conPlat.close();
+		
+		JSONObject form=null;
+		try{
+			form= new JSONObject("{success:true}");
+			JSONArray jarr=new JSONArray();
+			for(int i=0;i<rs.length;i++){
+				JSONObject js=new JSONObject();
+				for(int j=0;j<rowSet.length;j++){
+					if(j==5){
+						JSONArray ctype=new JSONArray();
+						ctype.put(rs[i][5]);
+						ctype.put(rs[i][6]);
+						ctype.put(rs[i][7]);
+						ctype.put("");
+						ctype.put("");
+						ctype.put("");
+						ctype.put(rs[i][8]);
+						ctype.put("");
+						ctype.put("");
+						ctype.put("");
+						js.put(rowSet[5],ctype);
+						j=9;
+					}
+					if(j==3 && (rs[i][2].equals("%audit") ||  rs[i][2].equals("%action"))){
+						js.put(rowSet[j],rs[i][10]);
+						continue;
+					}
+					js.put(rowSet[j],rs[i][j]);
+				}
+				jarr.put(js);
+			}
+			form.put("items",jarr);
+			form.put("totalCount",jarr.length());
+			jacper.print(form.toString());
+		}catch(Exception e){
+			e.printStackTrace(); 
+		}
+	}
+
+
+	public void doPost(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		String object_id=jacper.getStr("object_id");
+		String fields=jacper.getStr("fields");
+
+		if(fields.equals("")) return;
+
+		try{
+			JSONArray jarr=new JSONArray(fields);
+			conPlat.setAutoCommit(false);
+		    conPlat.exec("delete from  $[plat].ctrl_button where module_id=?",new String[]{object_id});
+			String buttonClass,workflowid,buttonAction,target_type,target,target_id,target_task;
+
+			for(int i=0;i<jarr.length();i++){
+
+				JSONObject js=jarr.getJSONObject(i);
+				StringBuffer taskType=new StringBuffer(20);
+
+				JSONArray jt=js.getJSONArray("target_type");
+				target_type=jt.getString(0);
+				target=jt.getString(1);
+				target_id=jt.getString(2);
+				target_task=jt.getString(6);
+				
+				buttonClass=js.optString("button_class");
+				workflowid=js.optString("workflow_id");
+				buttonAction=js.optString("button_action");
+
+				if (!buttonAction.equals("%define")&&!target_type.equals("0")){
+						String[] temp1 = target.split(",");
+						for ( int t=0; t<temp1.length; t++ ){
+							if(t>0) taskType.append(":");
+							if(temp1[t].equals("%define"))
+								taskType.append("%define");
+							else
+								taskType.append(conPlat.getRow("select prgtype from $[plat].prg_base where object_id=?",new String[]{temp1[t]})[0]);
+						}
+				}
+
+				if ( buttonAction.equals("%audit") ||  buttonAction.equals("%action")) {
+					workflowid = buttonClass;
+					buttonClass = "0";
+				}
+
+
+				conPlat.exec("insert into $[plat].ctrl_button (module_id,button_name,button_action,seq,button_class,button_img,target_type,target,target_task,target_id,page_type,task_type,workflow_id,targetText,button_class_text,button_js,CONSTRAINT_TYPE) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",new String[]{object_id,js.optString("button_name"),buttonAction,String.valueOf(i),buttonClass,js.optString("button_img"),target_type,target,target_task,target_id,js.optString("page_type"),taskType.toString(),workflowid,js.optString("targetText"),js.optString("button_class_text"),js.optString("button_js"),js.optString("constraint_type")});
+
+				}
+			conPlat.commit();
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			try{
+			conPlat.setAutoCommit(true);
+			}catch(Exception e){}
+			conPlat.close();
+			ButtonFactory.remove(object_id);
+		}
+	}
+}

@@ -1,0 +1,1 @@
+Ext.ns("ExternalItems.haiwaizhishigongxiang.spacePage.Portal");loadcss("ExternalItems.haiwaizhishigongxiang.spacePage.Portal.portal");ExternalItems.haiwaizhishigongxiang.spacePage.Portal.Portlet=Ext.extend(Ext.Panel,{anchor:"100%",frame:true,collapsible:true,draggable:true,cls:"x-portlet"});Ext.reg("portlet",ExternalItems.haiwaizhishigongxiang.spacePage.Portal.Portlet);

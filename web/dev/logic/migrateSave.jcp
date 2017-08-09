@@ -1,0 +1,85 @@
+import java.io.*;
+import java.util.*;
+import com.kinglib.*;
+import org.jdom.*;
+import org.jdom.input.*;
+import com.susing.core.*;
+import com.susing.server.*;
+
+@class{
+	public void doPost(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String returnValue="{success:true}";
+		Connection conPlat = jacper.getConnection("plat");
+		String xml = jacper.getString("xml");
+		try{
+			Reader rd = new StringReader(xml); 
+			SAXBuilder builder = new SAXBuilder(); 
+			Document doc = builder.build(rd); 
+			Element root = doc.getRootElement();
+			String object_id=root.getAttribute("object_id").getValue();
+			List migs=root.getChildren();
+			String[][] migValue=new String[migs.size()][5];
+			try{
+					conPlat.setAutoCommit(false);
+					conPlat.exec("delete from $[plat].ctrl_tabquery where object_id=?",new String[]{object_id});
+					conPlat.exec("delete from $[plat].ctrl_transfer where MODULE_ID=?",new String[]{object_id});
+					for (int i=0; i<migs.size();i++){
+						migValue[i][0]=object_id;
+						migValue[i][1]=String.valueOf(i);
+						Element curmig=(Element)migs.get(i);
+						migValue[i][2]=curmig.getAttribute("dblink").getValue();
+						migValue[i][3]=curmig.getAttribute("tab_id").getValue();
+						migValue[i][4]=curmig.getAttribute("query_id").getValue();
+						List submig=curmig.getChildren();
+						String[][] migVal=new String[submig.size()][5];
+						for(int j=0; j<submig.size();j++){
+							Element cursub=(Element)submig.get(j);
+							migVal[j][0]=cursub.getAttribute("tabitem_id").getValue();
+							migVal[j][1]=String.valueOf(j);
+							migVal[j][2]=object_id;
+							migVal[j][3]=cursub.getAttribute("qname").getValue();
+							migVal[j][4]=String.valueOf(i);
+						}
+						if(submig.size()>0)
+						conPlat.exec("INSERT INTO $[plat].ctrl_transfer (TABITEM_ID, SEQ, MODULE_ID, SOURCE_COLUMN,INDEX_ID) VALUES (?,?,?,?,?)",migVal);
+
+					}
+					if(migs.size()>0)
+						conPlat.exec("insert into $[plat].ctrl_tabquery (object_id,index_id,dblink,tab_id,query_id) values (?,?,?,?,?)",migValue);
+					conPlat.commit();
+					String type = jacper.getString("type");
+					if(type!=null && type.equals("task")){
+						String[][] rs = conPlat.get("select schedule_id from $[plat].sys_task_schedule a where a.task_id=?",new String[]{object_id});
+						String[] serviceArray=KingleSystem.getServiceNames();
+						for(int i=0;i<serviceArray.length;i++){
+							if((jacper.trans("任务服务")).equals(serviceArray[i])){
+								for(int j=0;j<rs.length;j++){
+									KingleTaskService taskService=(KingleTaskService)KingleSystem.getService(serviceArray[i]);
+									taskService.stopTask(object_id+"_"+rs[j][0]);
+									taskService.startTask(object_id+"_"+rs[j][0]);
+								}
+							}
+						}
+					}	
+			}catch(Exception e){
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				e.printStackTrace();
+				returnValue="{success:false,message:'"+jacper.trans("错误:")+""+e.toString().replaceAll("\\'","\\\\'")+"'}";
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+		}catch(Exception e){
+			returnValue="{success:false,message:'"+jacper.trans("错误:")+""+e.toString().replaceAll("\\'","\\\\'")+"'}";
+		} 
+		jacper.print(returnValue);
+	}
+
+}

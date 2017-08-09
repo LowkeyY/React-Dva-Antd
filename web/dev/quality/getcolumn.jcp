@@ -1,0 +1,126 @@
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+
+import java.util.ArrayList;
+import com.kinglib.*;
+import com.kinglib.database.*;
+import java.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.quality.*;
+@class{
+
+public void doGet(Jacper jacper){
+	String tabId = jacper.getString("object_id");
+	String type = jacper.getString("type");
+	if(type==null)
+		return;
+	Connection conPlat = jacper.getConnection("plat");
+	String dataType = jacper.getString("dataType");
+	jacper.getResponse().setContentType("application/x-json");
+	try{	
+		QualityFactory  QF=QualityFactory.getInstance();
+		Quality quality=QF.getQuality(conPlat,tabId);
+		MetaTable mt = MetaFactory.getObject(quality.getTabId());
+
+		JSONObject colJSON = new JSONObject("{success:true}");
+		JSONArray jarr=new JSONArray();
+		if(type.equals("col")){
+			ArrayList<MetaColumn> colArr=new ArrayList<MetaColumn>();
+			for(MetaColumn mc:mt.getColumns()){
+				//if(mc.hasForeignKey()){
+					JSONObject js = new JSONObject();
+					js.put("id",mt.getPname()+"."+mc.getPname());
+					js.put("lname",mc.getLname()); 
+					jarr.put(js);
+				//}
+			}
+			colJSON.put("dataItem",jarr);
+			colJSON.put("totalCount",jarr.length());
+			jacper.print(colJSON.toString());
+			/*String[][] rs= conPlat.get("select id,data_type,lname from $[plat].meta_column  where object_id=?",new String[]{""+tabId});
+			if(rs!=null){
+				for (int i = 0; i < rs.length; i++) {
+					JSONObject js = new JSONObject("{}");
+					js.put("lname",rs[i][2]);
+					js.put("id",rs[i][0]+"&"+DataType.parseDataType(rs[i][1]).toString()); 
+					jarr.put(js);
+				}
+				colJSON.put("dataItem",jarr);
+				colJSON.put("totalCount",jarr.length());
+				
+		   }else{
+				 colJSON.put("totalCount","0");
+				 jacper.print(colJSON.toString());
+		   }*/
+		}else{
+			String colname = jacper.getString("colname");
+			//System.out.println("----------------"+colname);
+			//String[] nameArr = colname.split(".");
+			//System.out.println("----------------"+nameArr.length);
+			//System.out.println("----------------"+nameArr[0].toString());
+			//String Pname = nameArr[1].toString();
+			int colId=0;
+			ArrayList<MetaColumn> colArr=new ArrayList<MetaColumn>();
+			for(MetaColumn mc:mt.getColumns()){
+				String tName = mt.getPname()+"."+mc.getPname();
+				if(tName.equals(colname)){
+					colId = mc.getId();
+					break;
+				}
+			}
+			MetaColumn fkColumn=mt.getColumn(colId);
+			Constraint[] constraints=mt.getConstraints(ConstraintType.ForeignKey);
+			for(Constraint c:constraints){
+				if(c.getColumnId()==colId){
+					String fkId=c.getLinkTable();
+					MetaTable fkmt = MetaFactory.getObject(fkId);
+					JSONObject js = new JSONObject("{}");
+					//js.put("id",fkId);
+					js.put("id",fkmt.getId());
+					js.put("lname",fkmt.getLname()); 
+					jarr.put(js);
+				}
+			}
+			colJSON.put("dataItem",jarr);
+			colJSON.put("totalCount",jarr.length());
+			jacper.print(colJSON.toString());
+			/*if(dataType==null||dataType.equals(""))
+				dataType = "unknown";
+			JSONObject colJSON = new JSONObject("{success:true}");
+			JSONArray jarr=new JSONArray();
+			String[] arrTemp = this.getOp(dataType).split("@");
+			for(int i=0;i<arrTemp.length;i++){
+				JSONObject js = new JSONObject("{}");
+				js.put("id",arrTemp[i]);
+				js.put("lname",arrTemp[i]);
+				jarr.put(js);
+			}
+			colJSON.put("dataItem",jarr);
+			colJSON.put("totalCount",jarr.length());
+			jacper.print(colJSON.toString());*/
+		}
+		   
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+public void doPost(Jacper jacper){
+	this.doGet(jacper);
+}
+
+private String getOp(String dataType){
+	String ops = "";
+	if(dataType.equals("int")||dataType.equals("float")||dataType.equals("date")){
+		ops = "="+"@"+">"+"@"+">="+"@"+"<"+"@"+"<="+"@"+"!="+"@"+"IS NULL"+"@"+"IS NOT NULL";
+	}else if(dataType.equals("varchar")){
+		ops = "like"+"@"+"not like"+"@"+"="+"@"+"!="+"@"+"in"+"@"+"IS NULL"+"@"+"IS NOT NULL";
+	}else{
+		ops = "like"+"@"+"not like"+"@"+"="+"@"+"!="+"@"+"in"+"@"+"IS NULL"+"@"+"IS NOT NULL";
+	}
+	return ops;
+}
+}

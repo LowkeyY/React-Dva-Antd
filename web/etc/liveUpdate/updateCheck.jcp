@@ -1,0 +1,381 @@
+
+
+
+import com.kinglib.*;
+import com.susing.*;
+import com.susing.util.*;
+import com.kinglib.util.RandomStr ;
+import com.kinglib.workbench.*;
+
+import org.apache.commons.httpclient.*;
+import org.apache.commons.httpclient.methods.*;
+import org.apache.commons.httpclient.params.HttpMethodParams;
+
+import java.io.*;
+import java.util.*;
+import java.nio.channels.FileChannel;
+import java.nio.MappedByteBuffer;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.CharBuffer;
+import java.nio.charset.CharsetDecoder;
+import java.util.jar.*;
+import java.util.zip.*;
+import java.net.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+	
+	String url = (String)com.susing.core.KingleSystem.getProperty("support_url");
+
+	Connection conPlat = jacper.getConnection("plat");
+	String[] rs = conPlat.getRow("select register_code,active_code,version from $[plat].system_register",null);
+	String rand="";
+	String register_code="";
+	String active_code="";
+	if(rs==null){
+		<?<script>alert("?>jacper.trans("系统未注册,请注册并获得商典公司认证后方可升级!")<?");self.location.replace("register.jcp?rand="+Math.random());</script>?>;
+		return;
+	}else{
+		register_code=rs[0];
+		active_code=rs[1];
+		String platSystem = (String)com.susing.core.KingleSystem.getProperty("platSystem");
+		String urlString="";
+		try{
+			urlString="type=auth&platSystem="+URLEncoder.encode(platSystem,"UTF-8")+"&register_code="+URLEncoder.encode(rs[0],"UTF-8")+"&active_code="+URLEncoder.encode(rs[1],"UTF-8");
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		url=url+"/getUpdate.jcp?"+urlString;
+		HttpClient httpclient = new HttpClient();
+
+		GetMethod method = new GetMethod(url);
+		method.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, 
+		new DefaultHttpMethodRetryHandler(3, false));
+		
+		try {
+		  int statusCode = httpclient.executeMethod(method);
+		  if (statusCode != HttpStatus.SC_OK) {
+			<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+		  }
+		  rand=method.getResponseBodyAsString();
+		} catch (HttpException e) {
+			 <?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+		  e.printStackTrace();
+		} catch (IOException e) {
+			<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+		  e.printStackTrace();
+		} finally {
+		   method.releaseConnection();
+		} 
+		if(rand.equals("true")){
+			rand="";
+			url = (String)com.susing.core.KingleSystem.getProperty("support_url");
+			try{
+				urlString="type=listUpdate&platSystem="+URLEncoder.encode(platSystem,"UTF-8")+"&version="+URLEncoder.encode(rs[2],"UTF-8");
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			url=url+"/getUpdate.jcp?"+urlString;
+			method = new GetMethod(url);
+			method.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, 
+			new DefaultHttpMethodRetryHandler(3, false));
+			
+			try {
+			  int statusCode = httpclient.executeMethod(method);
+			  if (statusCode != HttpStatus.SC_OK) {
+				<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+			  }else{
+			  
+			  }
+			  rand=method.getResponseBodyAsString();
+			} catch (HttpException e) {
+				 <?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+			  e.printStackTrace();
+			} catch (IOException e) {
+				<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+			  e.printStackTrace();
+			} finally {
+			   method.releaseConnection();
+			} 
+		}else{
+			<?<script>alert("?>jacper.trans("您的系统未通过商典公司认证,可能试用已过!")<?");</script>?>;
+		}
+	}
+	String frm = "<script>var frm = new ShowForm('updateCheck.jcp','post');</script>";
+
+<?
+<html>
+<head><title></title>
+<meta http-equiv="Content-Type" content="text/html;">
+<yacus style="behavior:url(#default#userdata);" id="__YACUS_CACHE"/>
+<SCRIPT SRC="/JavaScript"></SCRIPT>
+<script src='/themes/js/show.js'></script>
+<script src="/themes/js/showmenu.js"></script>
+<script src='/themes/js/verify.js'></script>
+<link rel='stylesheet' type='text/css' href='/themes/css/standard.css'>
+<SCRIPT>
+susing("MButton","Menu");
+function main(){
+	var install,leftwin;
+	var titleMap = new Map();
+	leftwin =  new MButton("?>jacper.trans("切换窗格")<?","/themes/icon/xp/leftwin.gif");
+	leftwin.click = function(){
+		if(parent.appload._LEFTWIN_.style.display == 'none'){
+			parent.appload._LEFTWIN_.style.display = '';
+			parent.rightFrame.cols="20%,80%";
+			leftwin.setDown(false);
+		}else{
+			parent.appload._LEFTWIN_.style.display = 'none';
+			parent.rightFrame.cols="0,*";
+			leftwin.setDown(true);
+		}
+	}
+	titleMap.append("",leftwin);
+	titleMap.finish(titlemap);
+	leftwin.setDown(false);
+}
+
+function liveUpdate(val1,val){
+		var fm=eval(frm.nam);
+		document.all.installUpload.style.display='none';
+		document.all.statusFrame.style.display='';
+		fm.newVersion.value=val;
+		fm.platSystem.value=val1;
+		fm.target='fsm';
+		fm.submit();
+}
+
+</SCRIPT>
+</head>
+<body topmargin="0" leftmargin="0" rightmargin="0" bottommargin="0" bgcolor="#9EBEF5" style="overflow:auto">
+<table height="100%" width="100%"  cellspacing="0" cellpadding="0">
+<tr height=20  width="100%"><td>
+<table cellspacing cellpadding align=center width=100%>
+			<tr><td nowrap width='100%' height='25' colspan='2'>
+					<table width='100%' cellspacing='0' cellpadding='0' height='28' bgcolor="#9EBEF5">
+							<tr><td nowrap width='2' height='25' ></td><td valign='bottom'>
+									<table width='45%' cellspacing='0' cellpadding='0' background='/themes/default/images/bg2.gif'>
+										<tr>
+											<td width=7><img src="/themes/images/t1.gif"></td>
+											<td width="100%" background="/themes/images/bg2.gif" id=titlemap></td>
+											<td width=13><img src="/themes/images/tbar_tail.gif"></td>
+										</tr>
+									</table>
+							</td></tr>
+					</table>
+			</td></tr>
+	</table>
+</td></tr>
+
+<tr  width="100%"><td  style="border-left:1px solid #ACA899;">	
+	<table cellSpacing="3" cellPadding width="100%" height=100% bgcolor="#ECE9D8" style="border-left:1px solid #ACA899;border-right:1px solid #ACA899;border-top:1px solid #ACA899" >
+			 <tr><td align="left">	
+					<table width="100%" bgcolor="#FEFAEF" style="border-top:1px solid #ACA899;border-left:1px solid #ACA899;border-right:1px solid #FFFFFF;border-bottom:1px solid #FFFFFF" cellspacing cellpadding height="100%" >
+						<tr><td valign="top" height="100%" id='installUpload'>								
+							<table cellpadding cellspacing width="100%"  height="100%" >
+								<tr height=1><td bgcolor="#FEFAEF"></td></tr>		
+									?>frm<?
+									<tr><td  valign="top" >?>rand<?
+									</td></tr>	
+									<input type=hidden  name="newVersion" value="">
+									<input type=hidden  name="platSystem" value="">
+									<input type=hidden  name="register_code" value="?>register_code<?">
+									<input type=hidden  name="active_code" value="?>active_code<?">
+									<script>frm.Close();</script>
+								<tr height=1 valign="top"><td bgcolor="#ACA899"></td></tr>
+							</table>
+						</td></tr>
+						<tr id='statusFrame'  ><td  valign="top"  width="100%"  height="100%" style="padding:10;" >
+							<table cellpadding cellspacing width="100%"  height="100%" >
+								<tr><td>
+								<iframe  name='fsm' style='position:relative: left:0; top:0; height:100%; width:100%'/> </td></tr>
+							</table>
+						</td></tr>
+					</table>
+				</td></tr>
+			</table>
+			</td></tr>
+<tr height=20  width="100%">
+	<td background="/themes/default/images/status_bg.gif" id="statu"></td></tr>
+</td></tr>
+</table>
+</body>
+</html>
+?>;
+}
+ public void doPost(Jacper jacper){
+	
+		Connection conPlat = jacper.getConnection("plat");
+
+		String newVersion = jacper.getStr("newVersion");
+		String platSystem = jacper.getStr("platSystem");
+		String register_code = jacper.getStr("register_code");
+		String active_code = jacper.getStr("active_code");
+
+		String url = (String)com.susing.core.KingleSystem.getProperty("support_url");
+		String urlString="";
+		String rand="";
+
+		try{		
+			urlString="type=auth&platSystem="+URLEncoder.encode(platSystem,"UTF-8")+"&register_code="+URLEncoder.encode(register_code,"UTF-8")+"&active_code="+URLEncoder.encode(active_code,"UTF-8");
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		url=url+"/getUpdateFile.jcp?"+urlString;
+		HttpClient httpclient = new HttpClient();
+
+		GetMethod method = new GetMethod(url);
+		method.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, 
+		new DefaultHttpMethodRetryHandler(3, false));
+		
+		try {
+		  int statusCode = httpclient.executeMethod(method);
+		  if (statusCode != HttpStatus.SC_OK) {
+			<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?")</script>?>;
+		  }
+		  rand=method.getResponseBodyAsString();
+		} catch (HttpException e) {
+			 <?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?")</script>?>;
+		  e.printStackTrace();
+		} catch (IOException e) {
+			<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?")</script>?>;
+		  e.printStackTrace();
+		} finally {
+		   method.releaseConnection();
+		} 
+
+		if(rand.equals("true")){
+		
+			try{
+				url = (String)com.susing.core.KingleSystem.getProperty("support_url");		
+				url=url+"/getUpdateFile.jcp?platSystem="+URLEncoder.encode(platSystem,"UTF-8")+"&newVersion="+URLEncoder.encode(newVersion,"UTF-8");
+
+				method = new GetMethod(url);
+				method.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, 
+				new DefaultHttpMethodRetryHandler(3, false));
+					
+				InputStream inTarStream=null;
+
+				RandomStr.setCharset("A-Z");
+				RandomStr.setLength(8+"");
+				try {
+					RandomStr.generateRandomObject();
+				}catch(Exception e) {
+					e.printStackTrace();
+				}
+				String tempFileName=RandomStr.getRandom()+".zip";
+
+				File jarFile=new File(Files.TEMP_DIR+File.separator+tempFileName); 
+
+				try {
+				  int statusCode = httpclient.executeMethod(method);
+				  if (statusCode != HttpStatus.SC_OK) {
+					<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?")</script>?>;
+				  }
+				  inTarStream=method.getResponseBodyAsStream();
+					try{
+						FileOutputStream os=new FileOutputStream(jarFile);
+						if(inTarStream!=null)
+							Files.copyRange(inTarStream, os,1024);
+					}catch(Exception e){e.printStackTrace();}
+				} catch (HttpException e) {
+					 <?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?")</script>?>;
+				  e.printStackTrace();
+				} catch (IOException e) {
+					<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?")</script>?>;
+				  e.printStackTrace();
+				} finally {
+				   method.releaseConnection();
+				}  
+				
+				Install it=new Install();
+
+
+				ZipFile jf=new ZipFile(jarFile); 
+				Enumeration fileEnum =jf.entries();  		
+				while (fileEnum.hasMoreElements()){	
+					ZipEntry ze=new ZipEntry(fileEnum.nextElement().toString()); 
+					String fileName=ze.getName();
+					if(ze.isDirectory()){
+						continue;
+					}else{
+						if(fileName.substring(0,fileName.indexOf("/")).toUpperCase().indexOf("SQL")!=-1){
+							if(fileName.toUpperCase().indexOf("CREATE.SQL")!=-1){
+								InputStream in=jf.getInputStream(ze);
+								String sqlString=it.readString(new InputStreamReader(in));
+								String rt=it.executeSql(jacper,conPlat,sqlString);
+								if(rt.length()!=0){
+									<?<script>alert("?>jacper.trans("Sql语句执行失败,请检查或与应用提供商联系!")<?");</script>?>;
+								}
+							}
+						}
+					}
+				 }
+				fileEnum =jf.entries(); 
+				 while (fileEnum.hasMoreElements()) {	
+					ZipEntry ze=new ZipEntry(fileEnum.nextElement().toString()); 
+					String fileName=ze.getName();
+					if(ze.isDirectory()){
+						continue;
+					}else{
+						if(fileName.substring(0,fileName.indexOf("/")).toUpperCase().indexOf("ANT")!=-1){
+							if(fileName.toUpperCase().indexOf("BUILD.XML")!=-1){
+								InputStream in=jf.getInputStream(ze);
+								String installStr=it.readString(new InputStreamReader(in));
+								it.installFile(jacper,installStr,jf,newVersion);
+							}
+						}
+					}
+				 }
+				 fileEnum =jf.entries(); 
+				 while (fileEnum.hasMoreElements()) {
+					ZipEntry ze=new ZipEntry(fileEnum.nextElement().toString()); 
+					String fileName=ze.getName();
+					if(ze.isDirectory()){
+						continue;
+					}else{
+						if(fileName.substring(0,fileName.indexOf("/")).toUpperCase().indexOf("SQL")!=-1){
+							if(fileName.toUpperCase().indexOf("INSERT.SQL")!=-1){
+								InputStream in=jf.getInputStream(ze);
+								String sqlString=it.readString(new InputStreamReader(in));
+								String rt=it.executeSql(jacper,conPlat,sqlString);
+								if(rt.length()!=0){
+									<?<script>alert("?>jacper.trans("Sql语句执行失败,请检查或与应用提供商联系!")<?");</script>?>;
+								}
+							}
+						}
+					}
+				 }
+				 fileEnum =jf.entries(); 
+				 while (fileEnum.hasMoreElements()) {	
+					ZipEntry ze=new ZipEntry(fileEnum.nextElement().toString()); 
+					String fileName=ze.getName();
+					if(ze.isDirectory()){
+						continue;
+					}else{
+						if(fileName.substring(0,fileName.indexOf("/")).toUpperCase().indexOf("IMPORT")!=-1){
+							if(fileName.toUpperCase().indexOf("XML")!=-1&&!fileName.toUpperCase().equals("BUILD.XML")){
+								InputStream in=jf.getInputStream(ze);
+								String installStr=it.readString(new InputStreamReader(in, "UTF-8"));
+								it.installExec(jacper,conPlat,installStr);
+							}
+						}
+					}
+				 }
+				 conPlat.exec("update $[plat].system_register set version=? where register_code=?",new String[]{newVersion,register_code});
+				<?<script>alert("?>jacper.trans("系统升级完成,请手工重起应用服务器!")<?");</script>?>;
+			}catch (Exception e){			
+					e.printStackTrace();
+					<?<script>alert("?>jacper.trans("文件格式错误,请检查上传文件是否是标准的Jar格式或安装文件错误!")<?");</script>?>;
+			}
+		}else{
+			<?<script>alert("?>jacper.trans("您的系统未通过商典公司认证,可能试用已过!")<?");</script>?>;
+		}
+}
+}

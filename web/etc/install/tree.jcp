@@ -1,0 +1,120 @@
+
+import java.io.IOException;
+
+import java.util.*;
+
+import com.kinglib.workbench.application.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.program.*;
+
+import com.social.api.core.model.User;
+import com.social.api.core.model.User;
+import com.social.api.core.model.UserType;
+import com.kinglib.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	String level = jacper.getString("level");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String userId = hs.uid+"";
+	String deptId=hs.getString("dept_id");
+	User u = User.getUser(userId+"");
+	UserType userType=u.getUserType();
+
+	String type=jacper.getStr("type");
+	String haschild = "";
+
+	HashSet<String> appSet=new HashSet<String>();
+	if (userType.getValue()!=1&&userType.getValue()!=0){
+		String[][] rs=conPlat.get("select id from $[plat].system_auth where roleid=?",new String[]{userId+""},0);
+		for(int i=0;i<rs.length;i++){
+			appSet.add(rs[i][0]);
+		}
+	}
+
+	if (level.equals("1")){
+		String id= jacper.getString("_id");
+		<?<root _id="top">
+			<forder _parent="top"  event="event0">?>; 
+			String sql="";
+			String[] params=new String[]{};
+			if (userType.getValue()==1||userType.getValue()==0){
+				sql="select a.system_id,a.system_name from $[plat].system_base a ";
+			}else{
+				params=new String[]{deptId,userId};
+				sql="select a.system_id,a.system_name from $[plat].system_base a,$[plat].system_auth b where a.system_id=b.id and b.deptid=? and b.roleid=?";
+			}
+			String[][] rs = conPlat.get(sql,params,0);
+			int appCount=0;
+			if(rs.length!=0){				
+				for(int i=0;i<rs.length;i++){	
+					ObjectNode systemNode=ObjectManager.getObject(rs[i][0]);
+					ObjectNode[] appNodes=systemNode.findAllChildsByType(ObjectType.APPLICATION);	
+					haschild = "0";	
+					if (userType.getValue()==1||userType.getValue()==0){
+						if (appNodes.length>0)
+							haschild = "1";
+						else
+							haschild = "0";
+					}else{
+						for(int k=0;k<appNodes.length;k++){
+							if(appSet.contains(appNodes[k].getId()+""))
+								 appCount++;
+						}
+						if (appCount>0)
+							haschild = "1";
+						else
+							haschild = "0";
+					}
+					<?<e _id="?>rs[i][0]<?" _parent="top" operationType='1' params="id=?>rs[i][0]<?"  framenum="1" title="?>rs[i][1]<?" url="/etc/install/tree.jcp?level=2&amp;_id=?>rs[i][0]<?" _hasChild="?>haschild<?"  icon0="/themes/icon/xp/axx.gif" icon1="/themes/icon/xp/axx.gif"/>?>;
+				}
+			}
+		<?</forder></root>?>;
+	}else if (level.equals("2")){   
+		String id= jacper.getString("_id");
+
+		String sql="";
+		String[] params=new String[]{};
+		if (userType.getValue()==1||userType.getValue()==0){
+			params=new String[]{id};
+			sql="select max(a.group_id),max(a.group_name),count(b.strategy_id) from $[plat].application_group a left outer join $[plat].sys_strategy b on a.group_id=b.group_id where a.system_id=?  group by a.group_id";
+		}else{
+			params=new String[]{id,deptId,userId};
+			sql="select max(a.group_id),max(a.group_name),count(b.strategy_id) from $[plat].application_group a left outer join $[plat].sys_strategy b on a.group_id=b.group_id,$[plat].application_base c,$[plat].system_auth d where a.system_id=? and a.group_id=c.system_id and d.id=c.object_id and  d.deptid=? and d.roleid=? group by a.group_id";
+		}
+		String[][] rs = conPlat.get(sql,params,0);
+
+		<?<root _id="?>id<?">?>;
+		if (rs.length != 0) {
+			<?<forder _parent="?>id<?"  event="event0">?>;
+			for ( int i=0; i<rs.length; i++ ) {
+					if (Integer.parseInt(rs[i][2])>0) 
+						haschild = "1";
+					else 
+						haschild = "0";
+				<?<e _id="?>rs[i][0]<?" _parent="?>id<?"  operationType='3'  params="id=?>rs[i][0]<?&amp;parent_id=?>id<?"  framenum="1" title="?>rs[i][1]<?" url="/etc/install/tree.jcp?level=3&amp;_id=?>rs[i][0]<?" _hasChild="?>haschild<?" icon0="/themes/icon/xp/dhd.gif" icon1="/themes/icon/xp/dhd.gif"/>?>;
+			}
+			<?</forder>?>;
+		}
+		<?</root>?>;
+	}else if (level.equals("3")){
+		String id= jacper.getString("_id");
+		String[][] rs = conPlat.get("select strategy_id,strategy_name from $[plat].sys_strategy where group_id=?",new String[]{id},0);		
+		<?<root _id="?>id<?">?>;
+		if (rs.length != 0){
+			<?<forder _parent="?>id<?" event="event0">?>;
+			for ( int i=0; i<rs.length; i++ ) {
+				<?<e _id="?>rs[i][0]<?" _parent="?>id<?"  title="?>rs[i][1]<?"   operationType='4'   params="id=?>rs[i][0]<?&amp;parent_id=?>id<?"   _hasChild="0" icon0="/themes/icon/common/group.gif" icon1="/themes/icon/common/group.gif"/>?>;
+			}
+			<?</forder>?>;
+		}
+		<?</root>?>;
+	}
+	conPlat.close();
+}}
+

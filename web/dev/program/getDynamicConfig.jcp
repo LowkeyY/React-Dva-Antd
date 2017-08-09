@@ -1,0 +1,70 @@
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.util.json.*;
+import java.util.*;
+import com.susing.core.KingleSystem;
+
+@class{
+
+	public void doPost(Jacper jacper){
+		String type=jacper.getStr("type");
+		String[][] rs=null;
+		int tlen=0;
+		if(type.equals("columns")){
+			String object_id=jacper.getString("object_id","-1");
+			if(object_id.equals("-1")) return;
+			MetaTable mt=MetaFactory.getObject(object_id);
+			if(mt==null){
+				jacper.print("{success:false,message:'"+jacper.trans("本模块所关联的表不存在")+"'}");
+				return;
+			}
+			MetaColumn[] columns=mt.getColumnArray();
+			if(columns==null){
+				jacper.print("{success:false,message:'"+jacper.trans("表未设置列")+"'}");
+				return;			
+			}
+			rs=new String[columns.length][2];
+			for(int i=0;i<columns.length;i++){
+				rs[i][0]=columns[i].getLname();
+				rs[i][1]=String.valueOf(columns[i].getId());
+			}
+			tlen=rs.length;
+		}else if(type.equals("subTable")){
+			String object_id=jacper.getString("object_id","-1");
+			if(object_id.equals("-1")) return;
+			MetaTable[] mts=MetaFactory.getSubTables(object_id);
+			rs=new String[mts.length][2];
+			tlen=mts.length;
+			for(int i=0;i<tlen;i++){
+				rs[i][0]=mts[i].getLname();
+				rs[i][1]=String.valueOf(mts[i].getObjectId());
+			}
+		}
+		JSONObject form=null;
+		try{
+			form= new JSONObject("{success:true}");
+			JSONArray jarr=new JSONArray();
+			for(int i=0;i<tlen;i++){
+				JSONObject js=new JSONObject("{}");
+				js.put("text",rs[i][0]);
+				js.put("value",rs[i][1]);
+				jarr.put(js);
+			}
+			form.put("items",jarr);
+			form.put("totalCount",jarr.length());
+			jacper.print(form.toString());
+		}catch(Exception e){
+			e.printStackTrace(); 
+		}
+	}
+
+	private static int count(String m){
+		int len=m.length();
+		int total=0;
+		for(int i=0;i<len;i++){
+			if(m.charAt(i)==',')
+				total++;
+		}
+		return total-1;
+	}
+}

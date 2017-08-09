@@ -1,0 +1,801 @@
+import gpra.filesystem.HWCreateSWFFileQueue;
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.HWUnits.HWSpaceConfig;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.sql.SQLException;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import com.kinglib.*;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.user.CertManager;
+import com.kinglib.user.User;
+import com.susing.EFile;
+import com.susing.upload.FileUpload;
+
+		//	public class up{
+@class{
+	public void doPost(Jacper jacper){
+		System.out.println("批量上传开始>>>");
+		Param param =new Param(jacper);
+		Connection conDocmgr= param.getConnection("docmgr");
+		Connection conPlatForm= param.getConnection("plat");
+		String userId=param.getStr("userId");
+		FileUpload upload = new FileUpload(Integer.parseInt(userId));
+		try {
+			upload.parseRequest(param.getRequest());
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		boolean isAdd=false;
+		upload.appendParamToMap(param);
+		User user=CertManager.getUser(userId);
+		String deptId=user.getDeptId();
+		String deptName=user.getDept().getName();
+		EFile eexcel=param.getEFile("EXCEL");
+		String panFu="M:";
+
+		String regionId=param.getString("REGION_ID");
+		String countId=param.getString("COUNTRY_ID");
+		String basin=param.getString("BASIN_ID");
+		String beizhu=param.getString("FILE_REMARKS");
+		String dept=param.getString("FILE_DEPT");
+		String project=param.getString("PROJECT");
+		String shenhe=param.getString("SHENPI");
+
+		String IS_SECRECY=param.getString("IS_SECRECY");
+
+		String file_name=eexcel.getAttribute("file-name");
+		int lastgang=file_name.lastIndexOf("\\");
+		if(lastgang>0){
+			file_name=file_name.substring(lastgang+1);
+		}
+		file_name=file_name.substring(0,file_name.indexOf("."));
+		String type=eexcel.getAttribute("file-name");
+		type=type.substring(type.indexOf(".")+1);
+
+		if(!type.equals("xls") && !type.equals("xlsx")&& !type.equals("xlsm")){
+			jacper.print("{success:true,err:true,message:'请上传excel文件。'}");
+			return;
+		}
+
+
+		Map<String, Object> allType= new HashMap<String, Object>();
+
+		Map<String, String> type1= new HashMap<String, String>();
+		type1.put("id", "REGION_ID");
+		type1.put("name","REGION_NAME_CN");
+		type1.put("table","DIR_ZYZL_REGION" );
+		allType.put("e0996ed7-4623-4828-adfe-020e5664953a", type1);
+
+
+		Map<String, String> type2= new HashMap<String, String>();
+		type2.put("id", "COUNTRY_ID");
+		type2.put("name","COUNTRY_NAME_CN");
+		type2.put("table","DIR_ZYZL_COUNTRY" );
+		allType.put("08141acc-71ac-4798-836d-affa6a1c927f", type2);
+
+		Map<String, String> type3= new HashMap<String, String>();
+		type3.put("id", "GP_ID");
+		type3.put("name","BASIN_NAME_EN");
+		type3.put("table","DIR_ZYZL_BASIN" );
+		allType.put("dc1cef74-b29c-41c5-aa39-b4e0d1a5f52e", type3);
+
+		//Map<String, String> type4= new HashMap<String, String>();
+		//type4.put("id", "PLAY_ID");
+		//type4.put("name","PLAY_NAME_EN");
+		//type4.put("table","ZYZL_PLAY" );
+		//allType.put("8bc5a5df-f689-4470-8e4b-86a38c6ab7c1", type4);
+
+
+		Map<String, String> type5= new HashMap<String, String>();
+		type5.put("id", "FIE_ID");
+		type5.put("name","FIELD_NAME_EN");
+		type5.put("table","DIR_ZYZL_FIELD" );
+		allType.put("933b3161-4be0-4199-b129-6f833de5e878", type5);
+
+		Map<String, String> type6= new HashMap<String, String>();
+		type6.put("id", "STANDARD_TYPE_ID");
+		type6.put("name","STANDARD_TYPE_NAME");
+		type6.put("table","DIR_DATUM_STANDARD_TYPE" );
+		allType.put("8afaecca-54193cae-0154-193caee4-0000", type6);
+
+		Map<String, String> type7= new HashMap<String, String>();
+		type7.put("id", "METTING_ID");
+		type7.put("name","METTING_NAME");
+		type7.put("table","DIR_DATUM_METTING" );
+		allType.put("8afaecca-5419625e-0154-19625ef5-0000", type7);
+
+		Map<String, String> type8= new HashMap<String, String>();
+		type8.put("id", "SUB_METTING_ID");
+		type8.put("name","SUB_METTING_NAME");
+		type8.put("table","DIR_DATUM_SUB_METTING" );
+		allType.put("8afaecca-5419625e-0154-19630a72-0001", type8);
+
+		Map<String, String> type9= new HashMap<String, String>();
+		type9.put("id", "DATA_TYPE_ID");
+		type9.put("name","DATA_TYPE_NAME");
+		type9.put("table","DIR_DATUM_DATA_TYPE" );
+		allType.put("8afaecca-5419625e-0154-19650a76-0002", type9);
+
+		Map<String, String> type10= new HashMap<String, String>();
+		type10.put("id", "METTING_ID");
+		type10.put("name","METTING_NAME");
+		type10.put("table","DIR_DATUM_METTING" );
+		allType.put("8afaecca-5419625e-0154-19625ef5-0000", type10);
+
+		Map<String, String> type11= new HashMap<String, String>();
+		type11.put("id", "SPECIALTIES_ID");
+		type11.put("name","SPECIALTIES_NAME");
+		type11.put("table","DIR_DATUM_SPECIALTIES" );
+		allType.put("8afaec81-5460fcbd-0154-61090e7d-0004", type11);
+
+		Map<String, String> type12= new HashMap<String, String>();
+		type12.put("id", "SPECIALTIES_ID");
+		type12.put("name","SPECIALTIES_NAME");
+		type12.put("table","datefiled" );
+		allType.put("16d19014-41da-43d3-9bb0-074694b4fea7", type12);
+
+
+
+		Map<String, Object> all=new HashMap<String, Object>();
+		try {
+			all = getAll(eexcel.getInputStream(),type);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}	//读取Excel
+		List<String> rowList = (List<String>) all.get("allList");		//所有列
+		List<List<String>> rowValues = (List<List<String>>) all.get("allListValue");//所有值
+
+		String eFilePath=(String) all.get("configvalue");
+		eFilePath = panFu+eFilePath.substring(eFilePath.indexOf(":\\")+1);
+		System.out.println("rowList:"+rowList.size() + " , rowValues:"+rowValues.size());
+
+		String allAtt="";
+		String allWenHao="";
+		String dalei="";
+		List<Map<String,String>> allRow= new ArrayList<Map<String,String>>();
+
+		String[] getdaleirs= conDocmgr.getRow("select DATUM_ID from DIR_DATUM_BASE where DATUM_NAME='"+file_name+"' and DISPLAY_TYPE='ad34639a-085b-414f-b17f-c37e47d33c96'");
+		if(getdaleirs!=null &&getdaleirs.length>0){
+			dalei=getdaleirs[0];
+		}else{
+			System.out.println("未找到资料大类。请检查数据是否存在。");
+			jacper.print("{success:true,err:true,message:'未找到资料大类。请检查数据是否存在。'}");
+			return;
+		}
+		boolean validate=true;
+		String message="";
+		for (int i = 1; i < rowList.size(); i++) {
+			String name=rowList.get(i).trim();
+			if(name.equals("资料名称") ){
+				Map<String, String> row= new HashMap<String, String>();
+				row.put("name", rowList.get(i).trim());
+				row.put("att", "FILE_INFO_NAME");
+				row.put("dalei", dalei);
+				row.put("id", "");
+				row.put("blank", "0");
+				allRow.add(row);
+				allAtt+=","+"FILE_INFO_NAME";
+				allWenHao+=",?";
+			}else if(name.equals("资料备注")){
+				Map<String, String> row= new HashMap<String, String>();
+				row.put("name", rowList.get(i).trim());
+				row.put("att", "FILE_REMARKS");
+				row.put("dalei", dalei);
+				row.put("id", "");
+				row.put("blank", "1");
+				allRow.add(row);
+				allAtt+=","+"FILE_REMARKS";
+				allWenHao+=",?";
+			}else{
+
+				Map<String, String> row= new HashMap<String, String>();
+				String sql="select RP_FILE_COL,P_DATUM_ID,DISPLAY_TYPE,ALLOW_BLANK from DIR_DATUM_BASE where DATUM_NAME='"+rowList.get(i).trim()+"' and P_DATUM_ID='"+dalei+"'";
+
+				String[]rs=conDocmgr.getRow(sql);
+				if(rs==null || rs[0].equals("")){
+					System.out.println("不是本大类的规范项。");
+					jacper.print("{success:true,err:true,message:'第1行，"+(i+1)+"列。不是本大类的规范项。'}");
+					return;
+				}else{
+					String columns=rs[0];   //对应字段  ATT?
+					String datumId=rs[1];   //对应资料大类id
+					String display=rs[2];	//显示类型
+					String blank=rs[3];	//显示类型
+					row.put("name", rowList.get(i).trim());
+					row.put("att", columns);
+					row.put("dalei", datumId);
+					row.put("id", display);
+					row.put("blank", blank);
+					allRow.add(row);
+					allAtt+=","+columns;
+					allWenHao+=",?";
+				}
+			
+			}
+		}
+
+
+		String notmsg="";
+		int index=1;
+		for (List<String> list : rowValues) {
+			File ff=new File(eFilePath+list.get(0));
+			if(!ff.exists()){
+				if(message.length()<200){
+				notmsg+="<br>第"+index+"行文件不存在。";
+				}
+				validate=false;
+			}
+
+			for (int i = 1; i < list.size(); i++) {
+				String name=list.get(i);
+				Map<String, String> row=allRow.get(i-1);
+				Map<String, String> columnstype=(Map<String, String>)allType.get(row.get("id"));
+				if(name!=null && !name.equals("")){
+					if(row.get("att").equals("IS_RESULT")){
+						if(name.equals("是")){
+							list.set(i, "1");
+						}else if(name.equals("否")){
+							list.set(i, "0");
+						}else{
+							if(message.length()<200){
+							message+="<br>第"+index+"行，"+(i+1)+"列。";
+							}
+							validate=false;
+						}
+
+					}
+
+					if(columnstype!=null){
+						if(columnstype.get("table").equals("datefiled")){
+							SimpleDateFormat format = new SimpleDateFormat("yyyy/MM/dd");
+							//System.out.println("name : "+name);
+							try {
+								format.setLenient(false);
+								System.out.println("dateName:"+name);
+								String yydate=format.format(format.parse(name));
+								list.set(i, yydate);
+							} catch (Exception e) {
+								validate=false;
+								if(message.length()<200){
+									message+="<br>第"+index+"行，"+(i+1)+"列,填写内容不是日期类型。";
+								}
+							} 
+						}else{
+							String validateSql="select "+columnstype.get("id")+" from "+columnstype.get("table")+" where "+columnstype.get("name")+"=?";
+							String[] rs=conDocmgr.getRow(validateSql,new String[]{name});
+							if(rs!=null && rs.length>0){
+								list.set(i,rs[0]+"::"+name);
+							}else{
+								validate=false;
+								if(message.length()<200){
+									message+="<br>第"+index+"行，"+(i+1)+"列。";
+								}
+							}
+						}
+					}else{
+
+					}
+				}else{
+					String blank=row.get("blank");
+					if(blank.equals("0")){
+						validate=false;
+						if(message.length()<200){
+							message+="<br>第"+index+"行，"+(i+1)+"列为必填项。";
+						}
+					}
+				}
+			}
+			index++;
+		}
+
+
+		if(!validate){
+			System.out.println(message+"\n"+"数据未成功匹配。请检查数据是否存在。\n 文件修改完成后请重新选择文件。");
+			jacper.print("{success:true,err:true,message:'"+message+"<br> 数据未成功匹配。请检查数据是否存在。"+notmsg+"'}");
+			return;
+		}else{
+			System.out.println("文件校验成功，开始上传...");
+			for (List<String> list : rowValues) {
+				String spaceid=(String) param.getFromSession("HW_BASE_SPACEID");	//空间id
+				String nodeid=param.getString("exportData");							//节点id
+
+				if(nodeid!=null && !nodeid.equals("")){
+					nodeid=nodeid.split("::")[0];
+				}
+
+				String path=eFilePath+list.get(0);		 //填写的文件路径
+				String notpath=path.replace(eFilePath, "");
+				System.out.print("spaceid : "+ spaceid + " , nodeid : "+nodeid +" , notPath : "+notpath);
+				File ff=new File(path);
+
+				String[] nodes=notpath.split("\\\\");
+				String exportItem=param.getString("export_data","");
+
+
+				if(nodes.length>1){
+
+					List<String[]> nodeS=new ArrayList<String[]>();
+
+					for (int j = 0; j < nodes.length - 1; j++) {
+						String nodeName = nodes[j];
+						String verifySql = "";
+						if (!exportItem.equals("")) {
+							verifySql = "select node_id from DIR_NODE_INFO where DIR_ID='" + nodeid + "' and node_value='" + nodeName + "' and P_NODE_ID is null";
+						} else {
+							verifySql = "select node_id from DIR_NODE_INFO where p_node_id='" + nodeid + "' and node_value='" + nodeName + "'";
+						}
+
+						String[][] verifyRs = conDocmgr.get(verifySql);
+						if (verifyRs != null && verifyRs.length > 0) {
+							nodeid = verifyRs[0][0];
+						} else {
+							String varifyUUId = UUID.randomUUID().toString();
+							if (!exportItem.equals("") && j == 0) {
+								nodeS.add(new String[]{varifyUUId,nodeName,""});
+							} else {
+								nodeS.add(new String[]{varifyUUId,nodeName,nodeid});
+							}
+							nodeid = varifyUUId;
+							isAdd = true;
+						}
+					}
+
+					String defaultNodeId = conDocmgr.getRow("select default_dir_id from DIR_SPACE_BASE where space_id='" + spaceid + "'")[0];
+					long seqcount=getSord(conPlatForm, nodeS.size());
+					long seq=seqcount-nodeS.size()+1;
+					for (String[] strings : nodeS) {
+						System.out.println("创建目录："+strings[1]+"父目录节点："+strings[2]);
+						String insFySql = "insert into DIR_NODE_INFO (NODE_ID,DIR_ID,NODE_VALUE,NODE_ADD_USER,P_NODE_ID,NODE_ICON,C_NODE_IS_SHOW,SORT_SEQ) values(?,?,?,?,?,?,?,?)";
+						conDocmgr.exec(insFySql, new String[] { strings[0], defaultNodeId, strings[1], userId, strings[2], "/themes/icon/xp/folder.gif", "0", String.valueOf(seq) });
+						seq++;
+					}
+				}
+
+				String fileId = String.valueOf(getId(conDocmgr));	
+				String fileSize = "0";
+				try {
+					fileSize = String.valueOf(new FileInputStream(ff).available());//文件大小
+				} catch (Exception e1) {
+					fileSize = String.valueOf(ff.length());
+				}
+
+				int pos = -1;
+				String Name = (pos = path.lastIndexOf("\\")) != -1 ? path.substring(pos + 1) : path; //文件名称
+				pos = -1;
+				String filetype = (pos = Name.lastIndexOf(".")) != -1 ? Name.substring(pos + 1) : "unknown"; //文件类型
+
+				boolean hasPhysicalFile = false;
+
+				String fileMD5 = "" , phyFileid = "" , uri = "" , newfilename = "";
+				try {
+					fileMD5 = HWUnits.getFileMD5Code(new FileInputStream(ff));
+				}catch (Exception e1) {
+					e1.printStackTrace();
+				}
+				if(fileMD5.length() > 0){
+					String[] row = conDocmgr.getRow("select p.phy_file_id from DIR_FILE_PHYSICAL p where p.file_md5 = ?" , new String[]{fileMD5});
+					if(row != null && row.length >0){
+						hasPhysicalFile =  true;
+						phyFileid = row[0];
+						HWUnits.addPhysicalFileCount(conDocmgr, phyFileid);
+					}					
+				}
+
+				if (!hasPhysicalFile) {
+					phyFileid = UUID.randomUUID().toString();
+					String uuid = UUID.randomUUID().toString();
+					String base = "d:" + File.separator + "upload"
+					+ File.separator;
+					File file = new File(base);
+					if (!(file.exists()))
+						file.mkdirs();
+					String filepath = base + toHexString(uuid.substring(uuid.length() - 2, uuid.length()).getBytes()) + File.separator;
+					File filep = new File(filepath);
+					if (!(filep.exists()))
+						filep.mkdirs();
+
+					// 新的没有后缀的文件路径
+					newfilename = filepath
+					+ uuid.substring(0, uuid.length() - 2);
+					File newFile = new File(newfilename); // 复制文件。
+					nioTransferCopy(ff, newFile);
+					uri = "file:" + newfilename;
+				}
+
+				try {
+					conDocmgr.setAutoCommit(false);
+					if(!hasPhysicalFile)
+						conDocmgr.exec("insert into DIR_FILE_PHYSICAL values(?,?,?,?,?,?,?,?,?)", new String[]{phyFileid,spaceid,uri,fileMD5,Name,fileSize,filetype,"1",""});
+
+					String base_dir= (String) param.getFromSession("HW_BASE_DIRID");	//空间默认节点id
+					System.out.println("base_dir:"+base_dir);
+
+					String dirid="";					//目录
+
+					String getDirsql="select P_NODE_ID from DIR_NODE_INFO where NODE_ID=?";
+					boolean boo=true;
+					String node_id=nodeid;       //循环用节点id;
+					while (boo) {
+						String[][] rs= conDocmgr.get(getDirsql, new String[]{node_id});
+						if(rs!=null && rs.length>0 && !rs[0][0].equals("")){
+							dirid=dirid.equals("")?rs[0][0]:rs[0][0]+"/"+dirid;
+							node_id=rs[0][0];
+						}else{
+							break;
+						}
+					}
+					if(dirid.equals("")){
+						dirid=spaceid+"/"+base_dir;
+					}else{
+						dirid=spaceid+"/"+base_dir+"/"+dirid+"/"+nodeid;
+					}
+
+					System.out.print("dirid:"+dirid);
+
+					String insFileBase="insert into DIR_FILE_BASE " +
+					"(FILE_ID,PHY_FILE_ID,FILE_NAME,FILE_SIZE,FILE_TYPE,FILE_UPLOAD_DATE,FILE_UPLOADER,FILE_DIR,REGION_ID,COUNTRY_ID,BASIN_ID,SPACE_ID,NODE_ID,FILE_DEPT,FILE_CLASS,PROJECT,IS_SECRECY"+allAtt+")" +
+					" values(?,?,?,?,?,sysdate,?,?,?,?,?,?,?,?,?,?,?"+allWenHao+")";
+					List<String> allinserValue=new ArrayList<String>();
+					allinserValue.add(fileId);
+					allinserValue.add(phyFileid);
+					if(Name.indexOf(".")>-1){
+						Name=Name.substring(0,Name.indexOf("."));
+					}
+					allinserValue.add(Name);
+					allinserValue.add(fileSize);
+					allinserValue.add(filetype);
+					allinserValue.add(userId);
+					allinserValue.add(dirid);
+					allinserValue.add(regionId);
+					allinserValue.add(countId);
+					allinserValue.add(basin);
+					allinserValue.add(spaceid);
+					allinserValue.add(nodeid);
+					allinserValue.add(dept);
+					allinserValue.add(dalei);
+					allinserValue.add(project);
+
+					allinserValue.add(IS_SECRECY);
+					for (int i = 1; i < list.size(); i++) {
+						Map<String, String> row=allRow.get(i-1);
+						if(row.get("att").equals("FILE_REMARKS") && !beizhu.equals("")){
+							allinserValue.add(beizhu+","+list.get(i));
+						}else{
+							allinserValue.add(list.get(i));
+						}
+					}
+
+
+					String[] toBeStored = allinserValue.toArray(new String[allinserValue.size()]);  
+
+					conDocmgr.exec(insFileBase,toBeStored);
+					System.out.print(insFileBase);
+
+					String num="0";
+					if(shenhe!=null && shenhe.equals("0")){
+						num="1";
+					}
+					String insreview="insert into DIR_DATUM_FILE_REVIEWED values(?,?,?,?,sysdate,'')";
+					conDocmgr.exec(insreview,new String[]{fileId,"",num,""});
+
+					if(shenhe!=null && shenhe.equals("0")){
+						try {
+							/** 审核和将文件写入全文检索库 **/
+							String[] result = conDocmgr.getRow("select FILE_PATH,FILE_NAME,FILE_TYPE,PHY_SPACE_ID from DIR_FILE_PHYSICAL where PHY_FILE_ID=(select PHY_FILE_ID from DIR_FILE_BASE where file_id=?)",new String[]{fileId});
+							result[0]=result[0].replace("\\","\\\\");
+							HWUnits.add2SolrSever("http://"+param.getRequest().getServerName()+":"+param.getRequest().getServerPort()+"/"+HWUnits.getSolrWebName()+"/"+HWSpaceConfig.SOLR_NAME.toString()+"/", spaceid, fileId, Name, result[2], new File(result[0].substring(5)));
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+					conDocmgr.exec("update  dir_file_bianma set file_id_count=?",new String[]{fileId}); 
+					String[] integral=conDocmgr.getRow("select upload_times,upload_num,upload_length,integral_total from dir_integral_mgr where USER_ID=?",new String[]{userId});
+					DecimalFormat df = new DecimalFormat("######.000"); 
+					if(integral!=null&&integral.length>0){
+						String sql="update dir_integral_mgr set upload_times=?,upload_num=?,upload_length=?, integral_total=? where user_id=?";
+						String integralTotal=(Integer.parseInt(integral[3])+1+1+getIntegral(Double.valueOf(integral[2])+Double.valueOf(fileSize)/(1024*1024)))+"";
+						conDocmgr.exec(sql,new String[]{(Integer.parseInt(integral[0])+1)+"",(Integer.parseInt(integral[1])+1)+"",df.format(Double.valueOf(integral[2])+Double.valueOf(fileSize)/(1024*1024)),integralTotal,userId});
+						conDocmgr.exec("update docmgr.dir_integral_mgr t set t.ranking =(select num from (select row_number()over(order by integral_total desc) as num, rowid as rid from docmgr.dir_integral_mgr )where t.rowid = rid)",new String[]{});
+					}else{
+						String sql="insert into dir_integral_mgr(upload_times,upload_num,upload_length,user_id,user_name,dept_id,dept_name,integral_total,down_times) values(?,?,?,?,?,?,?,?,?)";
+						String integralTotal=(1+1+getIntegral(Double.valueOf(fileSize)/(1024*1024)))+"";
+
+						conDocmgr.exec(sql,new String[]{"1","1",df.format(Double.valueOf(fileSize)/(1024*1024)),userId,user.getRealName(),deptId,deptName,integralTotal,"0"});
+						conDocmgr.exec("update docmgr.dir_integral_mgr t set t.ranking =(select num from (select row_number()over(order by integral_total desc) as num, rowid as rid from docmgr.dir_integral_mgr)where t.rowid = rid)",new String[]{});
+					}
+					conDocmgr.commit();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+				if(!hasPhysicalFile){
+					System.out.println("将文件添加到处理队列中去生成预览文件。");
+					HWCreateSWFFileQueue.getInstance().addToQueue(new String[]{phyFileid,newfilename,filetype});
+				}
+			}
+
+		}
+
+		if(isAdd){
+			jacper.print("{'success':true,'message':'上传成功','isAdd':'true'}");
+		}else{
+			jacper.print("{'success':true,'message':'上传成功'}");
+		}
+
+
+	}
+
+
+
+	public int getIntegral(double size){
+		System.out.println(size);
+		int s=0;
+		if(size<=10){
+			s=1;
+		}
+		if(size>10&&size<=20){
+			s=2;
+		}
+		if(size>20&&size<=30){
+			s=3;
+		}
+		if(size>30&&size<=40){
+			s=4;
+		}
+		if(size>40&&size<=50){
+			s=5;
+		}
+		if(size>50&&size<=60){
+			s=6;
+		}
+		if(size>60&&size<=70){
+			s=7;
+		}
+		if(size>70&&size<=80){
+			s=8;
+		}
+		if(size>80&&size<=90){
+			s=9;
+		}
+		if((size>90&&size<=100)||size>100){
+			s=10;
+		}
+		return s;
+	}
+	private static void nioTransferCopy(File source, File target) {  
+		FileChannel in = null;  
+		FileChannel out = null;  
+		FileInputStream inStream = null;  
+		FileOutputStream outStream = null;  
+		try {  
+			inStream = new FileInputStream(source);  
+			outStream = new FileOutputStream(target);  
+			in = inStream.getChannel();  
+			out = outStream.getChannel();  
+			in.transferTo(0, in.size(), out);  
+		} catch (IOException e) {  
+			e.printStackTrace();  
+		} finally {  
+			try {
+				inStream.close();  
+				in.close();  
+				outStream.close();  
+				out.close();  
+			} catch (Exception e2) {
+				e2.printStackTrace();
+			}
+		}  
+	}  
+	public String toHexString(byte[] b)
+	{
+		StringBuffer buffer = new StringBuffer();
+		for (int i = 0; i < b.length; ++i)
+		{
+			buffer.append("0x");
+			buffer.append(toHexString(b[i]));
+			//buffer.append(" ");
+		}
+		return buffer.toString();
+	}
+
+	public String toHexString(byte b)
+	{
+		char[] buffer = new char[2];
+		buffer[0] = Character.forDigit((b >>> 4) & 0x0F, 16);
+		buffer[1] = Character.forDigit(b & 0x0F, 16);
+		return new String(buffer);
+	}
+	public Long getId(Connection conDocmgr){
+		Long num=null;
+		String[] rs=conDocmgr.getRow("select file_id_count from dir_file_bianma",new String[]{});
+		if(rs!=null){
+			num=Long.valueOf(rs[0]);
+			num=num+1;
+		}
+		return num;
+	}
+
+
+
+	public Long getSord(Connection conPlatForm,int count){
+		Long num=(long)SQLUtils.getNextVal(conPlatForm, 1216,count);
+		return num;
+	}
+
+
+	protected static final String dateTimeFmtPattern = "yyyy/MM/dd HH:mm:ss";
+
+	protected static final String dateFmtPattern = "yyyy/MM/dd";
+
+	public static Map<String, Object> getAll(FileInputStream fis,String type)
+	{
+		Map<String, Object> all =new HashMap<String, Object>();
+
+
+		Workbook wb = null;  
+		try
+		{
+			if ("xls".equalsIgnoreCase(type)) {
+				wb = new HSSFWorkbook(fis);
+			} else if ("xlsx".equalsIgnoreCase(type) || "xlsm".equalsIgnoreCase(type)) {
+				wb = new XSSFWorkbook(fis);
+			} else {
+				throw new Exception("file is not office excel");
+			}
+
+			int configIndex=0;
+			for (int i = 0; i < wb.getNumberOfSheets(); i++) {//获取每个Sheet表
+				Sheet sheet = wb.getSheetAt(i);
+				String sheetName=sheet.getSheetName();
+				if(sheetName.equals("config")){
+					configIndex=i;
+				}
+			}
+			Sheet configSheet = wb.getSheetAt(configIndex);
+			Row  configrow = configSheet.getRow((short)0);
+			Cell configcell =configrow.getCell(0);
+			String configvalue =getCellValue(configcell);
+			all.put("configvalue", configvalue);
+			Sheet sheet = wb.getSheetAt(0);
+
+			int RowCount= sheet.getLastRowNum();
+			int ListCount=0;								//存储多少字段
+			boolean Listnexit = true;
+			List<String> allList=new ArrayList<String>();	//存储第一列所有列
+			while (Listnexit)
+			{
+				Row  row = sheet.getRow((short)0);
+				if (row == null)
+				{
+					Listnexit = false;
+					break;
+				}
+				if (ListCount>=row.getPhysicalNumberOfCells()) {
+					Listnexit = false;
+					break;
+				}
+
+				Cell  Datecells = row.getCell(ListCount);
+				String date = getCellValue(Datecells);
+
+				allList.add(date);
+
+				ListCount++;
+			}
+			all.put("allList", allList);
+
+			System.out.println("RowCount : "+RowCount + ",ListCount : " + ListCount);
+			List<List<String>> allListValue=new ArrayList<List<String>>();
+			for (int i = 1; i <= RowCount; i++) {
+
+				Row  row = sheet.getRow((short)i);
+				if(row!=null){
+					List<String> ListValue=new ArrayList<String>();
+					for (int j = 0; j < ListCount; j++) {
+						Cell  Datecells = row.getCell(j);
+						String date ="";
+						if(Datecells!=null){
+							date = getCellValue(Datecells);
+						}
+
+						ListValue.add(date);
+					}
+
+					if(!ListValue.get(0).equals("")){
+						allListValue.add(ListValue);
+					}
+				}
+
+			}
+			all.put("allListValue", allListValue);
+
+		}catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+		return all;
+	}
+
+	protected static String getCellValue(Cell cell) {
+		String value = null;
+		switch (cell.getCellType()) {
+		case Cell.CELL_TYPE_FORMULA: // 公式
+		case Cell.CELL_TYPE_NUMERIC: // 数字
+
+			double doubleVal = cell.getNumericCellValue();
+			short format = cell.getCellStyle().getDataFormat();
+			String formatString = cell.getCellStyle().getDataFormatString();
+
+			if (format == 14 || format == 31 || format == 57 || format == 58 || (format >= 176 && format <= 183)) {
+				// 日期
+				Date date = DateUtil.getJavaDate(doubleVal);
+				value = formatDate(date, dateFmtPattern);
+			} else if (format == 20 || format == 32 || (format >= 184 && format <= 187)) {
+				// 时间
+				Date date = DateUtil.getJavaDate(doubleVal);
+				value = formatDate(date, "HH:mm");
+			} else {
+				value = String.valueOf(doubleVal);
+			}
+
+			break;
+		case Cell.CELL_TYPE_STRING: // 字符串
+			value = cell.getStringCellValue();
+
+			break;
+		case Cell.CELL_TYPE_BLANK: // 空白
+			value = "";
+			break;
+		case Cell.CELL_TYPE_BOOLEAN: // Boolean
+			value = String.valueOf(cell.getBooleanCellValue());
+			break;
+		case Cell.CELL_TYPE_ERROR: // Error，返回错误码
+			value = String.valueOf(cell.getErrorCellValue());
+			break;
+		default:
+			value = "";
+		break;
+		}
+		return value;
+	}
+
+	@SuppressWarnings("deprecation")
+	private static String formatDate(Date d, String sdf) {
+		String value = null;
+
+		if (d.getSeconds() == 0 && d.getMinutes() == 0 && d.getHours() == 0) {
+			SimpleDateFormat sdf2=new SimpleDateFormat(dateFmtPattern);
+			value=sdf2.format(d);
+			// value = DateTimeUtil.getFormatedDate(d, dateFmtPattern);
+		} else {
+			SimpleDateFormat sdf2=new SimpleDateFormat(dateTimeFmtPattern);
+			value=sdf2.format(d);
+			// value = DateTimeUtil.getFormatedDate(d, sdf);
+
+		}
+
+		return value;
+	}
+}

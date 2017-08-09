@@ -1,0 +1,1 @@
+etc.install.lang={"序列号":"Serial number","序列号不能超过{0}个字符!":"Serial number can not exceed { 0} characters long","系统架构管理":"Systems infrastructure .","安装":"Install","数据不能提交,请修改表单中标识的错误!":"The data can not be submitted, Please modify the errors identified in the form","控制台":"Console","系统架构体系":"System architecture system","宋体":"Times New Roman","上传安装文件":"Upload the installation files"}

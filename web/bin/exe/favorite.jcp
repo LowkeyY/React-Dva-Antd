@@ -1,0 +1,81 @@
+import java.io.IOException;
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.util.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.workbench.ProgramNode;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+import com.kinglib.ui.folder.*;
+
+@class{
+	public void doPost(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long userId=hs.uid; 
+		String objectId = jacper.getString("objectId","0");
+		String type=jacper.getStr("type");
+		
+		Connection conPlat = jacper.getConnection("plat");
+		String id="";
+		ProgramFactory prgFactory=ProgramFactory.getInstance();
+
+		ObjectNode pnode=ObjectManager.getObject(objectId);
+		for(ObjectNode n:pnode.upTo(ObjectType.MODULE).findAllChildsByType(ObjectType.PROGRAM)){
+			if(((ProgramNode)n).getProgramType()==ProgramType.FOLDER){
+				id=n.getId()+"";
+				break;
+			}
+		}
+		
+		if(id.length()==0){
+			jacper.print("{success:false,message:'"+jacper.trans("未设定收藏夹")+"'}");
+			return;
+		}
+		
+		if(type.equals("favorite")){
+
+			Program prg =ProgramFactory.getInstance().getProgram(conPlat,objectId);
+			String title=prg.getTitle();
+			String prgType=prg.getType()+"";
+			jacper.getResponse().setContentType("application/x-json");
+
+					
+			Connection conCert = jacper.getConnection("cert");
+
+			ProgramFolder pf=ProgramFolderFactory.getInstance().getProgramFolder(id+"");
+
+			try{
+			   conCert.exec("insert into $[cert].user_favorite(id,object_id,user_id,prg_title,prg_type,create_time) values(?,?,?,?,?,$getdate())",new String[]{id,objectId+"",userId+"",title,prgType});
+			   pf.reloadFavorite(userId+"");
+
+			   JSONObject favoriteJSON=new JSONObject("{}");
+			   favoriteJSON.put("success",true);
+			   jacper.print(favoriteJSON.toString());
+			}catch(Exception e){
+			}finally{
+				conPlat.close();
+				conCert.close();
+			}
+		}else{
+			jacper.getResponse().setContentType("application/x-json");
+
+			ProgramFolder pf=ProgramFolderFactory.getInstance().getProgramFolder(id+"");
+			Connection conCert = jacper.getConnection("cert");
+
+			try{
+			   conCert.exec("delete from $[cert].user_favorite where object_id=?",new String[]{objectId+""});
+			   pf.reloadFavorite(userId+"");
+			   JSONObject favoriteJSON=new JSONObject("{}");
+			   favoriteJSON.put("success",true);
+			   jacper.print(favoriteJSON.toString());
+			}catch(Exception e){
+			}finally{
+				conCert.close();
+				conPlat.close();
+			}
+		}
+	}
+}

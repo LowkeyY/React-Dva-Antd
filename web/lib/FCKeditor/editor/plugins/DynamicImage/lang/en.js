@@ -1,0 +1,1 @@
+FCKLang.DynamicImageBtn="Insert/Edit DynamicImage";FCKLang.DynamicImageDlgTitle="DynamicImage Properties";FCKLang.DynamicImageDlgName="DynamicImage Name";FCKLang.DynamicImageErrNoName="Please type the DynamicImage name";FCKLang.DynamicImageErrNameInUse="The specified name is already in use";

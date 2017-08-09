@@ -1,0 +1,126 @@
+
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.ResultSet;
+import java.io.*;
+
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.awt.image.ImageObserver;
+import javax.imageio.ImageIO;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import com.kinglib.*;
+import com.susing.*;
+import com.kinglib.util.Files;
+
+import com.smartkms.file.*;
+
+@class{
+	public void doGet(Jacper jacper){
+		boolean isLogin = jacper.setSession();  
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		String file_id=jacper.getStr("FileID");
+		String thumbnail=jacper.getStr("thumbnail");
+		String FolderID=jacper.getStr("FolderID");
+		Connection conUtils=jacper.getConnection("utils");
+
+		if(thumbnail.equals("true")){
+			if(file_id.equals("")){
+				try{	
+					FileList newfile =FileListFactory.getInstance().getFileList(conUtils,FolderID);
+					FileItem thumbnailFile=newfile.getFirstFile();
+					if(thumbnailFile!=null){
+						String fileName=thumbnailFile.getFileName();
+						EFile thumbnailContent=thumbnailFile.getThumbnail();
+						HttpServletResponse res = jacper.getResponse();
+						if(thumbnailContent!=null){
+							res.setContentType("image/jpeg");
+							res.setHeader("Content-Disposition", "attachment;filename=" + fileName);
+							res.setHeader("Content-Length", thumbnailContent.length()+"");
+							res.setHeader("Accept-ranges", "bytes");
+							try{
+								Files.copyRange(thumbnailContent.getInputStream(), res.getOutputStream(),2048);
+							}catch(IOException ioe){
+								return;
+							}
+						}
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}finally{
+					conUtils.close();
+				}
+			}else{
+				if(FolderID.equals("undefined")||FolderID.equals("")){
+					Connection conCert = jacper.getConnection("cert");
+					FileConfig fileConf =FileConfigFactory.getInstance().getFileConfig(conUtils,conCert,user_id+"");
+					FolderID=fileConf.getCurrentFolderId();
+					conCert.close();
+				}
+				try{	
+					FileList newfile =FileListFactory.getInstance().getFileList(conUtils,FolderID);
+					FileItem thumbnailFile=newfile.getFile(file_id);
+					if(thumbnailFile ==null){
+						thumbnailFile =FileListFactory.getInstance().getFile(conUtils,file_id);
+					}
+					String fileName=thumbnailFile.getFileName();
+					EFile thumbnailContent=thumbnailFile.getThumbnail();
+					HttpServletResponse res = jacper.getResponse();
+					if(thumbnailContent!=null){
+						res.setContentType("image/jpeg");
+						//res.setHeader("Content-Disposition", "attachment;filename=" + fileName);
+						//res.setHeader("Content-Length", thumbnailContent.length()+"");
+						//res.setHeader("Accept-ranges", "bytes");
+						try{
+							Files.copyRange(thumbnailContent.getInputStream(), res.getOutputStream(),2048);
+						}catch(IOException ioe){
+							return;
+						}
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}finally{
+					conUtils.close();
+				}
+			}
+		}else{
+			try{	
+				Object[] o=conUtils.getLarge("select file_name,file_type,content from $[utils].files where file_id=?",new String[]{file_id});
+				if(o==null){
+					return;
+				}
+				String fileName=o[0].toString();
+				try{
+					fileName = new String(fileName.getBytes(),"iso-8859-1");
+				}catch(Exception e){}
+				String fileType=o[1].toString(); 
+				
+				String viewType=jacper.getStr("viewType");
+
+				FileInputStream fin=((EFile)o[2]).getInputStream();
+				
+				HttpServletResponse res = jacper.getResponse();
+				res.setContentType(fileType);
+				res.setHeader("Content-Disposition", "attachment;filename=" + fileName);
+				res.setHeader("Content-Length", ((EFile)o[2]).length()+"");
+				res.setHeader("Accept-ranges", "bytes");
+				
+				OutputStream outStream=res.getOutputStream();
+				try{
+					Files.copyRange(fin,outStream,2048);
+					conUtils.exec("update $[utils].files set times=times+1 where file_id=?",new String[]{file_id});
+				}catch(IOException ioe){
+					return;
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conUtils.close();
+			}
+		}
+	}
+}

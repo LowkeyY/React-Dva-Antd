@@ -1,0 +1,97 @@
+                
+import com.kinglib.*;
+import java.util.*;
+import com.susing.core.KingleSystem;
+import com.kinglib.workbench.*;
+import com.kinglib.bi.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.application.*;
+
+@class{
+
+	public void doGet(Jacper jacper){
+
+		Connection conPlat=jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String objectId = jacper.getStr("objectId");
+		String isTable=jacper.getStr("isTable");
+		
+		try{
+			conPlat.setAutoCommit(false);	
+			ObjectManager OM=ObjectManager.getInstance();
+			ObjectNode tableNode=OM.getObject(objectId);
+
+			ObjectNode applicationNode=tableNode.upTo(ObjectType.APPLICATION);
+			String applicationId=applicationNode.getId();
+			
+			ApplicationFactory appFactory=ApplicationFactory.getInstance();
+			Application app=appFactory.getApplication(conPlat,applicationId+"");
+			String dbLink=app.getDatabaseLink();
+			
+			String folderId=app.getTabFolder();
+
+			MetaTable mt = MetaFactory.getObject(objectId);
+
+			String tabPname=mt.getPname();
+			String tabLname=mt.getLname();
+
+			String query_id="";
+
+			String[] queryArr= conPlat.getRow("select max(query_id) from $[plat].app_query_import where import_name=?",new String[]{"$["+dbLink+"]."+tabPname.toUpperCase()});
+
+			query_id=queryArr[0].trim();
+
+
+			String[][] queryArr1=conPlat.get("select query_id from $[plat].app_query_import where import_name=?",new String[]{"$["+dbLink+"]."+tabPname.toUpperCase()},0);
+
+			for(int j=0;j<queryArr1.length;j++){
+				if(!queryArr1[j][0].equals(query_id)){
+					QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+					queryEF.drop(conPlat,query_id);															
+				}
+			}					
+			if(!query_id.equals("")){
+					QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+					queryEF.remove(query_id);							
+					conPlat.exec("update $[plat].app_query  set query_name=? where query_id=?",new String[]{tabLname,query_id});
+					conPlat.exec("delete from  $[plat].app_query_column where query_id=?",new String[]{query_id+""});
+					conPlat.exec("delete from  $[plat].app_query_import where query_id=?",new String[]{query_id+""});
+					conPlat.exec("insert into $[plat].app_query_import (query_id,alias,import_name) values (?,?,?)",new String[]{query_id+"","tab0","$["+dbLink+"]."+tabPname.toUpperCase()});
+			}else{
+					String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+					if(idType==null||idType.equals("0")){
+						query_id = SQLUtils.getNextVal(conPlat,1)+"";
+					}else{
+						query_id =UUID.randomUUID().toString();
+					}					
+					conPlat.exec("insert into $[plat].app_query (forder_id,query_id,query_name,is_join,type,object_id) values (?,?,?,?,?,?)",new String[]{folderId,query_id+"",tabLname,"0","0",objectId});
+					conPlat.exec("insert into $[plat].app_query_import (query_id,alias,import_name) values (?,?,?)",new String[]{query_id+"","tab0","$["+dbLink+"]."+tabPname.toUpperCase()});
+			}			
+			MetaColumn[] mc=mt.getColumnArray();
+			int j=0;
+			try{
+				for(;j<mc.length;j++){	
+						conPlat.exec("insert into $[plat].app_query_column (QUERY_ID,COLUMN_NAME,POINT,ORDER_ID) values (?,?,?,?)",new String[]{query_id+"",mc[j].getLname(),"tab0."+mc[j].getPname(),j+""});
+				} 
+			}catch(Exception e){
+				throw new KingleException(jacper.trans("生成的查询列名")+"("+mc[j].getLname()+")"+jacper.trans("重复,如果要同步查询,请更改此列的逻辑列名"));
+			}
+			jacper.print("{success:true,objectId:'"+query_id+"'}");	
+			conPlat.commit();
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				if(conPlat!=null)
+					conPlat.close();
+				conPlat.setAutoCommit(true);
+			}catch(Exception e2) {}
+		}
+}
+}

@@ -1,0 +1,66 @@
+import com.kinglib.*;
+
+import java.io.File;
+import java.io.InputStream;
+import javax.servlet.http.HttpServletResponse;
+import com.kinglib.util.Files;
+import java.io.*;
+import com.susing.upload.FileExtend;
+
+	//public class up{
+@class{
+	public void doPost(Jacper jacper) {
+		boolean isLogin = jacper.setSession();
+		String file_Id = jacper.getString("fileId");
+		String path = jacper.getString("path");
+		String file_name= jacper.getString("file_name");
+		System.out.println(file_name);
+		String file_type= jacper.getString("file_type");
+		String userid = String.valueOf(jacper.getSession().uid);
+		InputStream in = null;
+		String file_upload = jacper.getString("file_upload");
+		try {
+				if(path.toLowerCase().startsWith("file:"))
+					path = path.substring(5);
+				
+				
+				file_name=parseGBK(file_name);
+				File file = new File(path);
+				HttpServletResponse res = jacper.getResponse();
+				in = new FileInputStream(file);
+				res.setContentType(FileExtend.getContentType(file_type));
+				res.setHeader("Content-Disposition", "attachment;filename="+ file_name);
+				res.setHeader("Content-Length", String.valueOf(in.available()));
+				res.setHeader("Accept-ranges", "bytes");
+				Files.copyRange(in, res.getOutputStream(), 1024);
+				
+		} catch (Exception e) {
+			e.printStackTrace();
+			jacper.print("对不起,数据库中未找相应文档.");
+		} finally {
+			try {
+				if (in != null) {
+					in.close();
+				}
+			} catch (Exception e2) {
+			}
+		}
+	}
+	public static String parseGBK(String sIn) {
+		if (sIn == null || sIn.equals(""))
+			return sIn;
+		try {
+			return new String(sIn.getBytes("GBK"), "ISO-8859-1");
+		} catch (UnsupportedEncodingException usex) {
+			return sIn;
+		}
+	}
+	public void doGet(Jacper jacper) {
+		doPost(jacper);
+	}
+
+	public String StringFilter(String res) throws Exception {
+		return res
+				.replaceAll("[\\s|\\\\|\\/|\\:|\\*|\\?|\\\"|\\<|\\>|\\|]", "");
+	}
+}

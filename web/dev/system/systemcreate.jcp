@@ -1,0 +1,142 @@
+
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+
+import com.kinglib.*;
+import java.util.*;
+import org.w3c.dom.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.system.*;
+import java.io.File;
+import com.susing.core.KingleSystem;
+
+@class{
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String type = jacper.getStr("type");
+	String objectId=jacper.getStr("id");
+	
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+			JSONObject systemJSON = new JSONObject("{}");
+			String[] rs = conPlat.getRow("select system_name,system_pname,system_type,current_stat,system_desc,creator from $[plat].system_base where system_id=?",new String[]{""+objectId});
+			
+			systemJSON.put("system_id",objectId+"");
+			systemJSON.put("system_name",rs[0]);
+			systemJSON.put("system_pname",rs[1]);
+			systemJSON.put("system_type",rs[2]);
+			systemJSON.put("current_stat",rs[3]);
+			systemJSON.put("system_desc",rs[4]
+			);
+			systemJSON.put("creator",rs[5]);
+			ObjectNode node=ObjectManager.getObject(objectId);
+			if(node!=null){
+				systemJSON.put("lastModifyTime",node.getLastModifyTime());
+				systemJSON.put("lastModifyName",node.getLastModifyName());
+			}
+		   <?[?>systemJSON.toString()<?]?>;
+
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = String.valueOf(hs.uid);
+
+	String type=jacper.getString("type");
+	
+	String system_id = "";
+	String system_name = jacper.getString("system_name");
+	String system_pname = jacper.getString("system_pname");
+	String system_type = jacper.getString("system_type");
+	String current_stat = jacper.getString("current_stat");
+	String system_desc = jacper.getString("system_desc");
+	String creator = jacper.getString("creator");
+
+	ObjectManager OM=ObjectManager.getInstance();
+
+	if (type.equals("save")){		
+		try{	
+			conPlat.setAutoCommit(false);	
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+
+			if(idType==null||idType.equals("0")){
+				system_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				system_id =UUID.randomUUID().toString();
+			}
+
+			String path = (String) KingleSystem.getProperty("js_lib");
+			path=path+ File.separator + "usr"+File.separator +system_pname;
+			File sourceFile = new File(path);
+			if (!sourceFile.exists())
+				sourceFile.mkdirs();
+	
+			ObjectFactory OF=ObjectManager.getFactory();
+			ObjectNode rootNode=OF.createObjectNode("0", "root",-1); 
+			ObjectNode systemNode=rootNode.addChild(conPlat,system_id,system_name,ObjectType.SYSTEM,hs.uid);
+			conPlat.exec("insert into $[plat].system_base ( system_id,system_name,system_pname,system_type,current_stat,system_desc,creator) values (?,?,?,?,?,?,?)",new String[]{system_id,system_name,system_pname,system_type,current_stat,system_desc,creator});		
+			conPlat.commit();
+			<?{success:true,id:'?>system_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if (type.equals("updatesave")) {
+		system_id = jacper.getString("id");
+		ObjectNode systemNode=OM.getObject(system_id);
+		try{	
+			conPlat.setAutoCommit(false);	
+			systemNode.updateName(conPlat,system_name);
+			conPlat.exec("update $[plat].system_base set system_name=?,system_pname=?,system_type=?,current_stat=?,system_desc=?,creator=? where system_id=?",new String[]{system_name,system_pname,system_type,current_stat,system_desc,creator,system_id});
+			conPlat.commit();
+			<?{success:true,id:'?>system_id<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}else if (type.equals("delete")){
+		system_id = jacper.getStr("id");
+		ObjectNode systemNode=OM.getObject(system_id);
+		try{	
+			conPlat.setAutoCommit(false);	
+			systemNode.destroy(conPlat);
+			conPlat.commit();
+			<?{success:true,id:'?>system_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

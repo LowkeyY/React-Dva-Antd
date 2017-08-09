@@ -1,0 +1,49 @@
+               
+
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.bi.chart.*;  
+import com.kinglib.workbench.program.*;
+import java.io.*;
+import java.awt.*;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import com.kinglib.bi.*;
+import com.kinglib.workbench.search.*;
+
+@class{
+	public void doGet(Jacper jacper){
+
+		HttpSession hs = jacper.getSession();
+		String userId= String.valueOf(hs.uid);
+		Connection conPlat = jacper.getConnection("plat");
+		String objectId=jacper.getString("objectId","-1");
+		
+		try{
+
+			Program program=ProgramFactory.getInstance().getProgram(conPlat,objectId);
+			String searchId=program.getSearchType();
+			SearchCategoryFactory SCF=SearchCategoryFactory.getInstance();
+			SearchCategory SC=SCF.getSearchCategory(conPlat,searchId);
+
+			JSONValue jval=ButtonFactory.getJson(conPlat,objectId,userId);
+			JSONPart ret=new JSONPart();
+			ret.join("success","true");
+			ret.join("logicName",SC.getLogicName());
+			ret.join("searchType",SC.getSearchType());
+			ret.join("mainTable",SC.getMainTable());
+			ret.join("tooltipText",SC.getTooltipText());
+			ret.join("advancedSearch",SC.isAdvancedSearch());
+			ret.join("buttonArray",jval);
+			jacper.print(ret);					
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+}
+ 

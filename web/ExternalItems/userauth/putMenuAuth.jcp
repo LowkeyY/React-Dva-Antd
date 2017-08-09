@@ -1,0 +1,41 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
+
+//public class putMenuAuth {
+@class{
+	public void doGet(Jacper jacper) {
+	
+		Connection con = jacper.getConnection("plat");
+		try {
+			JSONArray ja = new JSONArray(jacper.getString("data" , "[]"));
+			List<String[]> values = new ArrayList<String[]>();
+			List<String[]> users = new ArrayList<String[]>();
+			for (int i = 0; i < ja.length(); i++) {
+				JSONObject jo = ja.getJSONObject(i);
+				String userId = jo.getString("userId");
+				values.add(new String[] { userId, jo.getString("value") });
+				users.add(new String[]{userId});
+			}
+			if(users.size() > 0)
+				con.exec("delete from GATEWAY_USER_AUTH where userId = ? ", users.toArray(new String[users.size()][]));
+			if(values.size() > 0)
+				con.exec("insert into GATEWAY_USER_AUTH values(?,?)", values.toArray(new String[values.size()][]));
+
+			jacper.print("{success:true}");
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			jacper.print("{success:false}");
+		}
+	}
+
+	public void doPost(Jacper jacper) {
+		doGet(jacper);
+	}
+
+}

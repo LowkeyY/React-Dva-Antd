@@ -1,0 +1,87 @@
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.portal.PortalMessage;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import zpluginlistenerautorun.BigAntSendMsg;
+import zpluginlistenerautorun.WinMailListener;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+
+@class{
+	public void doPost(Jacper jacper) {
+		String menuId = jacper.getStr("menuId");
+
+		HttpSession hs = jacper.getSession();
+		
+		if(menuId.length() > 0){
+			String userId = String.valueOf(hs.uid);
+			
+			if(menuId.matches("1524f2bb-ab45-4266-9c0b-5c527da78ca4|ab8970e8-7816-49cb-a91e-9947478553be")){
+				User user = CertManager.getUser(userId);
+				JSONObject result = new JSONObject();
+				
+				if("1524f2bb-ab45-4266-9c0b-5c527da78ca4".equals(menuId)){
+					try {
+						result.put("success", false);
+						if (user != null) {
+							int newMessageCounts = 0;
+							try {
+								newMessageCounts = Integer.parseInt(BigAntSendMsg.getMsgCount(user.getUserName()));
+								JSONArray datas = new JSONArray();
+								result.put("success", true);
+								datas.put(new JSONObject().put("applyTo", "desktop").put("newMessageCounts", newMessageCounts));
+								if(newMessageCounts > 0){
+									datas.put(new JSONObject().put("applyTo", "info").put("message", "您有"+newMessageCounts+"条新的即时通讯消息。"));
+								}
+								result.put("datas", datas);
+							} catch (Exception e) {
+								result.put("message", "即时通讯获取新消息失败！");
+							}
+						}
+						
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+					jacper.print(result.toString());
+					return;
+				}
+				if("ab8970e8-7816-49cb-a91e-9947478553be".equals(menuId)){
+					try {
+						result.put("success", false);
+						if (user != null) {
+							int newMessageCounts = 0;
+							if("0".equals(userId) || "1".equals(userId))
+								newMessageCounts = WinMailListener.getMessageNumByUser("admin", "123456");
+							else 
+								newMessageCounts = WinMailListener.getMessageNumByUser(user.getUserName(), user.getPassword());
+							
+							JSONArray datas = new JSONArray();
+							result.put("success", true);
+							datas.put(new JSONObject().put("applyTo", "desktop").put("newMessageCounts", newMessageCounts));
+							if(newMessageCounts > 0){
+								datas.put(new JSONObject().put("applyTo", "info").put("message", "您有"+newMessageCounts+"条新邮件待处理。"));
+//								datas.put(new JSONObject().put("applyTo", "infos").put("message", "您有"+newMessageCounts+"条新邮件待处理。"));
+							}
+							result.put("datas", datas);
+						}
+					} catch (JSONException e) {
+						System.out.println(e.getMessage());
+					}
+					jacper.print(result.toString());
+					return;
+				}
+			}
+			PortalMessage msg = new PortalMessage(userId);
+			String result = msg.getMessageByMenuId(menuId);
+			if(result != null && result.length() > 0){
+				jacper.print(result);
+				return;
+			}
+		}
+		jacper.print("{success:true,datas:[]}");
+	}
+}

@@ -1,0 +1,162 @@
+import com.kinglib.Connection;
+import com.kinglib.Err;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.util.json.JSONObject;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.Strategy;
+import com.social.api.core.model.User;
+import com.susing.EFile;
+import com.susing.upload.FileExtend;
+
+@class{
+
+	public void doGet(Jacper jacper){
+			Connection conCert = jacper.getConnection("cert");
+			
+			boolean isLogin = jacper.setSession();
+			HttpSession hs = jacper.getSession();
+			int login_as = (int)hs.uid;
+	
+			String type = jacper.getStr("type");
+	
+			jacper.getResponse().setContentType("application/x-json");
+			try{
+				String dept_id=jacper.getStr("dept_id");
+				JSONObject userJSON = new JSONObject("{}");
+				String[][] rolesArray = conCert.get("SELECT role_id,roles FROM  $[cert].role_base  where dept_id=?",new String[]{"0"});
+				
+				StringBuffer jsb = new StringBuffer();
+				String roles ="";
+	
+				for (int i = 0; i <rolesArray.length; i++)
+					jsb.append(",['").append(rolesArray[i][0]).append("','").append(rolesArray[i][1]).append("']");
+				
+				if(jsb.toString().length()!=0)
+					roles = "[" + jsb.toString().substring(1) + "]";
+	
+				if(type.equals("new")){
+					userJSON.put("roles",roles);
+					<?[?>userJSON.toString()<?]?>;
+				}else{
+						
+					String user_id=jacper.getStr("userId");
+
+					String[] rs = conCert.getRow("SELECT  a.duty,a.entry_date,a.is_master,a.photo_name FROM  $[cert].user_base a where a.user_id=?",new String[]{user_id});
+					
+					User user = User.getUser(user_id);
+					String inActive = "";
+					String subAdmin = "";
+					if(user!=null){
+						inActive = user.isActive()?"y":"n";
+						subAdmin = user.isSubAdmin()?"y":"n";
+						
+						JSONObject sts=new JSONObject("{}");
+						StringBuilder text=new StringBuilder();
+						StringBuilder value=new StringBuilder();
+						for(Strategy st:user.getExternalStrategys()){
+							if(text.length()>0){
+								text.append(",");
+								value.append(",");
+							}
+							text.append(st.getName());
+							value.append(st.getId());
+						}
+						sts.put("text",text);
+						sts.put("value",value);
+						userJSON.put("strategys",sts);
+						
+						
+						userJSON.put("userName",user.getUserName());
+						userJSON.put("realName",user.getRealName());
+						userJSON.put("roleId",user.getRoleId());
+						userJSON.put("userId",user_id);
+						
+						userJSON.put("email",user.getEmail());
+						userJSON.put("phone",user.getPhone());
+						userJSON.put("phoneHome",user.getPhoneHome());
+						userJSON.put("celler",user.getCeller());
+						userJSON.put("userType",user.getUserType().getValue());
+						userJSON.put("duty",rs[0]);
+						userJSON.put("entryDate",rs[1]);
+						userJSON.put("inActive",inActive);
+						userJSON.put("subAdmin",subAdmin);	
+						userJSON.put("isMaster",rs[2]);	
+						userJSON.put("isDeveloper",user.isDeveloper());
+						userJSON.put("msn",user.getMsn());
+						userJSON.put("roles",roles);
+						userJSON.put("sortId",user.getSortId());
+						if(!rs[3].equals("")){
+							JSONObject file=new JSONObject("{}");
+							//此处设置文件名
+							file.put("value",rs[3]);
+							//注册的sql语句格式 select blob字段,文件名,文件类型,文件长度 from $[库名].表名 where 条件。 除第一个字段外，其它均可省略
+							String sql="select photo,'preview.jpg' from $[cert].user_base b where user_id ="+user_id;
+							file.put("id",FileExtend.getId(sql));
+							userJSON.put("photo",file);
+						}
+						if(rs[1].equals("")){
+							userJSON.put("entryDateModify","");
+						}else{
+							userJSON.put("entryDateModify",rs[1].substring(0,11));
+						}
+					}
+				   <?[?>userJSON.toString()<?]?>;
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
+				conCert.close();
+			}
+	}
+	
+	
+	
+	
+	public void doPost(Jacper jacper){
+		
+		Param param=new Param(jacper);//大字段传来时，post过来的参数jacper取不到。
+		Connection conCert = param.getConnection("cert");
+		EFile uf=null;
+		try{
+			if (FileExtend.isFileUpload(param)) {
+				uf = param.getEFile("photo");
+			}
+		}catch(Exception e){
+			<?{success:false,message:"?>e.getMessage()<?"}?>;
+			return;
+		}
+		String type = param.getStr("type");
+
+                if("".equals(param.getStr("creatorId")))
+                    param.put("creatorId", String.valueOf(jacper.getSession().uid));
+	
+		String user_id = jacper.getString("userId");
+		User user =null;
+		if(user_id!=null && user_id.length()>0){
+			user=CertManager.getUser(user_id);
+		}
+	
+		try{
+			if(type.equals("save")||type.equals("updatesave")){
+				if(type.equals("save")){	
+					user=CertManager.createUser(param);	
+				}else if(type.equals("updatesave")){
+					user.update(param);					
+				}
+			}else if(type.equals("updatePassword")){
+				user.updatePassword(param);
+			}else if(type.equals("moveTo")){
+				user.moveTo(param); 
+			}else if(type.equals("delete")){
+				user.delete(param);
+			}
+			jacper.print("{\"success\":true}");
+		}catch(Exception e){
+			jacper.print(Err.parse(e).toJSON());
+		}
+		param.closeAllConnection();
+	}
+}

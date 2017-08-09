@@ -1,0 +1,280 @@
+
+import java.io.IOException;
+import java.util.ArrayList;
+import com.kinglib.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.module.*;
+import com.kinglibx.query.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.utils.CoreUtils;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.workbench.program.*;
+import com.kinglib.workbench.workflow.*;
+
+
+@class{
+	private ObjectNode getParentNode(String objectId) {
+		ObjectNode retNode = null;
+		ObjectNode node = ObjectManager.getObject(objectId);
+		if (node != null) {
+			retNode = node.upTo(ObjectType.MODULE);
+			if (retNode == null) {
+				retNode = node.upTo(ObjectType.WORKFLOWACT);
+				if (retNode == null) {
+					retNode = node.upTo(ObjectType.MAPPOI);
+				}
+			}
+		}
+		return retNode;
+	}
+	private String getModType(Jacper jacper,ObjectNode node) {
+		String modType = "1";
+		if (node != null) {
+			switch (node.getType()) {
+			case ObjectType.MODULE:
+				Module md=ModuleFactory.getInstance().getModule(jacper.getConnection("plat"),String.valueOf(node.getId()));
+				if(md!=null){
+					modType=md.getModType();
+				}
+				break;
+			case ObjectType.WORKFLOWACT:
+				ObjectNode workflow=node.getParent();
+				WorkflowAct act=WorkflowFactory.getInstance().getWorkflow(jacper.getConnection("plat"),String.valueOf(workflow.getId())).getWorkflowAct(String.valueOf(node.getId()));
+				if(act!=null){
+					modType=act.getModType();
+				}
+				break;
+			case ObjectType.MAPPOI:
+				modType = "1";
+				break;
+			case ObjectType.QUALITY:
+				modType = "1";
+				break;
+			}
+		}
+		return modType;
+	}
+
+
+
+	public void doGet(Jacper jacper){//提供根据objectId,查询当前Module框架类型功能.
+		boolean isLogin = jacper.setSession();
+		String objectId=jacper.getString("objectId","-1");
+		if(!objectId.equals("-1")){
+			jacper.print(getModType(jacper,getParentNode(objectId)));
+		}
+	}
+
+	public JSONValue createPrgData(Jacper jacper,Connection conPlat, ObjectNode[] nodes)
+			throws JSONException {
+		String[][] arr = new String[nodes.length + 1][3];
+		arr[0] = new String[] { "-1", jacper.trans("无"), "[['','"+jacper.trans("无操作")+"']]" };
+		ProgramFactory pf = ProgramFactory.getInstance();
+		Program prg;
+		ProgramType type;
+		for (int i = 0, j = 1; i < nodes.length; i++, j++) {
+			arr[j][0] = String.valueOf(nodes[i].getId());
+			arr[j][1] = nodes[i].getName();
+			prg = pf.getProgram(conPlat, nodes[i].getId());
+			if (prg == null)
+				continue;
+			
+			type=ProgramType.parseProgramType(prg.getType());
+			if(type==ProgramType.FRAME){
+				JSONObject ret=new JSONObject();
+				for(ObjectNode frame:nodes[i].getChilds()){
+					ret.put("prg" + frame.getType(), createPrgData(jacper,conPlat, frame
+							.getChilds(ObjectType.PROGRAM)));
+				}
+				ret.put("stat",new JSONValue(join(jacper,type)));
+				arr[j][2]=ret.toString();
+			}else{
+				arr[j][2] = join(jacper,type);
+			}
+		}
+		return CoreUtils.table2Json(arr, new boolean[] { true, true, false });
+	}
+
+	private String join(Jacper jacper,ProgramType type){
+		if(type==ProgramType.FOLDER){
+			return "[['rootNode','"+jacper.trans("刷新根节点")+"']]";
+		}
+		if(type==ProgramType.NAVIGATOR){
+			return "[['selfNode','"+jacper.trans("刷新当前节点")+"'],['parentNode','"+jacper.trans("刷新父节点")+"'],['subNode','"+jacper.trans("刷新子节点")+"'],['rootNode','"+jacper.trans("刷新根节点")+"']]";
+		}
+		StringBuilder sb=new StringBuilder();
+		sb.append("[");
+		for(String state:type.getStates()){
+			if(sb.length()>1)
+				sb.append(",");
+			sb.append("['").append(state).append("','").append(type.getStateName(state)).append("']");
+
+		}
+		if(type==ProgramType.INPUT){
+			sb.append(",['copy','"+jacper.trans("拷贝")+"']");;
+		}
+		return sb.append("]").toString();
+	
+	}
+
+	/*
+		提取模块中所有Program
+	*/
+	public void doPut(Jacper jacper) {
+		Param param=new Param(jacper);
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String objectId = param.getStr("objectId");
+		int type =  Integer.parseInt(param.getStr("targetType"));
+		if (objectId.equals("-1") || type == -1){
+			jacper.print("{success:false,message:'"+jacper.trans("objectId错误")+""+objectId+"'}");
+			return;
+		}
+		ObjectNode mod = ObjectManager.getObject(objectId);
+		if (mod == null){
+			jacper.print("{success:false,message:'"+jacper.trans("系统找不到对象")+""+objectId+"'}");
+			return;
+		}
+		JSONObject ret = new JSONObject();
+		Connection conPlat=jacper.getConnection("plat");
+		try {
+			if (type == 1) {//获取所有控件
+				ObjectNode frameNode=mod.getParent();
+				if(mod!=null){
+					
+					int ftype = frameNode.getType();
+					ArrayList<ObjectNode> prgNodeList=new ArrayList<ObjectNode>();
+					ObjectNode[] prgNodeArray=frameNode.getChilds(ObjectType.PROGRAM);
+					for(int i=0;i<prgNodeArray.length;i++){
+						if(prgNodeArray[i].getId()!=objectId){
+							prgNodeList.add(prgNodeArray[i]);
+						}
+					}
+					ObjectNode[] selectNodeArray=new ObjectNode[prgNodeList.size()];
+					prgNodeList.toArray(selectNodeArray);
+					ret.put("prg1", createPrgData(jacper,conPlat,selectNodeArray));
+				}
+			/*
+				String opr = join(ProgramType.INPUT);
+				ObjectNode[] widgets = mod.upTo(ObjectType.SYSTEM)
+						.findAllChildsByType(ObjectType.WIDGET);
+						String[][] arr = new String[widgets.length + 1][3];
+				arr[0] = new String[] { "-1", "无", "[['','无操作']]" };
+				for (int i = 0, j = 1; i < widgets.length; i++, j++) {
+					arr[j][0] = String.valueOf(widgets[i].getId());
+					arr[j][1] = widgets[i].getName();
+					arr[j][2] = opr;
+				}
+				ret.put("prg1", CoreUtils.table2Json(arr, new boolean[] {true, true, false }));
+			*/
+
+			} else {
+				mod=getParentNode(objectId);
+				if(mod!=null){
+					ret.put("modType",Integer.parseInt(getModType(jacper,mod)));
+
+					if(mod.getType()==ObjectType.MAPPOI||mod.getType()==ObjectType.QUALITY){
+						//地图等系统内模块不再MODULE下时,统一变为单窗口--tz
+						ret.put("prg23", createPrgData(jacper,conPlat, ObjectManager.getObject(objectId).getChilds(ObjectType.PROGRAM)));
+					}else{
+						int ftype = 0;
+						for (ObjectNode frame : mod.getChilds()) {
+							ftype = frame.getType();
+							if (ftype < 23 || ftype > 27)
+								continue;
+							ret.put("prg" + ftype, createPrgData(jacper,conPlat, frame.getChilds(ObjectType.PROGRAM)));
+						}
+					}
+					conPlat.close();
+				}else{
+					jacper.print("{success:false,message:'"+jacper.trans("系统找不到当前模块")+"'}");
+					return;
+				}
+			}
+			ret.put("success", true);
+			jacper.print(ret);
+		} catch (Exception e) {
+			jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+		}finally{
+			conPlat.close();
+		}
+	}
+
+	public void doPost(Jacper jacper){
+		String gettype=jacper.getStr("type");
+		Connection conPlat = jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String object_id = jacper.getString("object_id","-1");
+		if(object_id.equals("-1")) return;
+		String json="";
+
+		if(gettype.equals("operlog")){
+				String[][] operlog = conPlat.get("select a.object_id,a.prglogic_name from $[plat].prg_base a,$[plat].object_base b,$[plat].object_base c where a.prgtype='8' and a.object_id=c.object_id and c.parent_id=b.parent_id and b.object_id=?",new String[]{object_id+""},0);
+				if ( operlog != null ) {
+					JSONArray jarr=new JSONArray();
+					try{
+						JSONObject items =null;
+						for(int i=0;i<operlog.length;i++){
+							items = new JSONObject();
+							items.put("value",operlog[i][0]);
+							items.put("text",operlog[i][1]);
+							jarr.put(items);
+						}
+						json=jarr.toString();
+					}catch(Exception e){}
+				}
+				json="{success:true,items:"+json+"}";
+		}else if(gettype.equals("workflow_base")){
+				ObjectNode mod = ObjectManager.getObject(object_id);
+				ObjectNode[] workflows = mod.upTo(ObjectType.SYSTEM).findAllChildsByType(ObjectType.WORKFLOW);
+				if ( workflows.length>0 ) {
+				   
+					JSONArray jarr=new JSONArray();
+					try{
+						JSONObject items = new JSONObject();
+						items.put("value","0");
+						items.put("text",jacper.trans("系统默认"));
+						jarr.put(items);
+						WorkflowFactory WF=WorkflowFactory.getInstance();
+						for(int i=0;i<workflows.length;i++){
+							String workflowId=workflows[i].getId();
+							Workflow  wkflow=WF.getWorkflow(conPlat,workflowId+"");
+							String workflowType=wkflow.getInitType();
+							if(workflowType.equals("1")){
+								items = new JSONObject();
+								items.put("value",workflows[i].getId());
+								items.put("text",workflows[i].getName());
+								jarr.put(items);
+							}
+						}
+						json=jarr.toString();
+					}catch(Exception e){}
+				}
+				json="{success:true,items:"+json+"}";
+		}else if(gettype.equals("map_base")){
+				String[][] map_base = conPlat.get("select distinct h.object_id,h.title from $[plat].map_base h,$[plat].object_base g,$[plat].object_base f,$[plat].object_base e,$[plat].object_base d,$[plat].object_base a,$[plat].object_base c,$[plat].object_base b where g.object_id=h.object_id and g.parent_id=f.object_id and f.parent_id=e.parent_id and e.object_id=d.parent_id and d.parent_id=c.parent_id and  b.object_id=a.parent_id and a.object_id=? and c.object_id=b.parent_id",new String[]{object_id+""});
+				if ( map_base != null ) {
+					JSONArray jarr=new JSONArray();
+					try{
+						JSONObject items =null;
+						for(int i=0;i<map_base.length;i++){
+							items = new JSONObject();
+							items.put("value",map_base[i][0]);
+							items.put("text",map_base[i][1]);
+							jarr.put(items);
+						}
+						json=jarr.toString();
+					}catch(Exception e){}
+				}
+				json="{success:true,items:"+json+"}";
+		}else if(gettype.equals("buttonCla")){
+				json="[{value:'0',text:'"+jacper.trans("系统默认")+"'}]";									
+				json="{success:true,items:"+json+"}";
+		}
+
+		jacper.print(json);
+		conPlat.close();
+	}
+
+}

@@ -1,0 +1,56 @@
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.GaoJian;
+import com.kinglib.service.cms.model.HTMLPage;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+
+import java.util.ArrayList;
+import java.util.UUID;
+
+import com.susing.core.KingleSystem;
+
+@class{
+	public void doPost(Jacper jacper) {
+
+		HttpSession hs = jacper.getSession();
+
+		String ids = jacper.getString("id");
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		ZhanDian zd = service.getZhanDian(ids);
+		ArrayList<HTMLPage> al = new ArrayList<HTMLPage>();
+
+		if (zd != null) {
+			al.add(zd);
+			for (LanMu lm : zd.getLanmu(false)) {
+				getLMS(lm, al);
+			}
+			String uuid = UUID.randomUUID().toString();
+			try {
+				service.fabuAllPages(al.toArray(new HTMLPage[al.size()]), uuid);
+			} catch (Exception e) {
+				e.printStackTrace();
+				jacper.print("{success:false}");
+			}
+			jacper.print("{success:true,uuid:\"" + uuid + "\"}");
+		}else{
+			jacper.print("{success:false}");
+		}
+	}
+	public void getLMS(LanMu lanmu,ArrayList<HTMLPage> al){
+		al.add(lanmu);
+
+		if(lanmu.getTemplatePath().length()>0 && lanmu.getGaojian().length>0){
+			for(GaoJian gj:lanmu.getGaojian()){
+				al.add(gj);
+			}
+		}
+		
+		if(lanmu.getZilanmu().length>0){
+			for(LanMu l:lanmu.getZilanmu()){
+				getLMS(l,al);
+			}
+		}
+	}
+}

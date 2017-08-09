@@ -1,0 +1,65 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+
+@class{
+
+
+public void doGet(Jacper jacper){
+
+	boolean isLogin = jacper.setSession();
+	String skin = jacper.getSession().getString("skin");
+
+	<?
+	<link rel='stylesheet' type='text/css' href='/themes/css/standard.css'>
+	<meta http-equiv="Content-Type" content="text/html;">
+	<body bgcolor="#FCF9E8"  >
+	?>;
+	String dept_id=jacper.getStr("dept_id");
+	if(dept_id==null||dept_id.length()==0||dept_id.equals("2")){
+		<?
+		<font color=red>?>jacper.trans("请先选择报表目录,然后选择部门...")<?</font>
+		?>;
+	}
+	Connection conCert=jacper.getConnection("cert");
+	String[][] userArray=null;
+	String authType=(String)com.susing.core.KingleSystem.getProperty("auth_type");
+	if(authType.equals("0")){
+		userArray=conCert.get("select a.user_id,a.real_name,b.short_name from $[cert].user_base a,$[cert].dept_base b where a.dept_id=b.dept_id and a.dept_id=? order by a.user_id desc",new String[]{dept_id});
+	}else if(authType.equals("1")){
+		userArray=conCert.get("select a.role_id,a.roles,b.short_name from $[cert].role_base a,$[cert].dept_base b where a.dept_id=b.dept_id and a.dept_id=? order by a.role_id desc",new String[]{dept_id});
+	}	
+	if(userArray!=null&&userArray.length>0){
+
+		<?
+		<select name='userList' size='30' multiple=true>
+		?>;
+
+		String[] oneUser;
+		for(int i=0;i<userArray.length;i++){
+			oneUser=userArray[i];
+			if(oneUser[0].equals("-999")){
+				<?
+				<option value="?>jacper.trans("当前部门所有人员")<?#?>oneUser[2]<?#?>jacper.trans("完全")<?#-999#?>dept_id<?#1">?>jacper.trans("当前部门所有人员")<?
+				?>;
+			}else if(oneUser[0].equals("-999999")){
+				<?
+				<option value="?>jacper.trans("当前部门所有人员")<?#?>oneUser[2]<?#?>jacper.trans("完全")<?#-999999#?>dept_id<?#1">?>jacper.trans("当前部门所有人员")<?
+				?>;
+			}else{
+				<?
+				<option value="?>oneUser[1]<?#?>oneUser[2]<?#?>jacper.trans("完全")<?#?>oneUser[0]<?#?>dept_id<?#1">?>oneUser[1]<?
+				?>;
+			}
+		}
+		<?
+		</select>
+		?>;
+	}
+	<?
+	?>;
+}
+
+}

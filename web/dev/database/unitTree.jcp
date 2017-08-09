@@ -1,0 +1,95 @@
+            
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.unit.Unit;
+import com.kinglib.unit.UnitFactory;
+import com.kinglib.unit.UnitGroup;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+
+               
+@class{
+
+	public void doGet(Jacper jacper){  
+
+			String id = jacper.getString("node");
+			int level = jacper.getInt("level",1);
+			try{
+			
+				JSONArray treeArr=new JSONArray();
+				if(level==1){
+					JSONObject js = new JSONObject();
+					js.put("id","0");
+					js.put("text",jacper.trans("公用单位"));
+					js.put("leaf",false);
+					js.put("level",2);
+					js.put("icon","/themes/icon/xp/spzl.gif");
+					js.put("allowSelect",false);
+					treeArr.put(js);
+					ObjectNode node=ObjectManager.getObject(id);
+					node=node.upTo(ObjectType.SYSTEM);
+					js = new JSONObject();
+					js.put("id",node.getId());
+					js.put("text",node.getName());
+					js.put("leaf",false);
+					js.put("level",2);
+					js.put("icon","/themes/icon/xp/spzl.gif");
+					js.put("allowSelect",false);
+					treeArr.put(js);
+					js = new JSONObject();
+					js.put("id","");
+					js.put("text",jacper.trans("无单位"));
+					js.put("leaf",true);
+					js.put("level",2);
+					js.put("icon","/themes/icon/all/brick_delete.gif");
+					js.put("allowSelect",true);
+					treeArr.put(js);
+				}else if(level==2){
+					Connection conPlat=jacper.getConnection("plat");
+					String[][] unitGroups=conPlat.get("select id,name from $[plat].unit_group where system_id=?",new String[]{id});
+					if(unitGroups!=null && unitGroups.length>0){
+						for(String[] g:unitGroups){
+							JSONObject js = new JSONObject();
+							js.put("id",g[0]);
+							js.put("text",g[1]);
+							js.put("leaf",false);
+							js.put("level",3);
+							js.put("icon","/themes/icon/all/bricks.gif");
+							js.put("allowSelect",false);
+							treeArr.put(js);
+						}
+					}
+					conPlat.close();
+				}else if(level==3){
+					Connection conPlat=jacper.getConnection("plat");
+					UnitGroup group=UnitFactory.getInstance().getGroup(conPlat, id);
+					for(Unit u:group.getUnits()){
+						JSONObject js = new JSONObject();
+						js.put("id",u.getId());
+						js.put("text",u.getName());
+						js.put("leaf",true);
+						js.put("level",4);
+						js.put("icon","/themes/icon/all/brick.gif");
+						js.put("allowSelect",true);
+						treeArr.put(js);
+					}
+					conPlat.close();
+				}
+				jacper.print(treeArr.toString());
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+
+		}
+
+	public void doPost(Jacper jacper) {
+		String unitId = jacper.getString("unitId");
+		Connection conPlat=jacper.getConnection("plat");
+		Unit u = UnitFactory.getInstance().getUnit(conPlat, unitId);
+		conPlat.close();
+		jacper.print("{success:true,value:'" + u.getName() + "'}");
+	}
+}

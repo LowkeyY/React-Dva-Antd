@@ -1,0 +1,72 @@
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import zpluginlistenerautorun.WinMailListener;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+
+@class{
+	public void doGet(Jacper jacper) {
+		String userId = String.valueOf(jacper.getSession().uid);
+		JSONObject result = new JSONObject();
+		User user = CertManager.getUser(userId);
+		try {
+			if (user != null) {
+				result.put("success", true);
+				
+				if("0".equals(userId) || "1".equals(userId)){
+					result.put("userId", "admin");
+					result.put("userPsd", "123456");
+				}else{
+					result.put("userId", user.getUserName());
+					result.put("userPsd", user.getPassword());
+				};
+			} else {
+				result.put("success", false);
+				result.put("message", "用户不存在，请联系管理员。");
+			}
+			jacper.print(result.toString());
+			return;
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		jacper.print("{success:false,message:'认证失败，请联系管理员。'}");
+	}
+	
+	public void doPost(Jacper jacper) {
+		String userId = String.valueOf(jacper.getSession().uid);
+		JSONObject result = new JSONObject();
+		User user = CertManager.getUser(userId);
+		long start = System.currentTimeMillis();
+		try {
+			result.put("success", false);
+			if (user != null) {
+				int newMessageCounts = 0;
+				if("0".equals(userId) || "1".equals(userId))
+					newMessageCounts = WinMailListener.getMessageNumByUser("admin", "123456");
+				else 
+					newMessageCounts = WinMailListener.getMessageNumByUser(user.getUserName(), user.getPassword());
+				
+				JSONArray datas = new JSONArray();
+				result.put("success", true);
+				datas.put(new JSONObject().put("applyTo", "desktop").put("newMessageCounts", newMessageCounts));
+				if(newMessageCounts > 0){
+					datas.put(new JSONObject().put("applyTo", "info").put("message", "您有"+newMessageCounts+"条新邮件待处理。"));
+					datas.put(new JSONObject().put("applyTo", "infos").put("message", "您有"+newMessageCounts+"条新邮件待处理。"));
+				}
+				result.put("datas", datas);
+			}
+			jacper.print(result.toString());
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			//e.printStackTrace();
+			System.out.println(e.getMessage());
+		} finally{
+			System.out.println("WinMail get new message , use "+(System.currentTimeMillis() - start)+" ms.");
+		}
+	}
+}

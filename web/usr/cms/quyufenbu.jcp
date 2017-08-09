@@ -1,0 +1,55 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.UUID;
+import com.susing.core.KingleSystem;
+
+@class{
+public void doGet(Jacper jacper) {
+doPost(jacper);
+}
+	public void doPost(Jacper jacper) {
+	try {
+			HttpSession hs = jacper.getSession();
+			Connection conEdu = jacper.getConnection("education");
+			String startdate = jacper.getString("startdate");
+			String enddate=jacper.getString("enddate");
+			enddate+="  23:59:59";
+			JSONObject jbout=new JSONObject();
+			JSONArray ja = new JSONArray();
+			String sql="select suozaisheng,count(*),count(distinct ip),count(distinct uesrid)from tongjiguanli  where suozaisheng is not null and  shijian>=$str_date('"+startdate+"',111) and shijian<=$str_date('"+enddate+"',113) group by suozaisheng";
+			
+			String[][]rs=conEdu.get(sql);
+			double count=0;
+                  	for(int i=0;i<rs.length;i++){
+                      count+=Integer.parseInt(rs[i][1]);
+           }
+			
+			
+			for(int i=0;i<rs.length;i++){
+				JSONObject jb=new JSONObject();
+				jb.put("name",rs[i][0]);
+				jb.put("pv",rs[i][1]);
+				double baifen=Math.round(Integer.parseInt(rs[i][1])/count*100*100)/100.0;
+				jb.put("pvbili",baifen+"%");
+				jb.put("uv",rs[i][3]);
+				jb.put("ip",rs[i][2]);
+				
+				ja.put(jb);
+				
+			}
+			jbout.put("authArray",ja);
+			System.out.println(jbout);
+			jacper.print(jbout);
+	} catch (Exception e) {
+			e.printStackTrace();
+	}
+	}}

@@ -1,0 +1,26 @@
+
+                  
+import java.io.IOException;
+import com.kinglib.*;
+   
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.gis.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.workbench.quality.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String qualityId=jacper.getStr("qualityId");
+		String exportData=jacper.getStr("exportData");
+		Connection conPlat = jacper.getConnection("plat");
+	    jacper.getResponse().setContentType("application/x-json");	
+		Quality quality =QualityFactory.getInstance().getQuality(conPlat,qualityId);
+		<??> quality.getJSON().toString()<??>;
+		conPlat.close();	
+	}
+}
+

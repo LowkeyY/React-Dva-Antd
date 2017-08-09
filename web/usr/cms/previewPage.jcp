@@ -1,0 +1,72 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.GaoJian;
+import com.kinglib.service.cms.model.HTMLPage;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.TempGaoJian;
+import com.kinglib.service.cms.model.ZhanDian;
+
+import java.sql.SQLException;
+import java.util.UUID;
+
+import com.susing.core.KingleSystem;
+
+@class{
+	public void doPost(Jacper jacper) {
+
+		HttpSession hs = jacper.getSession();
+
+		String ids = jacper.getString("pmk");
+		String fp = jacper.getString("fromNode");
+		
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		HTMLPage page = service.getCache(ids);
+		
+		if(page == null){
+			if("gaojian".equals(fp)){
+				page = service.getGaoJian(ids);	
+			}else if("lanmu".equals(fp)){
+				page = service.getLanMu(ids);
+			}else if("zhandian".equals(fp)){
+				page = service.getZhanDian(ids);
+			}else if("tempgaojian".equals(fp)){
+				try {
+					Connection con = service.getConnection();
+					String[] r = con.getRow(TempGaoJian.getSql(service, " where id=?"), new String[] { ids });
+					page = new TempGaoJian(service, r);
+					if("".equals(((GaoJian) page).getLanMu().getGaojianmuban())){
+						jacper.print("{success:false,message:'稿件模版为空，无法预览。'}");
+						return;
+					}
+				} catch (SQLException e) {
+					jacper.print("{success:false,message:'" + e.toString() + "'}");
+					e.printStackTrace();
+					return;
+				}
+			}
+		}
+		
+		if (page == null) {
+			jacper.print("{success:false,message:'页面没有找到！'}");
+		} else {
+			String uuid = UUID.randomUUID().toString();
+			try {
+				if(page instanceof GaoJian && "".equals(((GaoJian) page).getLanMu().getGaojianmuban())){
+					jacper.print("{success:false,message:'稿件模版为空，无法预览。'}");
+					return;					
+				}
+				if(page instanceof LanMu && "".equals(((LanMu) page).getMuban())){
+					jacper.print("{success:false,message:'栏目模版为空，无法预览。'}");
+					return;					
+				}
+				service.yulan(page, uuid, "previewPage");
+				jacper.print("{success:true,uuid:\"" + uuid + "\"}");
+			} catch (Exception e) {
+				jacper.print("{success:false,message:'" + e.toString() + "'}");
+				e.printStackTrace();
+			}
+		}
+	}
+}

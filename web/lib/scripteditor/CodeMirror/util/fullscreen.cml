@@ -1,0 +1,8 @@
+<root><class name="lib.scripteditor.CodeMirror.util.fullscreen"><fullscreen><![CDATA[      .CodeMirror-fullscreen {
+        display: block;
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%;
+        z-index: 9999;
+      }
+]]></fullscreen></class></root>

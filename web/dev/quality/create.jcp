@@ -1,0 +1,178 @@
+
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+import com.kinglib.database.*;
+import com.kinglib.*;
+import com.kinglib.dictionary.*;
+import java.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.quality.*;
+import com.kinglibx.query.Database;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String type = jacper.getString("type");
+	String objectId = jacper.getString("parent_id");
+
+	jacper.getResponse().setContentType("application/x-json");
+	try{
+		JSONObject qualityJSON = new JSONObject("{}");
+
+		String qualityDb=(String)com.susing.core.KingleSystem.getProperty("quality_db");
+		Connection conApp=null;
+		try{
+			conApp=jacper.getConnection(qualityDb);
+			String catalog="";
+			String schema=conApp.parseObjectName(qualityDb).toUpperCase();
+			try{
+				catalog=conApp.getCatalog();
+			}catch(SQLException se){}
+
+			String[][] data = Database.getTables(conApp,catalog,schema);
+			boolean created=false;
+			for(int i=0;i<data.length;i++){
+				if(data[i][2].toLowerCase().equals("quality_result")){
+					created=true;
+					break;
+				}
+			}
+			qualityJSON.put("result_create",created);
+			qualityJSON.put("result_db",qualityDb);
+		}catch(Exception e){
+			//e.printStackTrace();   
+			//<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				if(conApp!=null)
+					conApp.close();
+			}catch(Exception e2) {}
+		}
+		String[] rs= conPlat.getRow("select LOGIC_NAME,NAME,TAB_ID,INTE,NOTE_TEMPLATE,HAVE_SCRIPT,NOTE from $[plat].QUALITY_BASE  where OBJECT_ID=?",new String[]{""+objectId});
+		
+		qualityJSON.put("object_id",objectId);
+		qualityJSON.put("logicname",rs[0]);
+		qualityJSON.put("name",rs[1]);
+		qualityJSON.put("tab_id",rs[2]);
+		String tabId=rs[2];
+		MetaTable mt = MetaFactory.getObject(tabId);
+		String tableName=mt.getLname();
+		qualityJSON.put("tableName",tableName);
+		qualityJSON.put("inte_check",rs[3]);
+		qualityJSON.put("note_template",rs[4]);
+		qualityJSON.put("have_script",rs[5]);
+		qualityJSON.put("note",rs[6]);
+
+		ObjectNode node=ObjectManager.getObject(objectId+"");
+		if(node!=null){
+			qualityJSON.put("lastModifyTime",node.getLastModifyTime());
+			qualityJSON.put("lastModifyName",node.getLastModifyName());
+		}
+	   <?[?>qualityJSON.toString()<?]?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	int user_id = (int)hs.uid;
+
+	String type=jacper.getString("type");		
+	String logicName = jacper.getStr("logicname");
+	String name = jacper.getStr("name");
+	String tabId = jacper.getString("tab_id");
+	String inte = jacper.getString("inte_check");
+	String noteTemplate = jacper.getString("note_template");
+	String haveScript = "false";
+	String note = jacper.getString("note");
+
+	ObjectManager OM=ObjectManager.getInstance();
+	QualityFactory  QF=QualityFactory.getInstance();
+
+	if (type.equals("save")) {
+		String system_id=jacper.getString("id");
+		try{	
+			conPlat.setAutoCommit(false);
+			String object_id  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+			String parent_id = jacper.getStr("parent_id");
+
+			ObjectNode applicationNode=OM.getObject(parent_id);
+			applicationNode.addChild(conPlat,object_id,logicName,ObjectType.QUALITY,user_id);	
+
+			conPlat.exec("insert into $[plat].QUALITY_BASE (OBJECT_ID,LOGIC_NAME,NAME,TAB_ID,QUALITY_TYPE,INTE,NOTE_TEMPLATE,HAVE_SCRIPT,NOTE) values (?,?,?,?,?,?,?,?,?)",new String[]{object_id,logicName,name,tabId,parent_id,inte,noteTemplate,haveScript,note});
+			conPlat.commit();
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}else if ( type.equals("updatesave")){
+		String object_id = jacper.getStr("object_id");
+		
+		try{
+			ObjectNode qualityNode=OM.getObject(object_id);
+			qualityNode.updateName(conPlat,logicName);
+			conPlat.exec("update $[plat].QUALITY_BASE set LOGIC_NAME=?,NAME=?,INTE=?,NOTE_TEMPLATE=?,NOTE=? where object_id=?",new String[]{logicName,name,inte,noteTemplate,note,object_id});
+			QF.remove(object_id);
+			conPlat.commit();
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}else if (type.equals("delete")) {
+		String object_id = jacper.getStr("object_id");
+		try{	
+			conPlat.setAutoCommit(false);
+			conPlat.exec("delete from $[plat].QUALITY_BASE where object_id=?",new String[]{object_id});
+			conPlat.exec("delete from $[plat].QUALITY_INSTANCE where object_id=?",new String[]{object_id});
+			conPlat.exec("delete from $[plat].QUALITY_RULE where quality_id=?",new String[]{object_id});
+			ObjectNode qualityNode=ObjectManager.getObject(object_id);
+			qualityNode.destroy(conPlat);
+			QF.remove(object_id);
+			conPlat.commit();
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

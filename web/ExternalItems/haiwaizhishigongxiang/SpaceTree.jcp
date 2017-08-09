@@ -1,0 +1,87 @@
+import gpra.filesystem.space.HWSpaceFactory;
+import gpra.filesystem.space.HWSpaceNode;
+import gpra.filesystem.space.HWSpaceFactory.HWSessions;
+
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+//public class SpaceTree{
+@class{
+	public void doPost(Jacper jacper) {
+		HttpSession hs = jacper.getSession();
+		JSONArray children = getSpaceByUser(hs.uid);
+		jacper.print(children);
+	}
+	public void doGet(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		String path = jacper.getString("path");
+		if("currentSpace".equals(path))
+			path = hs.getString(HWSessions.HW_BASE_SPACEID.name());
+		JSONArray children = new JSONArray();
+		if(path != null && path.length() > 0)
+			children = getSpaceByPath(path.split("::")[0]);
+		jacper.print("{success:true,childs:"+children+"}");
+	}
+	
+	public JSONArray getSpaceByUser(int uid) {
+		String userId = String.valueOf(uid);
+		JSONArray children = new JSONArray();
+		try {
+			children.put(getSpaces(HWSpaceFactory.getBaseSpace() , userId , uid <= 1));
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		return children;
+	}
+	
+	public JSONObject getSpaces(HWSpaceNode baseNode , String userId , boolean isRoot) throws JSONException{
+		JSONArray children = new JSONArray();
+		for(HWSpaceNode node : HWSpaceFactory.getSpaceByParentId(baseNode.getSpaceId()))
+			children.put(getSpaces(node, userId , isRoot));
+		return add2JsonO(baseNode , userId , children , isRoot);
+	}
+	
+	public int getSpaceUDS(HWSpaceNode node , String userId){
+		if(node.getSpaceAdmin().equals(userId))
+			return 2;
+		else if(getParentSpaceAdmin(node).equals(userId))
+			return 1;
+		return 0;
+	}
+	
+	public String getParentSpaceAdmin(HWSpaceNode node){
+		return HWSpaceFactory.getSpaceById(node.getParentSpaceId()) == null ? 
+				"" : HWSpaceFactory.getSpaceById(node.getParentSpaceId()).getSpaceAdmin();
+	}
+	
+	public JSONArray getSpaceByPath(String spaceId){
+		JSONArray children = new JSONArray();
+		HWSpaceNode hsn = HWSpaceFactory.getSpaceById(spaceId);
+		while(hsn != null){
+			children.put(hsn.getSpaceId());
+			if(hsn.getSpaceId().equals(hsn.getParentSpaceId()))
+				break;
+			hsn = HWSpaceFactory.getSpaceById(hsn.getParentSpaceId());
+		}
+		return children;
+	}
+	
+	public String getIcon(String type){
+		return type.equals("space") ? "/themes/icon/all/server_database.gif" : "/themes/icon/all/bullet_green.gif";
+	}
+	
+	public JSONObject add2JsonO(HWSpaceNode node , String userId , JSONArray children , boolean isRoot) throws JSONException{
+		JSONObject obj = node.toJson();
+		obj.put("nodeType", "async");
+		obj.put("action", true);
+		obj.put("leaf", children.length() == 0);
+		obj.put("icon" , getIcon(node.getMyType()));
+		obj.put("UDS", isRoot ? 2 : getSpaceUDS(node , userId));
+		if(children.length() > 0)
+			obj.put("children", children);
+		return obj;
+	}
+}

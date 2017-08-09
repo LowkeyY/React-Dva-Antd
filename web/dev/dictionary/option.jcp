@@ -1,0 +1,173 @@
+/*
+无法删除字典项
+字典项更新保存不对
+修改"可用"checkbox 的状态后不保存
+"缺省值"有时可以点击并保存
+去掉 grid head 菜单
+添加一个字典后在左边的树上不可见
+改变列宽会使右侧变型或项目消失
+排序出现错误,将所有列设为不可排序
+切换字典时顶部项目不清空
+长度添加校验
+当一个分类下的所有字典均删除后,分类仍不可删除
+一个字典所有项目的可用状态都可以选掉而没有提示
+新建一个分类.并立即再建一个字典后,分类类别不可再点击
+部分操作未与后台缓存同步
+可以在编辑界面将所有的字典项都删除而没有提示.
+*/
+import java.io.IOException;
+import java.awt.Color;
+import java.awt.GradientPaint;
+import java.io.OutputStream;
+import java.util.*;
+import com.kinglib.dictionary.*;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.application.*;
+
+@class{
+	public void doGet(Jacper jacper){
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		Connection conPlat = jacper.getConnection("plat");
+
+		String option_id=jacper.getString("option_id","0");
+		String[] rs= conPlat.getRow("select option_name,dict_type,value_length,option_id from $[plat].first_dict where option_id=? ",new String[]{option_id+""});
+
+		jacper.getResponse().setContentType("application/x-json");
+		try{
+				JSONObject optionJSON = new JSONObject("{}");
+				optionJSON.put("option_name",rs[0]);
+				optionJSON.put("dict_type",rs[1]);
+				optionJSON.put("value_length",rs[2]);
+				optionJSON.put("option_id",rs[3]);
+				<?[?>optionJSON.toString()<?]?>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+				conPlat.close();
+		}
+}
+
+public void doPost(Jacper jacper){
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		Connection conPlat = jacper.getConnection("plat");
+
+		String types=jacper.getStr("type");
+
+		String kind_id=jacper.getString("kind_id","0");
+
+		String option_name=jacper.getStr("option_name");
+		String dict_type=jacper.getStr("dict_type");
+		String value_length=jacper.getStr("value_length");	
+			
+		if(types.equals("save")){
+			try{	
+				conPlat.setAutoCommit(false);
+				String option_id  = "";
+				
+				String[] dual=conPlat.getRow("select count(*) from $[plat].first_dict where option_name=? and kind_id=?",new String[]{option_name,kind_id});
+				if(!dual[0].equals("0")){
+					<?{success:false,message:"?>jacper.trans("字典名称重复，同类型下的字典名称不能重复!")<?"}?>;
+					return;
+				}
+				
+				String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+				if(idType==null||idType.equals("0")){
+					option_id = SQLUtils.getNextVal(conPlat,1)+"";
+				}else{
+					option_id =UUID.randomUUID().toString();
+				}
+				
+				
+				String insertStr="insert into $[plat].first_dict (option_id,option_name,kind_id,dict_type,value_length) values (?,?,?,?,?)";
+				conPlat.exec(insertStr,new String[]{option_id+"",option_name,kind_id,dict_type,value_length});
+				
+				String[] indexArray = jacper.getArray("index_id");
+				String[] optionCodeArray = jacper.getArray("option_code");
+				String[] optionValueArray = jacper.getArray("option_value");
+				String[] allowUsedArray = jacper.getArray("allow_used");
+				String[] isDefaultArray = jacper.getArray("is_default");
+
+				String[] rs= conPlat.getRow("select application_obj_id from $[plat].dict_kind where kind_id=?",new String[]{kind_id+""});
+
+				if(rs[0].equals("0")){
+					for(int i=0;i<optionCodeArray.length;i++){
+						conPlat.exec("insert into $[plat].second_dict (index_id,option_id,option_code,option_value,allow_used,is_default)  values (?,?,?,?,?,?)",new String[]{indexArray[i],option_id+"",optionCodeArray[i],optionValueArray[i],allowUsedArray[i],isDefaultArray[i]});
+					}
+				}else{
+						ObjectManager OM=ObjectManager.getInstance();
+						ObjectNode applicationNode=OM.getObject(rs[0]);
+						ApplicationFactory appFactory=ApplicationFactory.getInstance();
+						Application app=appFactory.getApplication(conPlat,rs[0]);
+						String dbLink=app.getDatabaseLink();
+						Connection conApp=jacper.getConnection(dbLink);
+						conApp.setAutoCommit(false);
+						for(int i=0;i<optionCodeArray.length;i++){
+							conApp.exec("insert into $["+dbLink+"].second_dict (index_id,option_id,option_code,option_value,allow_used,is_default)  values (?,?,?,?,?,?)",new String[]{indexArray[i],option_id+"",optionCodeArray[i],optionValueArray[i],allowUsedArray[i],isDefaultArray[i]});
+						}
+						conApp.commit();
+				}
+				conPlat.commit();
+				<?{success:true,option_id:'?>option_id<?'}?>;
+			}catch(Exception e){
+				e.printStackTrace();
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				if(e.getCause().getMessage().indexOf("ORA-00942")>-1){
+					<?{success:false,message:"?>jacper.trans("字典所在的应用未进行初始化字典,请在'体系设计'中找到该应用并点击初始化字典表!")<?"}?>;
+				}else{
+					<?{success:false,message:"?>e.toString()<?"}?>;
+				}
+			}finally{
+				try {
+					conPlat.setAutoCommit(true);
+				}catch(Exception e2) {}
+				conPlat.close();
+			}
+		}else if(types.equals("updatesave")){
+			try{	
+				String option_id=jacper.getString("option_id");
+				String updStr="update $[plat].first_dict set option_name=?,dict_type=?,value_length=? where option_id=?";
+				conPlat.exec(updStr,new String[]{option_name,dict_type,value_length,option_id+""});
+				DictFactory.getInstance().remove(Long.parseLong(option_id));
+				<?{success:true,option_id:'?>option_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else if(types.equals("delete")){
+			try{	
+				String option_id=jacper.getString("option_id","0");
+				conPlat.exec("delete from $[plat].first_dict where option_id=?",new String[]{option_id+""});
+
+				String[] rs= conPlat.getRow("select application_obj_id from $[plat].dict_kind where kind_id=?",new String[]{kind_id+""});
+
+				if(rs[0].equals("0")){
+						conPlat.exec("delete from $[plat].second_dict where option_id=?",new String[]{option_id+""});
+				}else{
+						ObjectManager OM=ObjectManager.getInstance();
+						ObjectNode applicationNode=OM.getObject(rs[0]);
+						ApplicationFactory appFactory=ApplicationFactory.getInstance();
+						Application app=appFactory.getApplication(conPlat,rs[0]);
+						String dbLink=app.getDatabaseLink();
+						Connection conApp=jacper.getConnection(dbLink);
+						conApp.exec("delete from $["+dbLink+"].second_dict where option_id=?",new String[]{option_id+""});
+				}
+				DictFactory.getInstance().remove(option_id);
+				<?{success:true,option_id:'?>option_id<?'}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}
+}
+}

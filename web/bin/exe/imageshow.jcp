@@ -1,0 +1,96 @@
+
+import java.io.InputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.*;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglibx.query.*;
+import com.susing.*;
+
+import com.kinglibx.query.*;
+import com.kinglib.bi.*;
+import com.kinglib.util.json.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	String queryString = jacper.getStr("queryId");
+	String data_column = jacper.getStr("dataColumn");
+	String file_name = jacper.getStr("fileName");
+	String file_type = jacper.getStr("fileType");
+	String file_size = jacper.getStr("fileSize");
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	String query_id=queryString;
+
+	QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+	QueryExtend QE=queryEF.getQueryExtend(conPlat,query_id);
+	Query query =QE.getQuery();
+	String server=QE.getServer(conPlat,query_id+"");
+	Connection conTemp = jacper.getConnection(server);
+	
+	Map p = Factory.newHashMap();
+
+	String dataId=jacper.getStr("dataId");
+	try{
+			if(dataId.equals("")){
+				p=p=QE.getAllQuerySearchCondition(jacper,conPlat,query,p);
+			}else{
+				p=QE.getQueryImportCondition(jacper,conPlat,query_id+"");
+				p=QE.getQuerySearchCondition(jacper,conPlat,query,p);
+			}
+
+			String[] title =new String[]{data_column,file_name,file_type,file_size};
+			String tempsql = query.parseSql(conPlat,title,p); 
+
+			int seq=jacper.getInt("seq",0);
+
+			Object[][] o= conTemp.getLarges(tempsql,new String[]{},seq,1);
+
+			if(o==null||o.length==0){
+				return ;
+			}else{
+
+				String fileName="";	
+				String fileType="text"; 
+				String fileSize="";
+
+				if(o[0][1]!=null)  
+					fileName=o[0][1].toString();	
+				
+				if(o[0][2]!=null)  
+					fileType=o[0][2].toString(); 
+				
+				if(o[0][3]!=null)  
+					fileSize=o[0][3].toString();
+
+				try{
+					fileName = new String(fileName.getBytes(),"iso-8859-1");
+				}catch(Exception e){}
+
+
+				InputStream in=null;
+				
+				if(o[0][0]!=null)  
+					in=((EFile)o[0][0]).getInputStream();
+
+				HttpServletResponse res = jacper.getResponse();
+				res.setContentType(fileType);
+				res.setHeader("Content-Disposition", "attachment;filename=" + fileName);
+				res.setHeader("Content-Length", fileSize);
+				res.setHeader("Accept-ranges", "bytes");
+				
+				if(in!=null)
+					Files.copyRange(in, res.getOutputStream(),1024);
+			}	
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+}

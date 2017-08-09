@@ -1,0 +1,115 @@
+            
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+
+import java.net.*;
+import java.io.IOException;
+import org.apache.commons.httpclient.*;
+import org.apache.commons.httpclient.methods.*;
+import org.apache.commons.httpclient.params.HttpMethodParams;
+                
+@class{
+
+	public void doGet(Jacper jacper){    
+
+		Connection conPlat = jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		String forder_id = jacper.getString("_id");		
+
+		String[] rs = conPlat.getRow("select register_code,active_code from $[plat].system_register ",new String[]{});
+		
+		String register_code="";
+		String active_key="";
+
+		if(rs!=null&rs.length!=0){
+			register_code=rs[0];
+			active_key=rs[1];
+		}		
+		<??>getXML(jacper,forder_id,register_code,active_key)<??>;
+	}
+	public String getXML(Jacper jacper,String id,String register_code,String active_key){
+		
+		String url = (String)com.susing.core.KingleSystem.getProperty("support_url");
+
+		Connection conPlat = jacper.getConnection("plat");
+		String[] rs = conPlat.getRow("select register_code,active_code,version from $[plat].system_register",null);
+		String rand="";	
+		String xmlString="";	
+
+		if(rs==null){
+			<?<script>alert("?>jacper.trans("系统未注册,请注册并获得商典公司认证后方可升级!")<?");</script>?>;
+		}else{
+
+			String urlString="";
+			try{
+				urlString="type=auth&register_code="+URLEncoder.encode(rs[0],"UTF-8")+"&active_code="+URLEncoder.encode(rs[1],"UTF-8");
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			url=url+"/getTree.jcp?"+urlString;
+
+			HttpClient httpclient = new HttpClient();
+			GetMethod method = new GetMethod(url);
+
+			method.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, 
+			new DefaultHttpMethodRetryHandler(3, false));
+			
+			try {
+			  int statusCode = httpclient.executeMethod(method);
+			  if (statusCode != HttpStatus.SC_OK) {
+				<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+			  }
+			  rand=method.getResponseBodyAsString();
+			} catch (HttpException e) {
+				 <?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+			  e.printStackTrace();
+			} catch (IOException e) {
+				<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+			  e.printStackTrace();
+			} finally {
+			   method.releaseConnection();
+			} 
+			if(rand.equals("true")){
+				rand="";
+				url = (String)com.susing.core.KingleSystem.getProperty("support_url");
+
+				try{
+					urlString="_id="+URLEncoder.encode(id,"UTF-8");
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+
+				url=url+"/getTree.jcp?"+urlString;
+				method = new GetMethod(url);
+
+				method.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, 
+				new DefaultHttpMethodRetryHandler(3, false));
+				
+				try {
+				  int statusCode = httpclient.executeMethod(method);
+				  if (statusCode != HttpStatus.SC_OK) {
+					<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+				  }
+				  xmlString=method.getResponseBodyAsString();
+				} catch (HttpException e) {
+					 <?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+				  e.printStackTrace();
+				} catch (IOException e) {
+					<?<script>alert("?>jacper.trans("不能连接商典系统认证服务器,请与北京商典信息科技有限公司联系!")<?");</script>?>;
+				  e.printStackTrace();
+				} finally {
+				   method.releaseConnection();
+				} 
+			}else{
+				<?<script>alert("?>jacper.trans("您的系统未通过商典公司认证,可能试用已过!")<?");</script>?>;
+			}
+		} 
+		return xmlString;
+	}
+}

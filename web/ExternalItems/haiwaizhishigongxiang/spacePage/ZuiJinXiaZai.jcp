@@ -1,0 +1,61 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+import gpra.filesystem.HWUnits;
+
+import java.text.SimpleDateFormat;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+
+	//public class up{
+@class{
+	public void doPost(Jacper jacper) {
+		JSONObject jbout=new JSONObject();
+		JSONArray ja = new JSONArray();
+		Connection con=jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			String spaceid=(String) jacper.getSession().get("HW_BASE_SPACEID");
+			String sql="";
+			
+			if(spaceid.equals("8afaec81-53efdc82-0153-efdc829f-0000")){
+				sql="select * from( select b.file_name,max(c.load_date),c.user_id,b.file_type,c.file_id from dir_download_count c inner join dir_file_base b on c.file_id=b.file_id  where b.is_result='0' group by (c.file_id,b.file_name,c.user_id,b.file_type)  order by max(c.load_date) desc) where  rownum<=30";
+			}else{
+				sql="select * from( select b.file_name,max(c.load_date),c.user_id,b.file_type,c.file_id from dir_download_count c inner join dir_file_base b on c.file_id=b.file_id  where b.space_id='"+spaceid+"' group by (c.file_id,b.file_name,c.user_id,b.file_type)  order by max(c.load_date) desc) where  rownum<=30";
+			}	
+			String[][]rs=con.get(sql);
+			String date="";
+			for (int i = 0; i < rs.length; i++) {
+				
+				User user = CertManager.getUser(rs[i][2]);
+				SimpleDateFormat sf = null;
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+				String sdate=rs[i][1];
+				if(sdate.indexOf(":")>-1){
+					sf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				}else{
+					sf=new SimpleDateFormat("yyyy-MM-dd");
+				}
+				String da= sdf.format(sf.parse(sdate));
+				
+				JSONObject jb=new JSONObject();
+				jb.put("xh",i+1);
+				jb.put("name",rs[i][0]);
+				jb.put("date",da);
+				jb.put("user",user!=null?user.getRealName():rs[i][2]);
+				jb.put("type",rs[i][3]);
+				jb.put("file_id",rs[i][4]);
+				ja.put(jb);
+			}
+			jbout.put("authArray",ja);
+			jacper.print(jbout);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	public void doGet(Jacper jacper){
+		doPost(jacper);
+	}
+}

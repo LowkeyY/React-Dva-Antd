@@ -1,0 +1,88 @@
+
+import com.kinglib.*;    
+import com.kinglib.dictionary.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+
+@class{
+public void doGet(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String parent_id = jacper.getStr("parent_id");
+	String type = jacper.getStr("type");
+	String module_id =jacper.getStr("module_id");
+	String ctrl_id = jacper.getStr("ctrl_id");
+	String option_id = jacper.getStr("option_id");
+
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+
+		JSONObject iconJSON = new JSONObject("{}");
+		String[][] rs = conPlat.get(
+		"select option_code,icon_path,column_name,option_id from $[plat].ctrl_tree_icon_map a where a.module_id=? and a.ctrl_id=? ",new String[]{module_id,ctrl_id});
+		String option_value =null;
+		if(rs!=null&&rs.length!=0){
+			Dict d=DictFactory.getInstance().getDict(conPlat,Long.parseLong(rs[0][3]));
+			for(int i=0;i<rs.length;i++){
+				iconJSON.put("option_code"+i,rs[i][0]);
+				iconJSON.put("icon_path"+i,rs[i][1]);
+				iconJSON.put("option_value"+i,d.getValue(rs[i][0]));
+			}
+			iconJSON.put("column_name",rs[0][2]);
+			iconJSON.put("iconNum",rs.length);
+			iconJSON.put("option_id",rs[0][3]);
+		}
+
+	   jacper.print("{success:true,data:"+iconJSON+"}");
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+	public void doPost(Jacper jacper){
+
+		Connection conPlat=jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		int user_id = (int)hs.uid;
+
+		String type = jacper.getStr("type");
+		String module_id = jacper.getStr("module_id");
+		String ctrl_id = jacper.getStr("ctrl_id");
+		String option_id = jacper.getStr("option_id");
+
+		String column_name = jacper.getStr("column_name");
+		int iconNum =jacper.getInt("iconNum",1);
+
+		try{	
+			conPlat.setAutoCommit(false);	
+			conPlat.exec("delete from $[plat].ctrl_tree_icon_map WHERE module_id=? and ctrl_id=?",new String[]{module_id,ctrl_id});
+			if(column_name.equals("-1")){
+				column_name="";
+			}
+			conPlat.exec("update $[plat].ctrl_tree set icon_item=? WHERE module_id=? and ctrl_id=?",new String[]{column_name,module_id,ctrl_id});
+			for(int i=0;i<iconNum;i++){
+				conPlat.exec("insert into $[plat].ctrl_tree_icon_map(module_id,ctrl_id,option_id,option_code,icon_path,column_name)values(?,?,?,?,?,?)",new String[]{module_id,ctrl_id,option_id,jacper.getStr("option_code"+i),jacper.getStr("icon_path"+i),column_name});
+			}
+			<?{success:true,id:'?>module_id<?'}?>;
+			conPlat.commit();
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}	
+	}
+}

@@ -1,0 +1,30 @@
+
+import com.kinglib.Jacper;
+
+import java.io.IOException;
+
+import javax.servlet.http.Cookie;
+import com.kinglib.HttpSession;
+
+import com.susing.KingleServletResponse;
+
+
+@class{
+
+	public void doGet(Jacper jacper) {
+		// 登陆检测
+		jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		// 设置cookie
+		<?<script type="text/javascript" src="/system.js"></script>
+		  <script>
+				set_cookie('real_name', '?>hs.getString("real_name")<?');
+				set_cookie('user_name', '?>hs.getString("user_name")<?');
+				set_cookie('user_id', '?>hs.getString("user_id")<?');
+				set_cookie('role_id', '?>hs.getString("role_id")<?');
+				self.location.replace("/home/desktop.html");
+		</script>?>;
+	}
+}
+          

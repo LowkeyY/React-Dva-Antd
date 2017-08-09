@@ -1,0 +1,182 @@
+import com.kinglib.*;
+import com.kinglib.workbench.system.Sys;
+import com.kinglib.workbench.system.SysFactory;
+import com.kinglib.i18n.develop.LanguageManager;
+import com.kinglib.i18n.develop.autotrans.AutoTranslateMachine;
+import com.kinglib.i18n.develop.dict.*;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.util.json.JSONPart;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map.Entry;
+
+@class{
+
+	public void doPost(Jacper jacper) {
+		Param param = new Param(jacper);
+		int mtype = jacper.getInt("mtype", 7);
+		String id = jacper.getStr("id");
+		String locale = jacper.getStr("lang");
+		String type = jacper.getStr("type");
+		String treeType = jacper.getStr("treetype");
+		Updatable u = getUpdatableDictionary(jacper,locale, mtype, id,treeType);
+
+		JSONPart result = new JSONPart();
+
+		if (type.equals("load")) {
+			JSONArray data = new JSONArray();
+			if (u.exists(param)) {
+				u.load(param);
+				HashMap<String, String> map = new HashMap<String, String>();
+				String[][] trans=u.getReferenceTable();
+				for (int i=0;i<trans.length;i++) {
+					JSONPart rec = new JSONPart();
+					rec.join("objectId",trans[i][2]);
+					rec.join("key", trans[i][0]);
+					rec.join("value", trans[i][1]);
+					rec.join("objectName",trans[i][3]);
+					data.put(rec);
+				}
+			}else{
+				for (String[] k : u.getTranslatable(param)) {
+					JSONPart rec = new JSONPart();
+					rec.join("objectId", k[0]);
+					rec.join("key", k[1]);
+					rec.join("value", "");
+					rec.join("objectName",k[2]);
+					data.put(rec);
+				}
+			}
+			result.join("data", data);
+		} else if (type.equals("translate")) {
+			JSONArray json;
+			try {
+				json = new JSONArray(jacper.getStr("fields"));
+				AutoTranslateMachine atm = LanguageManager.getInstance().getDefaultTranslateMachine();
+				String[] arr = new String[json.length()];
+				for (int i = 0; i < json.length(); i++) {
+					arr[i] = json.getJSONObject(i).getString("key");
+					
+				}
+				String[][] r = atm.translate(arr, locale);
+				for (int i = 0; i < json.length(); i++) {
+					json.getJSONObject(i).put("value", r[i][1]);
+				}
+				result.join("data", json);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else if (type.equals("addTranslate")) {
+			JSONArray json;
+			try {
+				json = new JSONArray(jacper.getStr("fields"));
+				AutoTranslateMachine atm = LanguageManager.getInstance().getDefaultTranslateMachine();
+				ArrayList<String> arrList=new ArrayList<String>();
+				for (int i = 0; i < json.length(); i++) {
+					if(json.getJSONObject(i).getString("value").trim().equals("")){
+						arrList.add(json.getJSONObject(i).getString("key"));
+					}
+				}
+				String[] arr = new String[arrList.size()];
+				arrList.toArray(arr);
+				String[][] r = atm.translate(arr, locale);
+				for (int i = 0; i <json.length(); i++){
+					for (int j = 0; j <r.length; j++){
+						if(json.getJSONObject(i).getString("key").equals(r[j][0]))
+							json.getJSONObject(i).put("value", r[j][1]);
+					}
+				}
+				result.join("data", json);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}else if (type.equals("save")) {
+			JSONArray json;
+			try {
+				u.destroy(param);
+				json = new JSONArray(jacper.getStr("fields"));
+				String[][] arr = new String[json.length()][3];
+				for (int i = 0; i < json.length(); i++) {
+					JSONObject j = json.getJSONObject(i);
+					arr[i][0] = j.getString("objectId");
+					arr[i][1] = j.getString("key");
+					arr[i][2] = j.getString("value");
+				}
+				u.create(param, arr);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else if (type.equals("delete")) {
+			u.destroy(param);
+		}
+		param.releaseResources();
+		result.join("success", true);
+		jacper.print(result);
+	}
+
+	private Updatable getUpdatableDictionary(Jacper jacper,String locale, int type, String id,String treetype) {
+		Updatable u = null;
+		switch (type) {
+			case 0:
+				u = new UpdatableApplicationDictionary(locale, id+":"+type);
+				break;
+			case 1:
+				if(treetype.equals("dict")){
+					type=50;
+				}else if(treetype.equals("mod_widget")){
+					type=8;
+				}else if(treetype.equals("mod_module")){
+					type=5;
+				}else if(treetype.equals("mod_workflow")){
+					type=32;
+				}else if(treetype.equals("mod_chart")){
+					type=9;
+				}else if(treetype.equals("mod_search")){
+					type=36;
+				}else if(treetype.equals("mod_panel")){
+					type=28;
+				}else if(treetype.equals("mod_map")){
+					type=11;
+				}
+				u = new UpdatableApplicationDictionary(locale, id+":"+type);
+				break;
+			case 4:
+				u = new UpdatableJsDictionary(locale, "js:" + id);
+				break;
+			case 5:
+				String propType="propertise";
+				if(id.indexOf("sys")==-1){
+					Connection con = jacper.getConnection("plat");
+					Sys s=SysFactory.getInstance().getSys(con,id);
+					propType=s.getSystemPname();
+					con.close();
+				}
+				u = new UpdatableJcpDictionary(locale, propType+":" + id);
+				break;
+			case 6:
+				u = new UpdatableUnitDictionary(locale, "unit:" + id);
+				break;
+			case 7:
+				u = new UpdatableProgramDictionary(locale, "program:" + id);
+				break;
+			case 8:
+				u = new UpdatableMenuDictionary(locale, id+":"+type);
+				break;
+			case 9:
+				u = new UpdatableDictDictionary(locale, "dict:" + id);
+				break;		
+			case 10:
+				u = new UpdatableSystemDictionary(locale, "system:");
+				break;
+			case 11:
+				u = new UpdatableJavaDictionary(locale, "propertise:" + id);
+				break;
+			case 12:
+				u = new UpdatableSysTableDictionary(locale, "table:" + id);
+				break;
+		}
+		return u;
+	}
+}

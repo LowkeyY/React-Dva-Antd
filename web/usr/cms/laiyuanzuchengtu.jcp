@@ -1,0 +1,69 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+
+import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.UUID;
+import com.susing.core.KingleSystem;
+
+@class{
+public void doGet(Jacper jacper) {
+doPost(jacper);
+}
+	public void doPost(Jacper jacper) {
+	try {
+			HttpSession hs = jacper.getSession();
+			Connection conEdu = jacper.getConnection("education");
+			String startdate = jacper.getString("startdate");
+			String enddate=jacper.getString("enddate");
+			enddate+="  23:59:59";
+			JSONObject jbout=new JSONObject();
+			JSONArray ja = new JSONArray();
+			
+			System.out.println(enddate);
+			System.out.println(startdate);
+			
+			String sqlsousuo="select count(*) from tongjiguanli where suosuoyinqing is not null and  shijian>=$str_date('"+startdate+"',111) and shijian<=$str_date('"+enddate+"',113) ";
+			String sqllaiyuan="select count(*) from tongjiguanli where laiyuanwangzhan is not null and  shijian>=$str_date('"+startdate+"',111) and shijian<=$str_date('"+enddate+"',113)";
+			String sql="select count(*) from tongjiguanli where laiyuanwangzhan is null and suosuoyinqing is null and shijian>=$str_date('"+startdate+"',111) and shijian<=$str_date('"+enddate+"',113)";
+	        
+	        
+	        String[][]rs=conEdu.get(sql);
+	        JSONObject rsjb=new JSONObject();
+	        rsjb.put("name","直接输入");
+	        rsjb.put("value",rs[0][0]);
+	        ja.put(rsjb);
+	        
+	        
+	        String[][]sqlsousuors=conEdu.get(sqlsousuo);
+	        JSONObject sqlsousuorsjb=new JSONObject();
+	        sqlsousuorsjb.put("name","搜索引擎");
+	        sqlsousuorsjb.put("value",sqlsousuors[0][0]);
+	        ja.put(sqlsousuorsjb);
+	        
+	        String[][]laiyuanrs=conEdu.get(sqllaiyuan);
+	        JSONObject laiyuanrsjb=new JSONObject();
+	        laiyuanrsjb.put("name","来源网站");
+	        laiyuanrsjb.put("value",laiyuanrs[0][0]);
+			ja.put(laiyuanrsjb);
+			
+			jbout.put("authArray",ja);
+			System.out.println(jbout);
+			jacper.print(jbout);
+	} catch (Exception e) {
+			e.printStackTrace();
+	}
+	}}

@@ -1,0 +1,154 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import java.util.UUID;
+@class{
+	public void doGet(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String parent_id = jacper.getStr("parent_id");
+		String type = jacper.getStr("type");
+
+		jacper.getResponse().setContentType("application/x-json");
+		try{
+			JSONObject dataJSON = new JSONObject("{}");
+			String[] rs = conPlat.getRow("SELECT  task_name, task_description, task_method, has_log, class_name,task_id,search_id,scraper_id FROM $[plat].sys_task where  task_id=?",new String[]{parent_id});
+			dataJSON.put("tasklogic_name",rs[0]);
+			dataJSON.put("task_desc",rs[1]);
+			dataJSON.put("task_method",rs[2]);
+			dataJSON.put("has_log",rs[3]);
+			if(!rs[2].equals("0")) rs[4]="";
+			dataJSON.put("class_name",rs[4]);
+			dataJSON.put("task_id",rs[5]);
+			dataJSON.put("quality_id",rs[6]);
+			dataJSON.put("scraper_id",rs[7]);
+			ObjectNode node=ObjectManager.getObject(parent_id);
+			if(node!=null){
+				dataJSON.put("lastModifyTime",node.getLastModifyTime());
+				dataJSON.put("lastModifyName",node.getLastModifyName());
+			}
+			JSONObject taskJSON = new JSONObject("{success:true}");
+			taskJSON.put("data",dataJSON);	
+			jacper.print(taskJSON.toString());		
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally {
+			conPlat.close();
+		}
+	}
+
+	public void doPost(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;   
+
+		String type = jacper.getStr("type");
+
+		String tasklogic_name = jacper.getStr("tasklogic_name");
+		String task_method = jacper.getStr("task_method");
+		String has_log = jacper.getStr("has_log");
+		String task_desc = jacper.getStr("task_desc");
+		String class_name = jacper.getStr("class_name");
+		String search_id = jacper.getStr("quality_id");
+		String scraper_id = jacper.getStr("scraper_id");
+		String parent_id = jacper.getStr("parent_id");
+	
+
+		if(task_method.equals("1")){
+			class_name="com.kinglib.task.ExeLogic";
+		}else if(task_method.equals("2")){
+			class_name="com.kinglib.task.ExeScript";
+		}else if(task_method.equals("3")){
+			class_name="com.kinglib.task.QueryTabMap";
+		}else if(task_method.equals("4")){
+			class_name="com.kinglib.task.ExeDataService";
+		}else if(task_method.equals("6")){
+			class_name="com.kinglib.task.Notify";
+		}else if(task_method.equals("7")){
+			class_name="com.kinglib.task.SearchEngine";
+		}else if(task_method.equals("8")){
+			class_name="com.kinglib.task.scraperSearch";
+		}else if(task_method.equals("9")){
+			class_name="com.kinglib.task.QualityEngine";
+		}
+		
+		jacper.getResponse().setContentType("application/x-json");
+		ObjectManager OM=ObjectManager.getInstance();
+		
+		if(type.equals("save")){ 
+			try{
+				conPlat.setAutoCommit(false);	
+				String object_id  = "";
+				String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+				if(idType==null||idType.equals("0")){
+					object_id = SQLUtils.getNextVal(conPlat,1)+"";
+				}else{
+					object_id =UUID.randomUUID().toString();
+				}
+				ObjectNode applicationNode=OM.getObject(parent_id);
+				applicationNode.addChild(conPlat,object_id,tasklogic_name,ObjectType.TASK,user_id);
+				conPlat.exec("INSERT INTO $[plat].sys_task (task_id,task_name,task_method,has_log,task_description,class_name,search_id,scraper_id) VALUES (?,?,?,?,?,?,?,?)",new String[]{object_id+"",tasklogic_name,task_method,has_log,task_desc,class_name,search_id,scraper_id});
+				conPlat.commit();
+				jacper.print("{success:true,id:'"+object_id+"'}");
+			}catch(Exception e){
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+					e.printStackTrace();
+					<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+		}else if(type.equals("updatesave")){
+			try{
+				conPlat.setAutoCommit(false);
+				ObjectNode taskNode=OM.getObject(parent_id);
+				taskNode.updateName(conPlat,tasklogic_name);
+				conPlat.exec("UPDATE $[plat].sys_task SET  task_name =?,task_method = ?,has_log = ?,task_description = ?,class_name=?,search_id=?,scraper_id=?  WHERE task_id=?",new String[]{tasklogic_name,task_method,has_log,task_desc,class_name,search_id,scraper_id,parent_id});
+				<?{success:true,id:'?>parent_id<?'}?>;
+				conPlat.commit();
+			}catch(Exception e){
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				e.printStackTrace();
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}
+		}else if(type.equals("delete")){
+			try{
+				conPlat.setAutoCommit(false);	
+				ObjectNode taskNode=OM.getObject(parent_id);
+				taskNode.destroy(conPlat);
+				conPlat.commit();
+				<?{success:true}?>;
+			}catch(Exception e){
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				e.printStackTrace();
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				try {
+					conPlat.setAutoCommit(true);
+					conPlat.close();
+				}catch(Exception e2) {}
+			}			
+		}
+	}
+}                                                                            

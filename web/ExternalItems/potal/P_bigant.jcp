@@ -1,0 +1,42 @@
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import zpluginlistenerautorun.BigAntSendMsg;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.User;
+
+
+
+
+@class{
+	public void doPost(Jacper jacper) {
+		String userId = String.valueOf(jacper.getSession().uid);
+		JSONObject result = new JSONObject();
+		User user = CertManager.getUser(userId);
+		try {
+			result.put("success", false);
+			if (user != null) {
+				int newMessageCounts = 0;
+				try {
+					newMessageCounts = Integer.parseInt(BigAntSendMsg.getMsgCount(user.getUserName()));
+					JSONArray datas = new JSONArray();
+					result.put("success", true);
+					datas.put(new JSONObject().put("applyTo", "desktop").put("newMessageCounts", newMessageCounts));
+					if(newMessageCounts > 0){
+						datas.put(new JSONObject().put("applyTo", "info").put("message", "您有"+newMessageCounts+"条新的即时通讯消息。"));
+					}
+					result.put("datas", datas);
+				} catch (Exception e) {
+					result.put("message", "即时通讯获取新消息失败！");
+				}
+			}
+			jacper.print(result.toString());
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+}

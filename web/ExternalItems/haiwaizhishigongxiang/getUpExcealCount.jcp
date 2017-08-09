@@ -1,0 +1,22 @@
+import gpra.filesystem.HWCreateSWFFileQueue;
+import gpra.filesystem.HWUpExcealUnits;
+import com.kinglib.*;
+
+		//	public class test{
+@class{
+	public void doPost(Jacper jacper){
+		String key=jacper.getString("key");
+		try{
+			int count= HWUpExcealUnits.getKey(key);
+			int Zcount= HWUpExcealUnits.getCountKey(key);
+			String statu=HWUpExcealUnits.getStatu(key);
+			jacper.print("{'success':true,'shengyu':'"+count+"','count' : '"+Zcount+"','statu':'"+statu+"'}");
+			
+		}catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	public void doGet(Jacper jacper){
+		jacper.print("{'count' : '"+HWCreateSWFFileQueue.getInstance().getCounts()+"}");
+	}
+}

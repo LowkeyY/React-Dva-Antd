@@ -1,0 +1,147 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.database.Attribute;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+
+import org.apache.poi.hssf.usermodel.HSSFFont;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFCell;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.util.Region;
+import org.apache.poi.hssf.usermodel.*;
+import java.io.FileOutputStream;
+import javax.servlet.http.HttpServletResponse;
+
+@class{
+	public void doPost(Jacper jacper){
+	
+					Param param = new Param(jacper);
+					param.put("jacper",jacper);
+					String parent_id = param.getString("parent_id","0");
+					String message = "";
+					boolean success = true;
+					String name="Download";
+					String title = ObjectManager.getObject(parent_id).getName();
+				try{	
+					HSSFWorkbook wb =new HSSFWorkbook();
+					HSSFSheet sheet = wb.createSheet();
+					wb.setSheetName(0,title);
+					sheet.setColumnWidth(0, 6500);
+					sheet.setColumnWidth(1, 4000);
+					sheet.setColumnWidth(4, 3500);
+					sheet.setColumnWidth(5, 3500);
+					sheet.setColumnWidth(8, 3500);
+					sheet.setColumnWidth(9, 6000);
+					
+					HSSFCellStyle style =wb.createCellStyle();
+					style.setBorderBottom(HSSFCellStyle.BORDER_THIN);
+	         		style.setBorderLeft(HSSFCellStyle.BORDER_THIN);
+	         		style.setBorderRight(HSSFCellStyle.BORDER_THIN);
+	         		style.setBorderTop(HSSFCellStyle.BORDER_THIN);
+	         		style.setAlignment(HSSFCellStyle.ALIGN_CENTER);
+	         		
+	         		HSSFFont font = wb.createFont();
+					font.setFontName("宋体");
+					font.setFontHeightInPoints((short)10);
+					
+					style.setFont(font);
+					
+					
+					
+					HSSFCellStyle style1 =wb.createCellStyle();
+					style1.setBorderBottom(HSSFCellStyle.BORDER_THIN);
+	         		style1.setBorderLeft(HSSFCellStyle.BORDER_THIN);
+	         		style1.setBorderRight(HSSFCellStyle.BORDER_THIN);
+	         		style1.setBorderTop(HSSFCellStyle.BORDER_THIN);
+	         		style1.setAlignment(HSSFCellStyle.ALIGN_CENTER);
+	         		
+	         		HSSFFont font1 = wb.createFont();
+					font1.setFontName("宋体");
+					font1.setFontHeightInPoints((short)13);
+					
+					style1.setFont(font1);
+					
+					HSSFRow row1 =sheet.createRow(0);
+					HSSFCell cell = row1.createCell(0);
+        
+        			String[] topName = {jacper.trans("数据项名称"),jacper.trans("拼音代码"),jacper.trans("类型"),jacper.trans("宽度"),jacper.trans("小数位数"),jacper.trans("计量单位"),jacper.trans("主键"),jacper.trans("非空"),jacper.trans("默认值"),jacper.trans("填写规定")};
+        			for(short i=0;i<topName.length;i++){
+        					cell = row1.createCell(i);
+				        	cell.setCellValue(new HSSFRichTextString(topName[i]));
+				        	cell.setCellStyle(style1);
+        			}
+        			
+		 			int count = 1;
+        			for(ObjectNode node: ObjectManager.getObject(parent_id).getChilds(ObjectType.METATABLE)){
+        				
+        				MetaTable mt = MetaFactory.getObject(node.getId());
+        				
+	 					HSSFRow row2 = sheet.createRow((short)count++);
+	 					
+				 //	 	sheet.addMergedRegion(new Region(count,(short)0,count++,(short)12));
+				 		row2.setHeightInPoints((short) 25);
+				 		HSSFCell cell2 = row2.createCell(4);
+				 		cell2.setCellStyle(style1);
+				 		cell2.setCellValue(new HSSFRichTextString(mt.getLname()));
+				 		
+				 		
+ 						for(MetaColumn col : mt.getColumns()){
+					 		HSSFRow row3 = sheet.createRow((short)count++);
+					 		HSSFCell cell3 = row3.createCell(2);
+					 		String key="";
+					 		String no="";
+					 		String ann = "";
+					 		if(col.getAttribute("ANNOTATION")!=null){
+					 			ann = col.getAttribute("ANNOTATION").getValue();
+					 		}
+							
+					 		if(col.isPrimaryKey()){
+					 		  	key=jacper.trans("是");
+					 		}else{
+					 			key=jacper.trans("否");
+					 		}
+					 		if(col.isNotNull()){
+					 		  	no=jacper.trans("是");
+					 		}else{
+					 			no=jacper.trans("否");
+					 		}
+					 	
+					 		String[] listName = {col.getLname(),col.getPname(),col.getDataType().toString(),col.getLength()+"",col.getDecimalDigits()+"",col.getUnit(),key+"",no+"",col.getDefaultValue(),ann};
+					 		for(short i=0;i<listName.length;i++){
+					 			cell3 = row3.createCell(i);
+					        	cell3.setCellValue(new HSSFRichTextString(listName[i]));
+					        	cell3.setCellStyle(style);
+        					}
+	        			}
+	        			
+	        		}
+	        		 	
+		
+			name = new String(title.getBytes("gb2312"),"iso-8859-1");	
+			HttpServletResponse res = jacper.getResponse();
+			res.setContentType("application/vnd.ms-excel");
+       		res.setHeader("Content-Disposition", "attachment;filename="+name+".xls");
+			res.setHeader("Accept-ranges", "bytes");
+			wb.write(res.getOutputStream());
+		    
+          	
+          } catch (Exception e) {
+            e.printStackTrace();
+           	success = false;
+        	message = e.getMessage();
+        }
+    	  if(!success){
+			<?<script>alert("Excel?>jacper.trans("生成错误,原因是:")+message<?");window.close();</script>?>;
+			return;
+		}
+        
+        
+	}
+}

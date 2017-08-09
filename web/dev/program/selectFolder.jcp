@@ -1,0 +1,68 @@
+import com.kinglib.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.workbench.application.*;
+import com.kinglib.util.json.*;
+import java.util.*;
+import java.text.Collator;
+
+@class{
+	public void doPost(Jacper jacper){
+		Connection conPlat=jacper.getConnection("plat");
+		String id=jacper.getStr("node");
+		ArrayList<String[]> al=new ArrayList<String[]>(5);
+
+		if(id.indexOf(":")==-1){
+			ObjectNode pnode=ObjectManager.getObject(id);
+			if(pnode==null) return;
+			ProgramFactory prgFactory=ProgramFactory.getInstance();
+			Program prg=null;
+			for(ObjectNode node:pnode.upTo(ObjectType.MODULE).findAllChildsByType(ObjectType.PROGRAM)){
+				prg=prgFactory.getProgram(conPlat,node.getId());
+				if(prg.getType()==ProgramType.FOLDER.getValue()){
+					String programId=prg.getId()+"";
+					String[][] rs=conPlat.get("select a.id,a.dir_name,a.start_icon,a.end_icon,b.id from $[plat].prg_folder a left outer join (select max(id) as id ,parent_id as parent_id  from $[plat].prg_folder  group by parent_id)  b on  a.id=b.parent_id where a.object_id=? and a.parent_id=? order by a.seq",new String[]{programId,"0"},0);
+					if(rs!=null && rs.length>0){
+						for(int i=0;i<rs.length;i++){
+							String isLeaf="false";
+							if(rs[i][4].equals(""))
+								isLeaf="true";
+							al.add(new String[]{rs[i][0]+":"+programId+":Folder",rs[i][1],"true",isLeaf,"/themes/icon"+rs[i][2]});
+						}
+					}
+				}
+			}	
+		}else{
+			String[] ids=id.split(":");
+			String folderId=ids[0];
+			String programId=ids[1];
+			String[][] rs=conPlat.get("select a.id,a.dir_name,a.start_icon,a.end_icon,b.id from $[plat].prg_folder a left outer join (select max(id) as id ,parent_id as parent_id  from $[plat].prg_folder  group by parent_id)  b on  a.id=b.parent_id where a.object_id=? and a.parent_id=? order by a.seq",new String[]{programId,folderId},0);
+			if(rs!=null && rs.length>0){
+				for(int i=0;i<rs.length;i++){
+					String isLeaf="false";
+					if(rs[i][4].equals(""))
+						isLeaf="true";
+					al.add(new String[]{rs[i][0]+":"+programId+":Folder",rs[i][1],"true",isLeaf,"/themes/icon"+rs[i][2]});
+				}
+			}
+		}
+		conPlat.close();		
+		try{
+			JSONArray treeJSONArray=new JSONArray();
+			String cname="";
+			for(String[] r:al){
+				JSONObject resultJSON = new JSONObject();
+				resultJSON.put("text",r[1]);
+				resultJSON.put("allowSelect",r[2]);
+				resultJSON.put("leaf",r[3].equals("true"));
+				resultJSON.put("id",r[0]);
+				resultJSON.put("icon",r[4]);
+				treeJSONArray.put(resultJSON);
+			}			
+			jacper.print(treeJSONArray.toString());
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+}

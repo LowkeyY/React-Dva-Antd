@@ -1,0 +1,39 @@
+
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.ui.core.ButtonFactory;
+import com.kinglib.ui.core.CustomizeFactory;
+import com.kinglib.ui.core.CustomizeObject;
+import com.kinglib.ui.core.input.AbstractInput;
+import com.kinglib.ui.core.input.InputColumn;
+import com.kinglib.Err;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.util.json.JSONValue;
+
+@class{
+ 	public void doPost(Jacper jacper) {
+
+		HttpSession hs = jacper.getSession();
+		String userId = hs.uid + "";
+		Param param = new Param(jacper);
+		String qualityId = param.getStr("qualityId");
+		String instanceId = param.getStr("instanceId");
+		String resultDb=(String)com.susing.core.KingleSystem.getProperty("quality_db");
+		Connection conQualityDb = jacper.getConnection(resultDb);
+
+		JSONObject batchJSON = new JSONObject();
+		try {
+			String dataId=param.getStr("exportData");
+			conQualityDb.exec("delete from $["+resultDb+"].quality_result where quality_id = ?  and instance_id =?  and export_data = ?",new String[]{qualityId,instanceId,dataId});
+			conQualityDb.exec("delete from $["+resultDb+"].quality_result_detail where quality_id = ?  and instance_id =?  and export_data = ?",new String[]{qualityId,instanceId,dataId});
+			batchJSON.put("success",true);
+			jacper.print(batchJSON);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+				conQualityDb.close();
+		}
+	}
+ }

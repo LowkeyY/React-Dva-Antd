@@ -1,0 +1,62 @@
+
+import java.io.IOException;
+import java.awt.Color;
+import java.awt.GradientPaint;
+import java.io.OutputStream;
+
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+    
+@class{	   
+
+public void doPost(Jacper jacper){
+	
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+
+	Connection conUtils = jacper.getConnection("utils");
+
+	String types=jacper.getStr("type");
+	String archive_id=jacper.getString("archive_id","0");
+	String dept_id=jacper.getStr("pid");
+	String name=jacper.getStr("name");
+	name=name.replaceAll("'","\\\\'");
+	try{	
+		if(types.equals("save")){	
+
+			String newid  = "";
+
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				newid = SQLUtils.getNextVal(conUtils,1)+"";
+			}else{
+				newid =UUID.randomUUID().toString();
+			}
+			
+
+			String insertStr="insert into $[utils].ELECTRONIC_ARCHIVE (id,name,DEPT_ID,CREATE_DATE) values (?,?,?,sysdate)";
+			conUtils.exec(insertStr,new String[]{newid+"",name,archive_id+"",});
+
+			archive_id = newid;
+
+			<?{success:true,archive_id:'?>newid<?'}?>;
+		}else if(types.equals("updatesave")){
+			String updStr="update $[utils].ELECTRONIC_ARCHIVE set name=? where id=?";
+			conUtils.exec(updStr,new String[]{name,archive_id+""});
+			<?{success:true,archive_id:'?>archive_id<?'}?>;
+		}else if(types.equals("delete")){
+			conUtils.exec("delete from $[utils].ELECTRONIC_ARCHIVE_MANAGER where  ARCHIVE_ID=?", new String[]{archive_id+""});
+			conUtils.exec("delete from $[utils].ELECTRONIC_ARCHIVE where  ID=?", new String[]{archive_id+""});
+			<?{success:true}?>;
+		}
+
+	}catch(Exception e){
+		<?{success:false,message:"?>e.toString()<?"}?>;
+	}finally{
+		conUtils.close();
+	}
+	//¸üÐÂ»º´æ
+	com.km.file.FileConfigFactory.getInstance().resetArchiveCache();
+  }
+}

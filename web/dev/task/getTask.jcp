@@ -1,0 +1,71 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+	public void doPost(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String  parent_id = jacper.getString("parent_id","1");
+		String type = jacper.getStr("type");
+		jacper.getResponse().setContentType("application/x-json");
+		if(type.equals("getSearch")){
+			try{
+				Connection conPlat = jacper.getConnection("plat");
+				JSONObject optionJSON = new JSONObject("{}");
+				ObjectNode taskNode=ObjectManager.getObject(parent_id);
+				ObjectNode appNode=taskNode.upTo(1);
+				String appId=appNode.getId();
+				String[][] searchs  = conPlat.get("select f.object_id,f.logicName from $[plat].search_base f,$[plat].object_base e where f.object_id=e.object_id and e.parent_id=? order by f.logicName",new String[]{appId+""});
+				conPlat.close();
+				JSONArray jarr=new JSONArray();
+				for(int i=0;i<searchs.length;i++){
+					JSONObject items = new JSONObject("{}");
+					items.put("id",searchs[i][0]);
+					items.put("title",searchs[i][1]);
+					jarr.put(items);
+				}
+				optionJSON.put("searchs",jarr);	
+				<??>optionJSON.toString()<??>;
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}else if(type.equals("getScraper")){
+			try{
+			
+				ObjectNode taskNode=ObjectManager.getObject(parent_id);
+				
+				JSONArray jarr=new JSONArray();
+				for(ObjectNode node:taskNode.upTo(ObjectType.APPLICATION).findAllChildsByType(ObjectType.SCRAPER)){
+						JSONObject items = new JSONObject();
+						items.put("id",node.getId());
+						items.put("title",node.getName());
+						jarr.put(items);
+				}
+				jacper.print("{scrapers:"+jarr+"}");
+				
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}else if(type.equals("getQuality")){
+			try{
+				JSONObject optionJSON = new JSONObject("{}");
+				ObjectNode taskNode=ObjectManager.getObject(parent_id);
+				ObjectNode appNode=taskNode.upTo(ObjectType.APPLICATION);
+				JSONArray jarr=new JSONArray();
+				for(ObjectNode node:appNode.findAllChildsByType(ObjectType.QUALITY)){
+						JSONObject items = new JSONObject();
+						items.put("id",node.getId());
+						items.put("title",node.getName());
+						jarr.put(items);
+				}
+				optionJSON.put("qualitys",jarr);	
+				<??>optionJSON.toString()<??>;
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	}
+}                                                                            

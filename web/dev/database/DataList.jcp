@@ -1,0 +1,176 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.database.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.utils.*;
+
+import com.susing.sql.DataSourceFactory;
+import com.kinglib.bi.*;
+import java.util.ArrayList;
+
+
+
+
+@class{
+	public void doPost(Jacper jacper){
+
+		String objectId = jacper.getString("id","-1");
+		int startRow = jacper.getInt("start",0);
+		int rowCount = jacper.getInt("limit",100);
+
+		if(!objectId.equals("-1")){
+
+			MetaTable mt = MetaFactory.getObject(objectId);
+			Connection conLocal=jacper.getConnection(mt.getDblink());
+			ArrayList<MetaColumn> colArr=new ArrayList<MetaColumn>();
+			
+		
+			for(MetaColumn mc:mt.getColumns()){
+				DataType type=mc.getDataType();
+				if(type!=DataType.CLOB && type!=DataType.BLOB && type!=DataType.GEOMETRY){ 
+					colArr.add(mc);
+				}
+			}
+			MetaColumn[] cols=colArr.toArray(new MetaColumn[colArr.size()]); 
+			
+			StringBuilder sql = new StringBuilder(200);
+			
+			sql.append("select ");
+			for(int i=0;i<cols.length;i++){
+				if(i>0){
+					sql.append(",");
+				}
+				
+				if(cols[i].getDataType()==DataType.DATE){
+					sql.append("$date_str(").append(cols[i].getPname()).append(",111)");
+				}else{
+					sql.append(cols[i].getPname());
+				}
+			}
+			sql.append(" from ").append(mt.getName());
+	
+			try{
+				StringBuilder sqlCount = new StringBuilder();
+				sqlCount.append("select count(*) from ").append(mt.getName());		
+				String[][] mcount =conLocal.get(sqlCount.toString());
+				String[][] rs=conLocal.get(sql.toString(),null,startRow,rowCount);
+
+				 if(rs!=null){	
+						
+					JSONObject retJSON =  new JSONObject();
+					
+					JSONArray filed = new JSONArray();
+					for(int i=0;i<cols.length;i++){
+						filed.put(cols[i].getPname());
+					}
+					retJSON.put("fields",filed);
+					retJSON.put("totalNumber",Integer.parseInt(mcount[0][0]));
+
+					JSONArray data = new JSONArray();
+					for(int i=0;i<rs.length;i++){
+						JSONObject rowJSON = new JSONObject();
+						for(int j=0;j<cols.length;j++){
+							rowJSON.put(cols[j].getPname(),rs[i][j]);
+						}
+						data.put(rowJSON);
+					}
+					retJSON.put("data",data);
+					
+					JSONArray cm = new JSONArray();
+					for(int i=0;i<cols.length;i++){
+						JSONObject colJSON = new JSONObject();						
+						colJSON.put("dataIndex",cols[i].getPname());
+						colJSON.put("header",cols[i].getLname());
+						cm.put(colJSON);
+					}
+					retJSON.put("cm",cm);
+					jacper.print(retJSON);			
+ 
+				}
+			}catch(Exception e){
+			   e.printStackTrace();
+				String errorMessage=e.getCause().toString();
+				errorMessage=errorMessage.replaceAll("\"","").replaceAll("\n","");
+				<?{success:false,message:"?>errorMessage<?"}?>;
+				return;
+			}finally{
+				conLocal.close();
+			}	
+		}
+	}
+	public void doPut(Jacper jacper){
+				Param param=new Param(jacper);
+				String jsonStr=param.getStr("result");
+				String objectId = param.getString("id","-1");
+				boolean success=false;
+				String message=jacper.trans("参数传递不正确");
+				if(!objectId.equals("-1")&& jsonStr.length()>0){
+				
+					MetaTable mt = MetaFactory.getObject(objectId);
+					Connection conLocal=jacper.getConnection(mt.getDblink());
+					try{
+						
+						JSONArray recs=new JSONArray(jsonStr);
+						ArrayList<MetaColumn> colArr=new ArrayList<MetaColumn>();
+						JSONObject first=recs.getJSONObject(0);
+						
+						 //过滤掉不能修改的列
+						for(MetaColumn mc:mt.getColumns()){
+							if(first.has(mc.getPname())){ 
+								colArr.add(mc);
+							}
+						}
+						
+						MetaColumn[] cols=colArr.toArray(new MetaColumn[colArr.size()]); 
+						StringBuilder setClause = new StringBuilder(200);
+						StringBuilder whereClause = new StringBuilder(200);
+						for(int i=0;i<cols.length;i++){
+							if(i>0){
+								setClause.append(",");
+								whereClause.append(" and ");
+							}
+							CoreUtils.appendWhere(setClause,cols[i]," =","?");
+							CoreUtils.appendWhere(whereClause,cols[i],"=","?");
+						}
+						
+						//生成update语句
+						StringBuilder sql = new StringBuilder(setClause.length()*2+100);
+						sql.append("update ").append(mt.getName()).append(" set ");
+						sql.append(setClause).append(" where ").append(whereClause);
+						String[][] resArr=new String[recs.length()/2][cols.length*2];
+						for(int i=0,colIndex=0;i<resArr.length;i++,colIndex=0){
+							first=recs.getJSONObject(i*2);
+							for(int j=0;j<cols.length;j++){
+								resArr[i][colIndex++]=first.getString(cols[j].getPname());
+							}
+							first=recs.getJSONObject(i*2+1);
+							for(int j=0;j<cols.length;j++){
+								resArr[i][colIndex++]=first.getString(cols[j].getPname());
+							}
+						}
+						
+						conLocal.setAutoCommit(false);
+						conLocal.exec(sql.toString(),resArr);	
+						conLocal.commit();
+						conLocal.setAutoCommit(true);
+						success=true;
+					
+					}catch(Exception e){
+						try{
+							conLocal.rollback();
+							conLocal.setAutoCommit(true);
+						}catch(Exception ec){}
+						success=false;
+						message=e.getMessage();
+					}finally{
+						conLocal.close();
+					}
+				}
+				jacper.print("{success:"+success+",message:'"+message+"'}");
+		}
+}			
+
+
+

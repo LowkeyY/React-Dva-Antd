@@ -1,0 +1,74 @@
+                
+import com.kinglib.*;
+
+
+import com.susing.core.KingleSystem;
+import com.kinglib.workbench.*;
+import com.kinglib.bi.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.application.*;
+import com.kinglibx.query.Database;
+import java.sql.SQLException;
+@class{
+
+	public void doGet(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String dbLink = (String)com.susing.core.KingleSystem.getProperty("quality_db");
+
+		Connection conApp=jacper.getConnection(dbLink);
+		Connection conPlat=jacper.getConnection("plat");
+		try{
+			String catalog="";
+			String schema=conApp.parseObjectName(dbLink).toUpperCase();
+			try{
+				catalog=conApp.getCatalog();
+			}catch(SQLException se){}
+
+			String[][] data = Database.getTables(conApp,catalog,schema);
+			boolean created=false;
+			for(int i=0;i<data.length;i++){
+				if(data[i][2].toLowerCase().equals("quality_result")){
+					created=true;
+				}
+				if(created)
+					break;
+			}
+			if(!created){
+				conApp.setAutoCommit(false);
+				if (conPlat.getType() == com.susing.EasyConnection.SQLSERVER) {
+					conApp.exec("create table $["+dbLink+"].quality_result_summary(quality_id VARCHAR(36) not null,instance_id VARCHAR(36) not null,check_date DATETIME not null,quality_name VARCHAR(50) not null,quality_type VARCHAR(32) not null,instance_name VARCHAR(50) not null, error_type varchar(32) not null,scan_rows int not null,error_rows int not null,primary key(quality_id,instance_id,check_date))",new String[]{});
+					conApp.exec("create table $["+dbLink+"].quality_result(quality_id VARCHAR(36) not null,instance_id VARCHAR(36) not null,check_date DATETIME not null,quality_name VARCHAR(50) not null,instance_name VARCHAR(50) not null,quality_type VARCHAR(32) not null, title varchar(500) not null, export_data varchar(500) not null,error_desc varchar(1000) not null,notify_time int,primary key(quality_id,instance_id,check_date,export_data))",new String[]{});
+					conApp.exec("create table $["+dbLink+"].quality_result_detail(quality_id VARCHAR(36) not null,instance_id VARCHAR(36) not null,col_id VARCHAR(32) not null,check_date DATETIME not null, error_type varchar(32) not null,export_data varchar(500) not null,error_tip varchar(50),error_level varchar(32) not null,primary key(quality_id,col_id,instance_id,check_date))",new String[]{});
+				} else if (conPlat.getType() == com.susing.EasyConnection.ORACLE) {
+					conApp.exec("create table $["+dbLink+"].quality_result_summary(quality_id VARCHAR2(36) not null,instance_id VARCHAR2(36) not null,check_date DATE not null,quality_name VARCHAR2(50) not null,quality_type VARCHAR2(32) not null,instance_name VARCHAR2(50) not null, error_type varchar2(32) not null,scan_rows number(15) not null,error_rows number(15) not null,primary key(quality_id,instance_id,check_date))",new String[]{});
+					conApp.exec("create table $["+dbLink+"].quality_result(quality_id VARCHAR2(36) not null,instance_id VARCHAR2(36) not null,check_date DATE not null,quality_name VARCHAR2(50) not null,instance_name VARCHAR2(50) not null,quality_type VARCHAR2(32) not null, title varchar2(500) not null, export_data varchar2(500) not null,error_desc varchar2(1000) not null,notify_time NUMBER(10),primary key(quality_id,instance_id,check_date))",new String[]{});
+					conApp.exec("create table $["+dbLink+"].quality_result_detail(quality_id VARCHAR2(36) not null,instance_id VARCHAR2(36) not null,col_id VARCHAR2(32) not null,check_date DATE not null,export_data varchar2(500) not null, error_type varchar2(32) not null,error_tip varchar2(50),error_level varchar2(32) not null,primary key(quality_id,col_id,instance_id,check_date))",new String[]{});
+				} else if (conPlat.getType() == com.susing.EasyConnection.MYSQL) {
+					conApp.exec("create table $["+dbLink+"].quality_result_summary(quality_id VARCHAR(36) not null,instance_id VARCHAR(36) not null,check_date DATETIME not null,quality_name VARCHAR(50) not null,quality_type VARCHAR(32) not null,instance_name VARCHAR(50) not null, error_type varchar(32) not null,scan_rows int not null,error_rows int not null,primary key(quality_id,instance_id,check_date))",new String[]{});
+					conApp.exec("create table $["+dbLink+"].quality_result(quality_id VARCHAR(36) not null,instance_id VARCHAR(36) not null,check_date DATETIME not null,quality_name VARCHAR(50) not null,instance_name VARCHAR(50) not null,quality_type VARCHAR(32) not null, title varchar(500) not null, export_data varchar(500) not null,error_desc varchar(1000) not null,notify_time int,primary key(quality_id,instance_id,check_date))",new String[]{});
+					conApp.exec("create table $["+dbLink+"].quality_result_detail(quality_id VARCHAR(36) not null,instance_id VARCHAR(36) not null,col_id VARCHAR(32) not null,check_date DATETIME not null,export_data varchar(500) not null, error_type varchar(32) not null,error_tip varchar(50)),error_level varchar(32) not null,primary key(quality_id,col_id,instance_id,check_date))",new String[]{});
+				} else if (conPlat.getType() == com.susing.EasyConnection.POSTGRESQL) {
+					conApp.exec("create table $["+dbLink+"].quality_result_summary(quality_id VARCHAR(36) not null,instance_id VARCHAR(36) not null,check_date timestamp  not null,quality_name VARCHAR2(50) not null,quality_type VARCHAR2(32) not null,instance_name VARCHAR2(50) not null, error_type varchar(32) not null,scan_rows int not null,error_rows int not null,primary key(quality_id,instance_id,check_date))",new String[]{});
+					conApp.exec("create table $["+dbLink+"].quality_result(quality_id VARCHAR(36) not null,instance_id VARCHAR(36) not null,check_date timestamp  not null,quality_name VARCHAR2(50) not null,instance_name VARCHAR2(50) not null,quality_type VARCHAR2(32) not null, title varchar2(500) not null, export_data varchar(500) not null,error_desc varchar(1000) not null,notify_time int,primary key(quality_id,instance_id,check_date))",new String[]{});
+					conApp.exec("create table $["+dbLink+"].quality_result_detail(quality_id VARCHAR(36) not null,instance_id VARCHAR(36) not null,col_id VARCHAR(32) not null,check_date timestamp  not null,export_data varchar(500) not null, error_type varchar(32) not null,error_tip varchar(50) not null,error_level varchar(32),primary key(quality_id,col_id,instance_id,check_date))",new String[]{});
+				}
+				conApp.commit();
+			}
+			jacper.print("{success:true,quality_db:'"+dbLink+"'}");	
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conApp.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+			conApp.setAutoCommit(true);
+				if(conApp!=null)
+					conApp.close();
+			}catch(Exception e2) {}
+		}
+}
+}

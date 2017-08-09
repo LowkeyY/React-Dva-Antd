@@ -1,0 +1,81 @@
+
+import java.io.IOException;
+
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.workbench.*;
+import com.kinglib.database.*;
+import java.util.*;
+import com.kinglib.dictionary.*;
+
+@class{
+ public void doPost(Jacper jacper){
+		
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		Connection conPlat = jacper.getConnection("plat"); 
+		String type= jacper.getStr("type");
+
+		String[][] groups=null;
+
+		if(type.equals("table")){
+
+			String module_id = jacper.getStr("module_id");
+			String ctrl_id = jacper.getStr("ctrl_id");
+
+			String[] table_id = conPlat.getRow("select tab_id from $[plat].ctrl_tree where module_id=? and ctrl_id=?",new String[]{module_id,ctrl_id});
+		
+			MetaTable mt=MetaFactory.getObject(table_id[0]);
+			ArrayList<Column> al=new ArrayList<Column>();
+			for(MetaColumn c:mt.getColumns()){
+				if(c.getSpecialSet()==SpecialSet.Dict)
+					al.add(c);
+			}
+			JSONArray jarr=new JSONArray();
+			if(!al.isEmpty()){
+				try{
+					for(Column c:al){
+						AttributeDict ad=(AttributeDict)c.getAttribute("option_id");
+						if(ad!=null){
+							JSONObject items = new JSONObject();
+							items.put("value",c.getLname());
+							items.put("text",c.getId());
+							items.put("option_id",ad.getOptionId());
+							jarr.put(items);
+						}
+					}
+					JSONObject items = new JSONObject();
+					items.put("value",jacper.trans("无"));
+					items.put("text","-1");
+					items.put("option_id","");
+					jarr.put(items);
+					jacper.print("{items:"+jarr+"}");
+				}catch(Exception e){
+					e.printStackTrace();
+				}finally{
+					conPlat.close();
+				}
+			}else{
+				try{
+					JSONObject items = new JSONObject();
+					items.put("value",jacper.trans("无字典项"));
+					jarr.put(items);
+					jacper.print("{items:"+jarr+"}");
+				}catch(Exception ee){
+					ee.printStackTrace();
+				}
+			}
+		}else if(type.equals("column")){
+			Dict d=DictFactory.getInstance().getDict(conPlat,Long.parseLong(jacper.getStr("option_id")));
+			if(d!=null)
+				jacper.print(d.getJavascriptArray());
+			conPlat.close();
+		}
+		
+	}
+}

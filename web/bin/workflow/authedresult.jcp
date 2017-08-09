@@ -1,0 +1,72 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.workflow.loader.*;
+import org.w3c.dom.*;
+import java.io.*;
+import java.util.*;
+import javax.xml.parsers.*;
+import com.kinglib.workflow.spi.Step;
+import com.kinglib.workflow.loader.WorkflowDescriptor;
+import com.kinglib.workflow.loader.ActionDescriptor;
+import com.kinglib.workflow.Workflow;
+import com.kinglib.workflow.basic.BasicWorkflow;
+import com.kinglib.workflow.query.WorkflowQuery;
+import com.kinglib.util.json.*;
+import com.social.api.core.model.User;
+
+@class{
+
+public void doGet(Jacper jacper){
+	Connection conWork = jacper.getConnection("plat");
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;   
+	String instance_id=jacper.getStr("instanceId");
+	Workflow wf = new BasicWorkflow(user_id+"");
+	long id = Long.parseLong(jacper.getStr("entryId"));
+	String[][] historyResult=conWork.get("select step_id,caller,note from $[work].historystep  where entry_id=?",new String[]{id+""},0);
+	try{
+		JSONObject wfJSON=new JSONObject("{}");
+		wfJSON.put("success","true");
+		JSONArray historyArray = new JSONArray();
+		for(int i = 0; i < historyResult.length; i++){
+			JSONObject itemJSON=new JSONObject("{}");
+			itemJSON.put("stepId",historyResult[i][0]);
+			if(historyResult[i][1].equals("0")){
+				historyResult[i][1]=jacper.trans("超级用户");
+			}else{
+				User ul=User.getUser(historyResult[i][1]);
+				historyResult[i][1]=ul.getRealName();	
+			}
+			itemJSON.put("caller",historyResult[i][1]);
+			itemJSON.put("comment",historyResult[i][2]);
+			historyArray.put(itemJSON);
+		}
+		wfJSON.put("historyStep",historyArray);
+		List currentSteps = wf.getCurrentSteps(id);
+		List hitorySteps = wf.getHistorySteps(id);
+		JSONArray currentArray = new JSONArray();
+		for(int i = 0; i < currentSteps.size(); i++){
+			JSONObject itemJSON=new JSONObject("{}");
+			itemJSON.put("stepId",((Step) currentSteps.get(i)).getStepId());
+			itemJSON.put("stepStatus",((Step) currentSteps.get(i)).getStatus());
+			currentArray.put(itemJSON);
+		}
+		wfJSON.put("currentStep",currentArray);
+		JSONArray historyStepIdArray = new JSONArray();
+		for(int i = 0; i < hitorySteps.size(); i++){
+			JSONObject itemJSON=new JSONObject("{}");
+			itemJSON.put("stepId",((Step) hitorySteps.get(i)).getStepId());
+			historyStepIdArray.put(itemJSON);
+		}
+		wfJSON.put("historyStepIds",historyStepIdArray);
+		jacper.print(wfJSON);
+	}catch(Exception e){
+	}finally{
+		if(conWork!=null)
+			conWork.close();
+	}
+}
+}

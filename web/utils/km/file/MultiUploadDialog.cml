@@ -1,0 +1,38 @@
+<root><class name="utils.km.file.MultiUploadDialog"><MultiUploadDialog><![CDATA[.ux-cell-icon-delete {
+	background: url(../ExternalItems/docmgr/images/icons/delete.gif) no-repeat;
+	height: 16px;
+	cursor: pointer;
+}
+
+.ux-cell-icon-completed {
+	background: url(../ExternalItems/docmgr/images/icons/tick.gif) no-repeat;
+	height: 16px;
+}
+
+.ux-cell-icon-clear {
+    background: url(../ExternalItems/docmgr/images/icons/bin_empty.png) no-repeat;
+    height: 16px;
+}
+
+.ux-cell-color-gray {
+	font-style:italic;
+	text-decoration: line-through;
+	color: gray;
+}
+.upload-progress-table {
+    width: auto;
+    border-collapse: collapse;
+    margin-top: 7px;
+    font: normal 11px tahoma, arial, verdana, sans-serif;
+}
+
+.upload-progress-table .upload-progress-label {
+    width: 60px;
+    text-align: left;
+    padding: 2px 2px 2px 15px;
+}
+.upload-progress-table .upload-progress-value {
+    width:150;
+}
+
+]]></MultiUploadDialog></class></root>

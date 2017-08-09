@@ -1,0 +1,190 @@
+
+import java.io.IOException;
+import java.awt.Color;
+import java.awt.GradientPaint;
+import java.io.OutputStream;
+
+import com.kinglib.*;
+import com.kinglib.ui.menu.*;
+import com.kinglib.util.json.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.UUID;
+
+@class{
+	public void doGet(Jacper jacper){
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		Connection conPlat = jacper.getConnection("plat");
+
+		String type=jacper.getStr("type");
+		String app_id=jacper.getStr("parent_app");
+
+		jacper.getResponse().setContentType("application/x-json");
+
+		try{
+			JSONObject menuJSON = new JSONObject("{}");				
+			JSONArray applicationJSONArray=new JSONArray();
+
+			if(type.equals("new")){
+				menuJSON.put("application_array",applicationJSONArray);	
+			}else{
+				String[] rs = conPlat.getRow("select app_name,app_title,app_seq,parent_app,all_use,son,app_path,icon_url,application_id,is_valid,ENTRY_DATE,CREATE_USER,app_id from $[plat].sys_application where app_id=?",new String[]{app_id+""});
+				if(rs!=null){
+					menuJSON.put("app_name",rs[0]);
+					menuJSON.put("app_title",rs[1]);
+					menuJSON.put("app_seq",rs[2]);
+					menuJSON.put("parent_app",rs[3]);
+					menuJSON.put("all_use",rs[4]);
+					menuJSON.put("son",rs[5]);
+					menuJSON.put("app_path",rs[6]);
+					menuJSON.put("icon_url",rs[7]);
+					menuJSON.put("application_id",rs[8]);
+					menuJSON.put("is_valid",rs[9]);	
+					menuJSON.put("entry_date",rs[10]);	
+					menuJSON.put("creater",rs[11]);	
+					menuJSON.put("id",rs[12]);	
+				}
+				menuJSON.put("application_array",applicationJSONArray);	
+			}
+			<?[?>menuJSON.toString()<?]?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+				conPlat.close();
+	}
+}   
+public void doPost(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;   
+
+	String type=jacper.getStr("type");
+
+	String app_name = jacper.getStr("app_name");
+	String app_title = jacper.getStr("app_title");
+	String app_seq = jacper.getStr("app_seq");
+	String app_path = jacper.getStr("app_path");
+	String icon_url = jacper.getString("icon_url_temp");
+	String application_id = jacper.getString("application_id");
+
+	String is_valid = String.valueOf(jacper.getStr("is_valid").equals("on"));
+	String all_use = String.valueOf(jacper.getStr("all_use").equals("on"));
+	String entryDate=(new SimpleDateFormat("yyyy/MM/dd")).format(new Date());
+
+	String portal_id = jacper.getString("portal_id");
+	String parent_app = jacper.getString("parent_app");
+
+	if(type.equals("save")){	
+		try{	
+			conPlat.setAutoCommit(false);
+			String app_id  = "";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				app_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				app_id =UUID.randomUUID().toString();
+			}
+
+			String from=jacper.getStr("from");
+			if(from.equals("menu")){
+				parent_app = jacper.getStr("id");
+			}
+			conPlat.exec("INSERT INTO $[plat].sys_application (app_id,app_name,app_title,parent_app,all_use,app_seq,son, app_path,icon_url,is_valid,application_id,portal_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",new String[]{app_id+"",app_name,app_title,parent_app+"",all_use+"", app_seq,"0",app_path,icon_url,is_valid+"",application_id,portal_id});
+
+			//同步Menu缓存--tz
+			Menu parent=MenuFactory.getInstance().getMenu(parent_app);
+			if(parent!=null){
+				Menu menu=new Menu(app_id,app_name,app_title,toInt(app_seq),entryDate,"0",String.valueOf(user_id),icon_url,portal_id,false);
+				menu.hang(parent);
+				MenuFactory.getInstance().addToCache(menu);
+			}
+			
+			<?{success:true,id:'?>app_id<?'}?>;
+			conPlat.commit();
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+			}catch(Exception e2) {}
+			conPlat.close();
+		}
+	}else if(type.equals("updatesave")){
+		try{	
+			conPlat.exec("UPDATE $[plat].sys_application SET app_name=?,app_title=?,all_use=?,app_seq=?,app_path=?,icon_url=?,is_valid=?,application_id=?  WHERE app_id=?",new String[]{app_name,app_title,all_use,app_seq,app_path,icon_url,is_valid,application_id,parent_app+""});
+			
+			//同步Menu缓存--tz
+			Menu m=MenuFactory.getInstance().getMenu(parent_app);
+			if(m!=null){
+				if(is_valid.equals("true")){
+					m.setPath(app_name);
+					m.setTitle(app_title);
+					m.setSequence(toInt(app_seq));
+					m.setEntryDate(entryDate);
+					m.setCreateUser(String.valueOf(user_id));
+					m.setIconUrl(icon_url);
+					m.setJson(null);
+					MenuFactory.getInstance().notifyCache(m);
+				}else{
+					MenuFactory.getInstance().removeMenu(parent_app);
+				}
+			}else{
+				if(is_valid.equals("true")){
+					String[] p=conPlat.getRow("select parent_app,portal_id from $[plat].sys_application where app_id=?",new String[]{parent_app});
+					Menu parent=MenuFactory.getInstance().getMenu(p[0]);
+					if(parent!=null){
+						Menu menu=new Menu(parent_app,app_name,app_title,toInt(app_seq),entryDate,"0",String.valueOf(user_id),icon_url,p[1],false);
+						menu.hang(parent);
+						MenuFactory.getInstance().addToCache(menu);
+					}
+				}
+			}
+
+
+			<?{success:true,id:'?>parent_app<?'}?>;
+		}catch(Exception e){
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			conPlat.close();
+		}
+	}else if(type.equals("delete")){
+		try{	
+			conPlat.setAutoCommit(false);
+			String[] rs = conPlat.getRow("SELECT parent_app FROM $[plat].sys_application WHERE app_id=?",new String[]{parent_app+""});
+			conPlat.exec("DELETE FROM $[plat].sys_application WHERE app_id=?",new String[]{parent_app+""});
+			<?{success:true,parent_app:'?>rs[0]<?'}?>;
+			conPlat.commit();
+			MenuFactory.getInstance().removeMenu(parent_app);
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+			}catch(Exception e2) {}
+			conPlat.close();
+		}
+	}
+}
+
+private int toInt(String str) {
+	try {
+		return Integer.parseInt(str);
+	} catch (Exception e) {
+		return 0;
+	}
+}
+
+
+}

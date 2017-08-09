@@ -1,0 +1,80 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.ui.core.parser.*;
+
+import com.susing.sql.DataSourceFactory;
+import com.kinglib.bi.*;
+import java.util.ArrayList;
+
+@class{
+	public void doGet(Jacper jacper){
+		Connection conGpraTemp = jacper.getConnection("plat");
+		String objectId=jacper.getString("objectId","");
+		String parent_id=jacper.getString("parent_id","");
+		if("".equals(parent_id)){
+			try{	
+				Object[] result=conGpraTemp.getLarge("select note from $[plat].help_category where object_id=?", new String[]{objectId});
+				if(result!=null && result.length>0){
+				    String note=result[0].toString();
+					jacper.print(note);
+				} else {
+					jacper.print("");
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+				jacper.print(jacper.trans("未找到请求的页面,错误为")+e.getMessage());
+			}finally{
+				try {
+					conGpraTemp.close();
+				}catch(Exception e2) {}
+			}	
+		} else if("".equals(objectId)){
+				try{	
+						Object[] result=conGpraTemp.getLarge("select note from $[plat].help_category where category_id=?", new String[]{parent_id});
+						if(result!=null && result.length>0){
+						    String note=result[0].toString();
+							jacper.print(note);
+						} else {
+							jacper.print("");
+						}
+					}catch(Exception e){
+						e.printStackTrace();
+						jacper.print(jacper.trans("未找到请求的页面,错误为")+e.getMessage());
+					}finally{
+						try {
+							conGpraTemp.close();
+						}catch(Exception e2) {}
+					}	
+		} else {
+				jacper.print(jacper.trans("未找到请求的页面"));
+		}
+		
+	}
+	public void doPost(Jacper jacper){
+		Connection conGpraTemp = jacper.getConnection("plat");
+		String objectId=jacper.getString("objectId","");
+		try{	
+				Object[] result=conGpraTemp.getLarge("select note from $[plat].help_category where object_id=?", new String[]{objectId});
+				if(result!=null && result.length>0){
+				    String note=result[0].toString();
+					jacper.print("{success:true,isdel:true}");
+				} else {
+					jacper.print("{success:true,isdel:false}");
+				}
+		}catch(Exception e){
+				e.printStackTrace();
+				jacper.print(jacper.trans("错误为")+e.getMessage());
+			}finally{
+				try {
+					conGpraTemp.close();
+				}catch(Exception e2) {}
+			}	
+	
+	}
+}

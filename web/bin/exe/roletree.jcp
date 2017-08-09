@@ -1,0 +1,166 @@
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.database.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.util.json.*;
+import com.social.api.core.model.*; 
+@class{
+private static int id=0;
+public void doGet(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+	String[][] groups = conPlat.get("SELECT b.option_code, b.option_value from $[plat].second_dict b WHERE b.option_id=6",new String[]{});
+	try{
+		JSONObject optionJSON = new JSONObject("{}");
+		JSONArray jarr=new JSONArray();
+		try{
+			for(int i=0;i<groups.length;i++){
+				JSONObject items = new JSONObject("{}");
+				items.put("ctrl_id",groups[i][0]);
+				items.put("text",groups[i][1]);
+				jarr.put(items);
+			}
+			optionJSON.put("authTypes",jarr);
+		}catch(Exception e){}
+		<??>optionJSON.toString()<??>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+public void doPost(Jacper jacper){
+
+	Connection conCert = jacper.getConnection("cert");
+	Connection conPlat = jacper.getConnection("plat");
+
+	String objectId=jacper.getString("objectId","-1");
+	if(objectId.equals("-1"))
+		return;
+	String tableId= ProgramFactory.getInstance().getProgram(conPlat,objectId).getTabId();
+	MetaTable mt=MetaFactory.getObject(tableId);
+	String dataId=jacper.getStr("dataId");
+	String[] values=dataId.split("::");
+	String name=mt.getName()+"_AUTH";
+	StringBuilder sb=new StringBuilder();
+	for(MetaColumn mc:mt.getPrimaryKeys()){
+		if(sb.length()>0)
+			sb.append(" and ");
+		CoreUtils.appendWhere(sb,mc,"?");
+	}
+	String condition=sb.toString()+" and auth_type=?";
+	String auth=jacper.getStr("authType");
+
+	String[] params=new String[values.length+1];
+	for(int i=0;i<params.length;i++){
+		if(i<params.length-1){
+			params[i]=values[i];
+		}else{
+			params[i]=auth;
+		}
+	}
+	String dept_id=jacper.getStr("node");
+
+	String authType=(String)com.susing.core.KingleSystem.getProperty("auth_type");
+
+	if(auth.indexOf("R")!=-1)
+		authType="1";
+	else 
+		authType="0";
+
+	Dept p=Dept.getDept(dept_id);
+
+	String[][] userArray=null;
+	if(authType.equals("0")){
+		ArrayList<User> userList=new ArrayList<User>();
+		p.getUsers(userList) ;
+		userArray=new String[userList.size()][2];
+		int i=0;
+		for(User u:userList){
+			userArray[i][0]=u.getUserId();
+			userArray[i][1]=u.getRealName();
+			i++;
+		}
+	}else if(authType.equals("1")){
+		ArrayList<Role> roleList=new ArrayList<Role>();
+		p.getRoles(roleList);
+		userArray=new String[roleList.size()][2];
+		int i=0;
+		for(Role r:roleList){
+			userArray[i][0]=r.getRoleId();
+			userArray[i][1]=r.getRoleName();
+			i++;
+		}
+	}
+	
+	StringBuffer sbf=new StringBuffer(100);
+	String[][] authArray=null;
+
+	String dbLink=mt.getDblink();
+	Connection conApp = jacper.getConnection(dbLink);	 
+	authArray=conApp.get("select USER_ID,DEPT_ID from "+name+"  where "+condition,params);
+
+	conPlat.close();
+	conCert.close();
+	for(int i=0;i<authArray.length;i++){
+		sbf.append(",");
+		sbf.append(authArray[i][1]);
+		sbf.append("_");
+		sbf.append(authArray[i][0]);
+	}
+	sbf.append(",");
+	String entered=sbf.toString();
+	sbf=null;
+
+	String[] ids = jacper.getArray("ids");
+	sbf=new StringBuffer(100);
+	for(int i=0;i<ids.length;i++){
+		sbf.append(",");
+	}
+	String haveEntered=sbf.toString();
+	sbf=null;
+
+	String[][] result1=new String[userArray.length+2][2];
+    for(int i=0;i<userArray.length;i++){
+		 result1[i][0]=dept_id+"_"+userArray[i][0];
+		 result1[i][1]=userArray[i][1];
+	}
+	result1[userArray.length][0]=dept_id+"_"+"-9";
+	result1[userArray.length][1]=jacper.trans("当前部门所有人员");
+	result1[userArray.length+1][0]=dept_id+"_"+"-99";
+	result1[userArray.length+1][1]=jacper.trans("当前部门及所有子部门人员");
+
+	try{
+		JSONArray treeJSONArray=new JSONArray();
+					
+		for(Dept d:p.getChilds()){
+			JSONObject resultJSON = new JSONObject("{}");
+			resultJSON.put("text",d.getShortName());
+			resultJSON.put("allowDrag",false);
+			resultJSON.put("leaf",false);
+			resultJSON.put("id",d.getDeptId());
+			resultJSON.put("icon","/themes/icon/all/chart_organisation.gif");
+			treeJSONArray.put(resultJSON);
+		}		
+
+	   for(int i=0;i<result1.length;i++){
+			if(entered.indexOf(","+result1[i][0]+",")!=-1) continue;
+			if(haveEntered.indexOf(","+result1[i][0]+",")!=-1) continue;
+			JSONObject resultJSON = new JSONObject("{}");
+			resultJSON.put("text",result1[i][1]);
+			resultJSON.put("allowDrag",true);
+			resultJSON.put("id",result1[i][0]);
+			resultJSON.put("leaf",true);
+			resultJSON.put("icon","/themes/icon/all/user.gif");
+			treeJSONArray.put(resultJSON);
+		}
+		jacper.print(treeJSONArray.toString());
+	}catch(Exception e){
+		e.printStackTrace();
+	}
+}
+}
+
+
+		

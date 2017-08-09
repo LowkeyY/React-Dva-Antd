@@ -1,0 +1,218 @@
+
+import java.io.IOException;
+import java.awt.Color;
+import java.awt.GradientPaint;
+import java.io.OutputStream;
+
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import SoftwareFX.ChartFX.*;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import java.io.*;
+import java.awt.*;
+import com.social.api.core.model.*; 
+
+@class{
+public void doGet(Jacper jacper){
+
+		Connection conCert= jacper.getConnection("cert");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		long user_id=hs.uid; 
+		String orgId="";
+
+		if (user_id==0||user_id==1){
+			Organization org=CertManager.getPrimaryOrg();
+			orgId=org.getId();
+		}else{
+			User user=CertManager.getUser(user_id+"");
+			orgId=user.getOrgId();
+		}
+
+
+		String title=jacper.trans("日访问统计");  
+		String bottom=jacper.trans("登入日期");
+		String left=jacper.trans("当日访问人次数(次)");
+		String sql="select $date_str(login_date,111),count(session_id)  from $[cert].user_logs where ";
+		int view =jacper.getInt("view",1);
+		
+		int maxUnitNumber=0;
+		if(view==1){
+			maxUnitNumber=4;
+		}else{
+			maxUnitNumber=3;
+		}
+		BufferedImage[] bufImage = new BufferedImage[maxUnitNumber];
+
+		for (int k=1;k<=maxUnitNumber;k++){
+			if(view==1){
+				switch(k){
+					case 1:
+						left=jacper.trans("当日访问人数");
+						sql = "select $date_str(b.login_date,111),count(distinct b.usr_id) from  $[cert].user_base a,$[cert].user_logs b where ";
+					break;
+					case 2:
+						left=jacper.trans("当日访问人次数(次)");
+						sql = "select $date_str(b.login_date,111),count(b.session_id) from  $[cert].user_base a,$[cert].user_logs b where ";
+					break;
+					case 3:
+						left=jacper.trans("当日使用时间(分钟)");
+						sql = "select $date_str(b.login_date,111),sum($minutediff(b.login_date,b.update_date)) from  $[cert].user_base a,$[cert].user_logs b where ";
+					break;
+					case 4:
+						left=jacper.trans("单次停留(分钟)");
+						sql = "select $date_str(b.login_date,111),sum($minutediff(b.login_date,update_date))/count(distinct(b.session_id)) as a from  $[cert].user_base a,$[cert].user_logs b where ";
+					break;
+				}
+			}else if(view==2){			
+				bottom="姓名";
+				switch(k){
+					case 1:
+						left=jacper.trans("访问次数");
+						sql="select a.real_name,count(b.session_id) from $[cert].user_base a,$[cert].user_logs b where ";
+					break;
+					case 2:
+						left=jacper.trans("使用时间(小时)");
+						sql="select a.real_name,sum($minutediff(b.login_date,b.update_date))/60 from $[cert].user_base a,$[cert].user_logs b where ";
+					break;
+					case 3:
+						left=jacper.trans("单次停留(分钟)");
+						sql="select a.real_name,sum($minutediff(b.login_date,b.update_date))/count(b.session_id) from $[cert].user_base a,$[cert].user_logs b where ";
+					break;
+				}
+			}
+			String firtim = jacper.getStr("firtim");
+			String sectim = jacper.getStr("sectim");
+			String[] param=null;
+			if(firtim.equals("null")||sectim.equals("null")||firtim.equals("")||sectim.equals("")||(firtim==null)||(sectim==null)){
+				param=new String[]{orgId};
+				if(view==1)
+					sql+=" a.user_id=b.usr_id and  a.org_id=? and $minutediff($getdate(),b.login_date)<30 group by $date_str(b.login_date,111) order by $date_str(b.login_date,111) ";
+				if(view==2)
+					sql+="a.user_id=b.usr_id and  a.org_id=?  and $minutediff($getdate(),b.login_date)<30 and b.usr_id!=1 group by a.real_name ";
+			}else{		
+				param=new String[]{orgId,firtim,sectim};
+				if(view==1)
+					sql+=" a.user_id=b.usr_id and  a.org_id=?  and  b.login_date between $str_date(?,111) and $str_date(?,111) group by $date_str(b.login_date,111) ";
+				if(view==2)
+					sql+=" a.user_id=b.usr_id and  a.org_id=?  and b.login_date between $str_date(?,111) and $str_date(?,111) and b.usr_id!=1 group by a.real_name ";
+			}
+
+			String[][] result = conCert.get(sql,param,0,100);
+			int currpage = jacper.getInt("currpage",0);
+			currpage *= 20;
+			int resu =0;
+			
+			if(result!=null)
+				resu = result.length;
+
+			if(resu>20){if(resu-currpage>20){resu=20;}else{resu=resu-currpage;}}
+			int start=currpage;
+			int end=currpage+resu;
+			int j=0;
+			int curve = jacper.getInt("curve",1);
+			
+			Chart chart = new  Chart();
+			chart.setGallery(curve); 
+			DefaultBorder myBorder = new DefaultBorder(0); 
+			chart.setBorderObject (myBorder);
+			chart.setAxesStyle(2);
+			chart.setRightGap(10);
+			chart.setBottomGap(10);
+			chart.setTopGap(10);
+			chart.setBackColor( java.awt.Color.decode("#FFFFFF") );
+			
+			Axis axisX = chart.getAxisX();
+			java.util.List list1 = new java.util.ArrayList(resu);
+			java.util.List list2 = new java.util.ArrayList(resu);
+			java.util.List list4 = new java.util.ArrayList();
+			if(resu>0){
+				for(int i=0;i<resu;i++){
+						list1.add(result[i][0]);
+						list2.add(new Float(Float.parseFloat(result[i][1])));
+				}
+			}else{
+						list1.add("0");
+						list2.add(new Float(Float.parseFloat("0")));
+			}
+		
+			list4.add(list1);
+			list4.add(list2);
+			SoftwareFX.ChartFX.ListProvider lstDataProvider = new SoftwareFX.ChartFX.ListProvider(list4);
+			chart.setDataSource(lstDataProvider);	
+
+			if((k==3&&view==2)||(k==4&&view==1)) axisX.setVisible(true);
+			else axisX.setVisible(false);
+
+			axisX.getTitle().setText(bottom);
+
+			SeriesAttributes series = null;
+			series = chart.getSeries(0);
+			series.setColor(java.awt.Color.decode("#00FF00"));
+			chart.setBorderEffect(BorderEffect.RAISED);
+			chart.setAxesStyle(AxesStyle.MATH);
+			
+			Axis axis=null;
+			axis = chart.getAxis(0);
+			axis.getTitle().setText(left);
+
+			if(k==1&&view==1){
+				chart.getTitle(0).setText(jacper.trans("系统访问统计"));
+			}else if(k==1&&view==2){
+				chart.getTitle(0).setText(jacper.trans("用户访问统计"));
+			}
+			chart.getTitle(0).setFont( new java.awt.Font("SimSun",java.awt.Font.BOLD, 15));
+			chart.getTitle(0).setTextColor(new java.awt.Color(0,0,0));
+
+			String width = jacper.getStr("width");
+			String height = jacper.getInt("height",400)/maxUnitNumber+"";
+			jacper.getResponse().setContentType("image/png");	
+			try{
+				ByteArrayOutputStream out = new ByteArrayOutputStream();
+				chart.getHtmlDataEx(width,height,"PNG",out,System.out,System.out);
+				bufImage[k-1]=ImageIO.read(new ByteArrayInputStream(out.toByteArray()) );
+			}catch(Exception e){
+				e.printStackTrace();
+		   }
+		}
+		try{
+			BufferedImage i3 = concat(bufImage,true);
+			ImageIO.write(i3, "PNG", jacper.getOutputStream());
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+}
+public static BufferedImage concat(Image[] images,boolean down){
+
+	int width=0;
+	int height=0;
+	for(int i=0;i<images.length;i++){
+		if(i==0){
+			width= images[i].getWidth(null);
+			height=images[i].getHeight(null);
+		}else if(down){
+			width = Math.max(width,images[i].getWidth(null));
+			height+=images[i].getHeight(null);
+		}else{
+			width+=images[i].getWidth(null);
+			height=Math.max(height,images[i].getHeight(null));
+		}
+	}
+	BufferedImage plat = new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
+	Graphics2D graphic = plat.createGraphics(); 
+
+	width=0;height=0;
+	for(int i=0;i<images.length;i++){
+		graphic.drawImage(images[i], java.awt.geom.AffineTransform.getTranslateInstance(width,height),null); 
+		if(down){
+			height+=images[i].getHeight(null);
+		}else
+			width+=images[i].getWidth(null);
+	}
+	return plat;
+}
+}

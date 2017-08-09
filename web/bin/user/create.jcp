@@ -1,0 +1,99 @@
+import com.kinglib.Connection;
+import com.kinglib.Err;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.dictionary.Dict;
+import com.kinglib.dictionary.DictFactory;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.util.json.JSONObject;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.Dept;
+
+@class{ 
+	public void doGet(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String type=jacper.getStr("type");
+		String dept_id=jacper.getStr("dept_id");
+		Connection conPlat = jacper.getConnection("plat");
+
+		jacper.getResponse().setContentType("application/x-json");
+
+		try{
+			JSONObject deptJSON = new JSONObject("{}");
+			Dict df=DictFactory.getInstance().getDict(conPlat,4014);
+			String deptjs=df.getJavascriptArray();  
+
+			if(type.equals("new")){
+				deptJSON.put("dept",deptjs);      
+				deptJSON.put("shortName","");
+				deptJSON.put("deptName","");
+				deptJSON.put("deptType","1");
+				deptJSON.put("sort_id","");
+				deptJSON.put("createDate","");
+				jacper.print(deptJSON);
+			}else{
+				Dept dept=Dept.getDept(dept_id);
+				deptJSON.put("shortName",dept.getShortName());
+				deptJSON.put("deptName",dept.getName());
+				deptJSON.put("deptType",dept.getDeptType());
+				deptJSON.put("dept",deptjs);
+				deptJSON.put("sort_id",dept.getSortId());
+				deptJSON.put("createDate",dept.getCreateDate());
+				if(dept.getCreateDate().equals("")){
+					deptJSON.put("createDateModify","");
+				}else{
+					deptJSON.put("createDateModify",dept.getCreateDate());
+				}
+				jacper.print(deptJSON);
+			}
+		}catch(Exception e){
+			e.printStackTrace(); 
+		}finally{
+			conPlat.close();
+		}
+	}   
+	public void doPost(Jacper jacper){
+
+ 		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid; 
+		String type = jacper.getStr("type");
+		String dept_id = jacper.getStr("dept_id");
+		String trueStr="";
+		Param param=new Param(jacper);
+		try{
+			if(type.equals("save")||type.equals("updatesave")){
+				String shortName = jacper.getStr("shortName");
+				String deptType = jacper.getStr("deptType");
+				String deptName = jacper.getStr("deptName");
+				if(type.equals("save")){
+					Dept dept=CertManager.createDept(param);	
+					trueStr="dept_id:"+dept.getDeptId()+",deptName:'"+deptName+"',shortName:'"+shortName+"'";
+				}else if(type.equals("updatesave")){
+					Dept depts=Dept.getDept(param.getStr("dept_id"));
+					int sort_id_new = param.getInt("sort_id", 1000) , sort_id_old = depts.getSortId();
+					depts.update(param);				
+					trueStr="dept_id:"+param.getStr("dept_id")+",deptName:'"+deptName+"',shortName:'"+shortName+"',sortChange:"+(sort_id_new != sort_id_old);
+				}
+			}else if(type.equals("delete")){
+				Dept deptt=Dept.getDept(param.getStr("dept_id"));
+				String parent_dept = deptt.getParent().getDeptId();
+				deptt.delete(param);
+				trueStr = "dept_id:" + parent_dept;
+			}else if(type.equals("move")){
+				Dept deptt=Dept.getDept(param.getStr("dept_id"));
+				deptt.move(param);
+				trueStr = "dept_id:" + deptt.getDeptId() + ",parent_dept_id:"+param.getStr("parent_dept_id");
+			}
+			jacper.print("{success:true,"+trueStr+"}");		
+		}catch(Err e){
+			jacper.print(e.toJSON(hs.uid+""));
+		}finally{
+				param.closeAllConnection();
+		}  
+	}
+}
+

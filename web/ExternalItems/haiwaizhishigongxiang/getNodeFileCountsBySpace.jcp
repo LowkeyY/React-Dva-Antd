@@ -1,0 +1,111 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.space.HWSpaceFactory;
+import gpra.filesystem.space.HWSpaceNode;
+import gpra.filesystem.space.HWSpaceFactory.HWSessions;
+
+import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+//public class getNodeFileCountsBySpace {
+@class{
+	public void doGet(Jacper jacper) {
+		HttpSession hs = jacper.getSession();
+		Connection con = jacper.getConnection(HWUnits.HW_DBLINK);
+		String currentNodeId = jacper.getStr("_id");
+		String path = jacper.getStr("_path");
+		HWSpaceNode currentSpace = HWSpaceFactory.getSpaceById(hs.getString(HWSessions.HW_BASE_SPACEID.name()));
+		if(currentNodeId.length() > 0 && path.length() > 0 && currentSpace != null){
+			boolean isTop = "top".equals(currentNodeId);
+			int currentNodeLevel = -1;
+			StringBuilder nodeDir = new StringBuilder(currentSpace.getSpaceId() + "/" + path.replace(isTop ? "top" : "top/", currentSpace.getDefaultDirId() + (isTop ? "" : "/")));
+			Pattern pattern = Pattern.compile("^(.+)__(\\d+)$");
+			Matcher mat = null;
+			if(isTop){
+				currentNodeId = currentSpace.getDefaultDirId();
+				currentNodeLevel = 1;
+			}else if((mat = pattern.matcher(currentNodeId)).find()){
+				currentNodeLevel = Integer.parseInt(mat.group(2));
+				currentNodeId = mat.group(1);
+			}
+			if(currentNodeLevel != -1){
+				int totalCounts = 0 , pos = -1;
+				if(currentSpace == HWSpaceFactory.getBaseSpace()){
+					HashMap<String, String> childAndParent = new HashMap<String, String>();
+					HashMap<String, Integer> parentCount = new HashMap<String, Integer>();
+					if(isTop){
+						String[][] rows = con.get("select c.id , c.p_id from dir_file_classified c where c.p_id is not null");
+						if(rows != null && rows.length > 0){
+							for(String[] row : rows){
+								childAndParent.put(row[0], row[1]);
+								parentCount.put(row[1], 0);
+							}
+						}
+					}
+					String[][] count = con.get("select f.country_id , count(*) from dir_file_base f where f.att_128 = '1' and f.is_secrecy = '0' group by f.country_id");
+					if(count!= null && count.length > 0){
+						JSONObject result = new JSONObject();
+						try {
+							for(String[] row : count){
+								String key = row[0];
+								int total = Integer.parseInt(row[1]);
+								if(parentCount.containsKey(key)){
+									total += parentCount.get(key);
+									parentCount.put(key, total);
+								} else if(childAndParent.containsKey(key)){
+									key = childAndParent.get(key);
+									total += parentCount.get(key);
+									parentCount.put(key, total);
+								}
+								result.put(key + "__" + String.valueOf(currentNodeLevel) , total);
+								totalCounts += total;
+							}
+							jacper.print("{success:true,childCounts:"+result.toString()+"}");
+							return;
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				} else{
+/*					String[] count = con.getRow("select count(*) from dir_file_base f left outer join dir_datum_file_reviewed r on f.file_id = r.file_id " +
+							"where r.file_audit = 1 and f.node_id = ?" , new String[]{currentNodeId});*/
+					String[] count = con.getRow("select count(*) from dir_file_base f where f.att_128 = '1' and f.node_id = ?" , new String[]{currentNodeId});
+					if(count!= null && count.length > 0)
+						totalCounts = Integer.parseInt(count[0]);
+					int prefixPath = nodeDir.length() + 37;
+					/*StringBuilder sql = new StringBuilder("select substr(f.file_dir , 0 , "+prefixPath+"), count(*) from dir_file_base f left outer join dir_datum_file_reviewed r on f.file_id = r.file_id" +
+							" where r.file_audit = 1 and f.file_dir like '"+nodeDir.toString()+"%' group by substr(f.file_dir , 0 , "+prefixPath+")");*/
+					StringBuilder sql = new StringBuilder("select substr(f.file_dir , 0 , "+prefixPath+"), count(*) from dir_file_base f" +
+							" where f.file_dir like '"+nodeDir.toString()+"%' and f.att_128 = '1' group by substr(f.file_dir , 0 , "+prefixPath+")");
+					long start = System.currentTimeMillis();
+					//System.out.println(sql.toString());
+					String[][] rows = con.get(sql.toString());
+					System.out.println("get counts need (" +(System.currentTimeMillis() - start)+")ms. rows :" + (rows == null ? "null" : rows.length));
+					if(rows != null && rows.length > 0){
+						JSONObject result = new JSONObject();
+						try {
+							result.put(isTop ? "top" : currentNodeId + "__" + String.valueOf(currentNodeLevel) , totalCounts);
+							for(String row[] : rows){
+								if((pos = row[0].lastIndexOf("/")) != -1)
+									result.put(row[0].substring(pos + 1) + "__" + String.valueOf(currentNodeLevel) , Integer.parseInt(row[1]));
+							}
+						} catch (JSONException e) {
+							e.printStackTrace();
+						}
+						jacper.print("{success:true,childCounts:"+result.toString()+"}");
+						return;
+					}
+				}
+		
+			}
+
+		}
+		jacper.print("{success:false}");
+	}
+}

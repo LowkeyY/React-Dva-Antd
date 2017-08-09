@@ -1,0 +1,89 @@
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.database.*;
+import com.kinglib.util.json.*;
+import java.sql.Types;
+@class{
+private static int id=0;
+public void doPost(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+	
+	String objectId=jacper.getString("objectId");
+	String tabId=jacper.getString("tabId","0");
+
+	String tab_id=jacper.getStr("node");
+	ArrayList<MetaTable> tableList=new ArrayList<MetaTable>();
+	MetaColumn[] columnArray=null;
+	
+	if(tabId.equals("0")){
+		ProgramFactory PF=ProgramFactory.getInstance();
+		Program program= PF.getProgram(conPlat, objectId);
+		tabId= program.getTabId();
+	}
+	if(tab_id.equals("0")){
+		MetaTable mt = MetaFactory.getObject(tabId);
+		MetaColumn[] MCA= mt.getColumnArray();
+		Constraint[] constraints=mt.getForeignKeyAndReference();
+		tableList.add(mt);
+		for(int i=0;i<constraints.length;i++){
+			if(tabId!=constraints[i].getLinkTable()){
+				MetaTable mt1 = MetaFactory.getObject(constraints[i].getLinkTable()); 
+				tableList.add(mt1);
+			}
+		}
+	}else{
+		String subTabId=tab_id;
+		if(tabId.equals(subTabId)){
+			MetaTable[] subTables=MetaFactory.getSubTables(tabId);
+			for(int i=0;i<subTables.length;i++){
+				tableList.add(subTables[i]);
+			}
+		}
+		MetaTable mt = MetaFactory.getObject(subTabId);
+		columnArray =mt.getColumnArray();
+	}
+
+	MetaTable[] tableArray=new MetaTable[tableList.size()];
+	tableList.toArray(tableArray);
+	conPlat.close();
+
+	try{
+		JSONArray treeJSONArray=new JSONArray();				
+		for(int i=0;i<tableArray.length;i++){
+			JSONObject resultJSON = new JSONObject("{}");
+			resultJSON.put("text",tableArray[i].getLname());
+			resultJSON.put("allowDrag",false);
+			resultJSON.put("leaf",false);
+			resultJSON.put("id",tableArray[i].getId());
+			resultJSON.put("icon","/themes/icon/database/table.gif");
+			treeJSONArray.put(resultJSON);
+		}
+	   if(columnArray!=null){
+		   for(int i=0;i<columnArray.length;i++){
+			   if(columnArray[i].getDataType()!=DataType.CLOB&&columnArray[i].getDataType()!=DataType.BLOB&&columnArray[i].getDataType()!=DataType.GEOMETRY&&columnArray[i].getDataType()!=DataType.UNSUPPORT){
+					MetaTable tempMt = columnArray[i].getTable(); 
+					JSONObject resultJSON = new JSONObject("{}");
+					resultJSON.put("text",columnArray[i].getLname());
+					resultJSON.put("allowDrag",true);
+					resultJSON.put("id",columnArray[i].getId());
+					resultJSON.put("specialSet",columnArray[i].getSpecialSet().getValue());
+					resultJSON.put("hasForeignKey",columnArray[i].hasForeignKey());
+					resultJSON.put("dataType",columnArray[i].getDataType().toString());
+					resultJSON.put("leaf",true);
+					resultJSON.put("icon","/themes/icon/common/list.gif");
+					treeJSONArray.put(resultJSON);
+				}
+			}
+		}
+		jacper.print(treeJSONArray.toString());
+	}catch(Exception e){
+		e.printStackTrace();
+	}
+}
+}
+
+
+		

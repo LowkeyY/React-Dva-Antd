@@ -1,0 +1,107 @@
+
+import java.io.IOException;
+import java.util.*;
+import com.kinglib.*;
+import com.kinglib.bi.*;
+import com.kinglibx.query.*;
+import com.kinglib.util.json.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.kinglibx.report.*;
+import electric.xml.*;
+
+import com.kinglib.util.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.ui.core.*;
+import com.kinglib.ui.core.utils.*;
+
+@class{ 
+	public void doGet(Jacper jacper){
+ 
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String userId=hs.uid+"";
+
+		Connection conPlat = jacper.getConnection("plat");
+
+		String report_id = jacper.getString("report_id","-1");
+
+		//jacper.getResponse().setContentType("application/x-json");
+
+		try{
+			String  query_id = jacper.getString("query_id","-1");
+			String reportType="normal";
+			String objectId="";
+			if(report_id.equals("-1")&&query_id.equals("-1")){
+				objectId=jacper.getStr("objectId");
+				Program prg =ProgramFactory.getInstance().getProgram(conPlat,objectId);
+				report_id=prg.getReportId();
+			}
+
+			JSONObject reportMetaJSON=new JSONObject("{}");
+
+			if(!report_id.equals("-1")&&query_id.equals("-1")){
+				ReportFactory tf=ReportFactory.getInstance();
+				Report rpt=tf.getReport(conPlat,report_id+"");
+				query_id=rpt.getQueryId();
+
+				QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+				QueryExtend QE=queryEF.getQueryExtend(conPlat,query_id);
+				Query query =QE.getQuery();
+				String[] titles = query.getCells();
+				String server=QE.getServer(conPlat,query_id+"");
+				Connection conTemp = jacper.getConnection(server);
+
+				Map p = Factory.newHashMap();
+				String retQuery=jacper.getStr("query");
+				if(retQuery.equals("")) 
+					retQuery="{}";
+				JSONObject searchJson=new JSONObject(retQuery);
+				
+				if(objectId.equals("")){
+					p=QE.getAllQuerySearchCondition(jacper,conPlat,query,p,searchJson);
+				}else{
+					p=QE.getQueryImportCondition(jacper,conPlat,query_id+"");
+					p=QE.getQuerySearchCondition(jacper,conPlat,query,p,searchJson);
+				}
+
+				String sql = query.parseSql(conPlat,titles,p);;
+				String sql_count = sql.toLowerCase();
+				String sqlCondion = "";
+				Pattern pt = Pattern.compile("order\\s+by");
+				int orderPos=-1;
+				Matcher m = pt.matcher(sql_count);
+				if(m.find())
+					orderPos=m.start();
+
+				if (orderPos != -1) {
+					sqlCondion = sql.substring(sql_count.indexOf("from"), orderPos);
+				} else {
+					sqlCondion = sql.substring(sql_count.indexOf("from"));
+				}
+
+				int rows = Integer.parseInt(conTemp.get("select count(1) as a from (select 1 as b " + sqlCondion+ ") derivedtbl", null)[0][0]);
+				reportMetaJSON.put("totalCount",rows);	
+				
+			    JSONArray JSONArray1 = new JSONArray();
+				
+				String reportContent=rpt.getContent();
+				ParseExcel xls = new ParseExcel((new Document(reportContent)).getRoot(),conTemp,p);
+				int pageSize=xls.getPageRowNumber();
+
+				for(int i=0;i<pageSize;i++){
+				   JSONObject itemJSON = new JSONObject();
+				   itemJSON.put("id",i);
+				   JSONArray1.put(itemJSON);      
+				}
+				reportMetaJSON.put("dataItem",JSONArray1);	
+			}
+			<??>reportMetaJSON.toString()<??>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+}

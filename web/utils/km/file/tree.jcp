@@ -1,0 +1,52 @@
+import java.io.IOException;      
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.smartkms.file.*;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+@class{
+public void doPost(Jacper jacper){
+	
+	boolean isLogin = jacper.setSession();  
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;
+	Connection conUtils = jacper.getConnection("utils");
+	Connection conCert = jacper.getConnection("cert");
+
+	String node=jacper.getStr("node");
+	if(node.equals("")) node="SystemFileRoot";
+ 
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{
+		FileConfig fileConf =FileConfigFactory.getInstance().getFileConfig(conUtils,conCert,user_id+"");
+		JSONArray pathJSONArray=new JSONArray();
+		if(node.equals("SystemFileRoot")){ 
+			pathJSONArray=fileConf.getLastState();
+		}else{
+			DirItem subNode=fileConf.getDir(node);
+			
+			if (subNode.getType() == FolderType.RecycleBin){
+			
+			}else if(subNode.hasChild()){
+				for (DirItem d : subNode.getChilds()) {
+					d=fileConf.getDir(d.getDirId());
+					if(d!=null)
+						pathJSONArray.put(d.toJSON());
+					else{
+						System.out.println(d.getDirId());
+					}
+				} 
+			}
+		}
+		<??>pathJSONArray.toString()<??>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conUtils.close();
+		conCert.close();
+	}
+}
+}

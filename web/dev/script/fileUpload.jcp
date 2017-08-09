@@ -1,0 +1,33 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import java.io.*;
+import com.susing.*;
+import com.susing.upload.FileUpload;
+
+@class{
+	public void doPost(Jacper jacper){
+		if(FileUpload.isMultipartContent(jacper.getRequest().getContentType())){
+			jacper=new JacperFile(jacper);
+			((JacperFile)jacper).action();
+		}
+		String uploadPath = jacper.getStr("url");
+		EFile[] ufs = ((JacperFile)jacper).getFiles("file-upload");
+		if ( ufs != null && ufs.length>0) {
+			for(EFile uf:ufs){
+				String fileName=uf.getAttribute("file-name");
+				fileName=fileName.substring(fileName.lastIndexOf("\\")+1,fileName.length());
+				String fileType=uf.getAttribute("content-type");
+				String fileSize = (int)uf.length()+"";
+				try{	
+					File uploadFile=uf.getFile();
+					uploadFile.renameTo(new File(uploadPath +"/"+ fileName));
+				}catch(Exception e){
+					e.printStackTrace();
+					jacper.print("{success:false,message:"+e.getMessage()+"}");
+				}
+			}
+			jacper.print("{success:true}");
+		}
+	}
+}

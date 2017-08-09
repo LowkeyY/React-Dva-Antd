@@ -1,0 +1,90 @@
+import java.io.IOException;   
+import java.io.*;  
+import java.text.SimpleDateFormat;    
+import java.util.Calendar; 
+import org.w3c.dom.*;
+import com.susing.core.*; 
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+@class{
+  public void doGet(Jacper jacper){
+    HttpServletRequest request = jacper.getRequest();
+    HttpServletResponse response = jacper.getResponse();
+    String dir=jacper.getStr("dir");
+    String[] filePathArray = (dir).split("\\/");
+    String relPath = "/";
+    if(filePathArray.length>1){
+      for(int t=1;t<filePathArray.length;t++){
+        relPath += filePathArray[t]+"/";
+      }
+    }
+    
+    try{
+      File file = new File(dir);
+      String[] fileList=file.list();
+      JSONObject  dirJSON=null;
+      dirJSON = new JSONObject("{}");     
+      JSONArray rowsJSONArray = new JSONArray();
+      for(int i=0;i<fileList.length;i++){
+        JSONObject nodeJSON = new JSONObject("{}");
+        File subFile = new File(dir+"/"+fileList[i]);
+        
+        if(subFile.isDirectory()&&!subFile.getName().equals(".svn")){
+          nodeJSON = new JSONObject("{}");
+          nodeJSON.put("fileName", fileList[i]);
+          nodeJSON.put("fileSize", "0");
+          nodeJSON.put("fileType", jacper.trans("文件夹"));
+          nodeJSON.put("updateTime", "0");
+          nodeJSON.put("folder",true);
+          nodeJSON.put("icon","folder");
+          nodeJSON.put("filePath",dir+"/");
+          nodeJSON.put("relPath",relPath);
+          rowsJSONArray.put(nodeJSON);
+        }else if(!subFile.getName().equals(".svn")){
+          if(fileList[i].split("\\.").length>1){
+            String[] fileNameArray=fileList[i].split("\\.");
+            nodeJSON.put("fileName", fileList[i]);
+            nodeJSON.put("fileSize", subFile.length());
+            nodeJSON.put("fileType", fileNameArray[fileNameArray.length-1]+jacper.trans("文件"));
+            Calendar cal = Calendar.getInstance();
+            long time = subFile.lastModified();
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            cal.setTimeInMillis(time);
+            nodeJSON.put("updateTime", formatter.format(cal.getTime()));
+            nodeJSON.put("folder",false);
+            nodeJSON.put("icon",fileNameArray[fileNameArray.length-1]);
+            nodeJSON.put("filePath",dir+"/");
+            nodeJSON.put("relPath",relPath);
+            rowsJSONArray.put(nodeJSON);
+          }
+        }
+        
+      }
+      dirJSON.put("success",true);
+      dirJSON.put("Rows",rowsJSONArray);
+      <??>dirJSON.toString()<??>;
+      
+    }
+    catch(Exception e){
+      try{
+			JSONObject	dirJSON=null;
+		 	dirJSON = new JSONObject("{}");	
+		 	dirJSON.put("success",false);
+		 	<??>dirJSON.toString()<??>;
+		}catch(Exception ex){
+			e.printStackTrace();
+		}	
+    }  
+  }
+  
+  public void doPost(Jacper jacper){
+    this.doGet(jacper);
+  }
+}

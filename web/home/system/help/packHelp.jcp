@@ -1,0 +1,95 @@
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+
+import java.io.File;
+import java.util.HashSet;
+import java.util.regex.*;
+
+import java.io.*;
+import javax.servlet.http.HttpServletResponse;
+import com.kinglib.util.Files;
+import com.susing.EFile;
+
+@class{
+		
+	HashSet<String> set = null;
+
+	String prefix ="";
+
+	Pattern pattern = Pattern.compile("\\<\\!--.+--\\>", Pattern.DOTALL);
+    Pattern patternCss = Pattern.compile("\\<head.*?\\<\\/span\\>\\<\\/p\\>", Pattern.DOTALL);
+  
+    
+	private void helpTrans( String pid, Connection conPlat, int lay,String title) {
+
+		Object[][] result = conPlat
+				.getLarges(
+						"select CATEGORY_ID,CATEGORY_NAME,NOTE from $[plat].help_category where parent_id=? order by CATEGORY_ID",
+						new String[] { pid });
+		String prefix=title;
+		int index=0;
+		if (result != null && result.length > 0) {
+			for (int row = 0; row < result.length; row++) {
+				index=row+1;
+				StringBuilder sb = new StringBuilder();
+				sb.append("<H").append(lay).append(">");
+				if (lay == 1) {
+					title=String.valueOf(index);
+					sb.append("<br>");
+					sb.append("<br>");
+					sb.append("<br>");
+					sb.append("第").append(title).append("章  ");
+				} else {
+					title=prefix+"."+index;
+					sb.append(title).append(" ");
+				}
+				sb.append(result[row][1].toString());
+				sb.append("</H").append(lay).append(">");
+				
+				out.append(sb);
+				out.append(trans(result[row][2].toString()));
+				if (set.contains(result[row][0].toString())) {
+					helpTrans(result[row][0].toString(), conPlat, lay + 1,title);
+				}
+			}
+		}
+	}
+
+	private String trans(String input) {
+		input=input.replaceAll("\\n", "");
+		input=input.replaceAll("\\r", "");
+		input=input.replaceAll("\\t", "");
+		input=input.replaceAll("\\<br\\>", "");
+		input=input.replaceAll("\\<img border\\=\\\"0\\\" src\\=\\\"\\/ExternalItems\\/jcp\\/help_images\\.jcp\\?mod_id\\=60424\\&images_id\\=img.jpg\\\"\\>", "");
+		Matcher matcher = pattern.matcher(input);
+		input=matcher.replaceAll("");
+		matcher = patternCss.matcher(input);
+		input=matcher.replaceAll("");
+		input=input.replaceAll("\\<html\\>", "");
+		input=input.replaceAll("\\<\\/html\\>", "");
+		input=input.replaceAll("\\<\\/body\\>", "");
+		input=input.replaceAll("\\<p\\>\\<span class\\=\\'themes-css-help-title-t1\\'\\>.*?\\<\\/span\\>\\<\\/p\\>","");
+		
+		return input;
+	}
+
+
+
+	StringBuilder out = null;
+
+	public void doGet(Jacper jacper) {
+		Connection conPlat = jacper.getConnection("plat");
+		String[][] result = conPlat.get("select distinct parent_id from $[plat].help_category", null);
+		set = new HashSet<String>(result.length);
+		for (int i = 0; i < result.length; i++) {
+			set.add(result[i][0]);
+		}
+		jacper.print("<html><title>全球油气资源信息库</title><head><link rel='stylesheet' type='text/css' href='/themes/css/help.css'/> <meta http-equiv='Content-Language' content='zh-cn'> <meta http-equiv='Content-Type' content='text/html; charset=gb2312'><style type='text/css'>h1 {font-family: '宋体';font-size: 38px;font-style: normal;font-weight: bold;}h2 {font-family: '宋体';font-size: 34px;font-style: normal;font-weight: bold;}h3 {font-family: '宋体';font-size: 30px;font-style: normal;font-weight: bold;}h4 {font-family: '宋体';font-size: 26px;font-style: normal;font-weight: bold;}h5 {font-family: '宋体';font-size: 22px;font-style: normal;font-weight: bold;}h6 {font-family: '宋体';font-size: 18px;font-style: normal;font-weight: bold;}</style> </head><body>");	
+		jacper.print("<br><br><br><br><p align='center'><span style='font-size: 35pt;font-family: 宋体'><strong>全球油气资源信息库</strong></span></p><p align='center'><span style='font-size: 30pt;font-family: 宋体'><strong>GPRDS 1.0</strong></span></p><br><br><br><p align='center'><span style='font-size: 35pt;font-family: 宋体'><strong>用户使用手册</strong></span></p><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><p align='center'><span style='font-size: 20pt;font-family: 宋体'><strong>2010年12月</strong></p><br><br><br>");
+		out = new StringBuilder();
+		helpTrans( "1", conPlat, 1, "");
+		jacper.print(out);
+		jacper.print("</body></html>");
+	}
+}

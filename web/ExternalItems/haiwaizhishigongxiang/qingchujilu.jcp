@@ -1,0 +1,24 @@
+import com.kinglib.*;
+import gpra.filesystem.HWUnits;
+
+//public class qingchujilu{
+@class{
+	public void doPost(Jacper jacper){
+		try{
+	    	Connection conDocmgr = jacper.getConnection(HWUnits.HW_DBLINK);
+	    	String id=jacper.getString("data");
+	    	
+	    	String in="";
+	    	String[] ids=id.split(",");
+	    	int start = 0;
+	   		for(String string : ids){
+	   			in += ((start++ > 0 ? "," : "") + ("'"+ string+"'"));
+	   		}
+	   		String sql="update DIR_DATUM_FILE_REVIEWED set BIAOSHI='1' where FILE_ID in("+in+")";
+	   		conDocmgr.exec(sql);
+		jacper.print("{success:true}");
+		} catch (Exception e) {
+					e.printStackTrace();
+		}
+	}
+}

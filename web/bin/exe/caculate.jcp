@@ -1,0 +1,662 @@
+
+import java.io.IOException;  
+
+
+import com.kinglib.*;
+import java.util.*;
+import java.io.*;
+import com.kinglib.util.*;
+import sun.misc.*; 
+import bsh.Interpreter;
+
+import com.susing.core.*;
+
+import com.kinglib.bi.*;
+import com.kinglib.database.*;
+import com.kinglibx.query.*;
+
+import com.kinglib.ui.core.input.AbstractSave;
+import com.kinglib.Err;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.workbench.dataservice.DataServiceClient;
+
+import com.kinglib.workbench.application.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.program.*;
+
+import com.kinglib.util.json.*;
+import com.kinglib.ui.core.parser.SearchEditorBuilder;
+import com.kinglib.workbench.widget.Widget;
+import com.kinglib.workbench.widget.WidgetFactory;
+
+import freemarker.template.*;
+
+import com.kinglib.util.*;
+import com.susing.server.SMSServer;
+import com.kinglib.ums.SendMail;
+import com.kinglib.ums.*;
+import com.kinglib.workbench.search.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+@class{
+ public void doPost(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		String parent_id=jacper.getStr("objectId");
+		
+		Program prg =ProgramFactory.getInstance().getProgram(conPlat,parent_id);
+		String taskType=prg.getTaskType();
+		/**
+		*
+		*taskType:
+		*[['1', "存储过程"], ['2', "Beanshell"], ['3', "抽取迁移"], ['4', "数据服务"], ['5', "条件抽取迁移"],["6","消息通知"]],
+		*
+		**/
+
+		if(taskType.equals("1")){
+			Connection conTmp1 = null;
+			String type=jacper.getStr("type");
+			String data_id=jacper.getStr("dataId");
+			String[] data_arr=null;
+				
+			if(type.equals("computethem")){
+				data_arr=jacper.getArray("data");
+			}else {
+				data_arr=new String[1];
+				data_arr[0]=data_id;
+			}
+			
+			String tempStr="select title,prog_type from $[plat].Ctrl_logic  where ctrl_id=? ";
+
+			String[] tab=conPlat.getRow(tempStr,new String[]{parent_id});
+
+			if(tab==null){
+				jacper.print("{success:false,message:'"+jacper.trans("没有定义存储过程程序")+"'}");
+				return;
+			}
+
+			ObjectManager OM=ObjectManager.getInstance();
+			ObjectNode appNode=OM.getObject(parent_id).upTo(ObjectType.APPLICATION);
+			String appId=appNode.getId();
+			ApplicationFactory appFactory=ApplicationFactory.getInstance();
+			Application app=appFactory.getApplication(conPlat,appId+"");
+			String dbLink=app.getDatabaseLink();
+
+			if(dbLink!=null){
+				conTmp1=jacper.getConnection(dbLink);
+			}else{
+				conTmp1=jacper.getConnection("plat");	  		
+			}
+
+			try {
+				conTmp1.setAutoCommit(false);	
+				for(int i=0,n=data_arr.length;i<n;i++){
+					String[] pkData=data_arr[i].split(":");
+					conTmp1.calls(tab[0],pkData);
+				}	
+				conTmp1.commit();
+				jacper.print("{success:true}");
+			}catch(Exception e) {
+				jacper.print("{success:false,message:"+e.getMessage()+"}");
+				try {
+					conTmp1.rollback();
+				}catch(Exception e1) {}
+			}finally {
+				try {
+					conTmp1.setAutoCommit(true);
+				}catch(Exception e2) {}
+			}
+		}else if(taskType.equals("2")){
+			Object[] data = conPlat.getLarge("SELECT SCRIPT_CONTENT FROM $[plat].APP_SCRIPT WHERE MODULE_ID=?",new String[]{parent_id+""});
+			if(data.length == 0){
+				jacper.print("{success:false,message:'"+jacper.trans("没有定义BeanShell执行程序")+"'}");
+			}else{
+				String eval=data[0].toString();
+				Interpreter inter = new Interpreter();
+				try{
+					inter.set("ENV",jacper);
+					inter.eval(eval);
+					jacper.print("{success:true}");
+				}catch(Exception e){
+					jacper.print("{success:false,message:"+e.getMessage()+"}");
+					throw new RuntimeException(e);
+				}
+			}
+		}else if(taskType.equals("3")){
+			
+				Connection conTmp1 = null;
+
+				String[][] prgBase=conPlat.get("select tab_id,query_id,index_id from $[plat].ctrl_tabquery  where object_id=? order by index_id desc",new String[]{parent_id});
+				
+				if(prgBase.length == 0){
+					jacper.print("{success:false,message:'"+jacper.trans("没有定义映射关系")+"'}");
+				}else{
+					try{
+						Logger log = Logger.getLogger("com.kinglib.ExeExtract");
+						log.setLevel(Level.ALL);
+						for(int m=0;m<prgBase.length;m++){	
+							
+							String tab_id=prgBase[m][0];
+							String index_id=prgBase[m][2];
+
+							MetaTable mt = MetaFactory.getObject(tab_id);
+							MetaColumn[] mc= mt.getPrimaryKeys();
+							String DbLink=mt.getDblink();
+							String tab_pname=mt.getName();
+
+							conTmp1=jacper.getConnection(DbLink);
+
+							String queryId="";
+							if(prgBase!=null) queryId=prgBase[m][1];						
+							Map p = Factory.newHashMap();
+
+							Connection con =null;
+							QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+							QueryExtend QE=queryEF.getQueryExtend(conPlat,queryId);
+							Query query =QE.getQuery();
+							String server=QE.getServer(conPlat,queryId);
+							con = jacper.getConnection(server);
+
+							p=QE.getQueryImportCondition(jacper,conPlat,queryId);
+						
+							String[][] lcolum=conPlat.get("select a.id, a.lname, a.pname, a.data_type,a.special_set,b.source_column from $[plat].meta_column a inner join $[plat].ctrl_transfer b on a.id = b.tabitem_id where b.module_id=?  and index_id=? order by a.id",new String[]{parent_id,index_id});
+
+							String[] fromColumn=new String[lcolum.length];
+							String[] toColumn=new String[lcolum.length];
+							Boolean haveLarge=false;
+							for(int i=0;i<lcolum.length;i++){	
+								if(lcolum[i][3].equals("2004")||lcolum[i][3].equals("2005")){
+									haveLarge=true;
+									break;
+								}
+							}
+							if(lcolum.length!=0){
+								for(int i=0;i<lcolum.length;i++){	
+										toColumn[i]=lcolum[i][2];
+										fromColumn[i]=lcolum[i][5];
+								}
+							}
+							String sql=query.parseSql(conPlat,fromColumn,p);
+							Object[][] dataFrom =null;
+							if(haveLarge){
+								dataFrom=con.getLarges(sql,new String[]{},0);
+							}else{
+								dataFrom=con.get(sql,new String[]{},0);
+							}
+							Param param=new Param(jacper);
+							param.set("local", conTmp1);
+							param.set("tableId", Integer.parseInt(tab_id));
+							log.info(query.getName()+"--->"+mt.getLname()+"("+mt.getName()+")");
+							ExtractSave extSave=new ExtractSave(param);
+							extSave.init(param);
+							
+							try{	
+								extSave.save(param,toColumn,dataFrom);
+								for(Attribute att:mt.getAttributes()){
+									if(att instanceof AttributeSequence){
+										MetaColumn col=mt.getColumn(att.getColumnId());
+										StringBuilder sb=new StringBuilder();
+										sb.append("select max(").append(col.getPname()).append(") from ");
+										sb.append(mt.getName());
+										String[] v=conTmp1.getRow(sb.toString());
+										int max=0;
+										if(v!=null && v.length>0){
+											try{
+												max=Integer.parseInt(v[0]);
+											}catch(Exception e){
+												max=0;
+											}
+										}
+										sb=new StringBuilder();
+										sb.append("UPDATE $[plat].A_APP_GLOBNUM set VALUE=").append(max);
+										sb.append(" WHERE ID=").append(((AttributeSequence)att).getSequenceId());
+										conPlat.exec(sb.toString());
+									}
+								}
+							}catch(Exception e){
+								e.printStackTrace();
+							}finally{
+								param.closeAllConnection();
+							}
+						}
+						jacper.print("{success:true}");
+					}catch(Exception e){
+						e.printStackTrace();
+						jacper.print("{success:false,message:"+e.getMessage()+"}");
+						throw new RuntimeException(e);
+					}
+				}
+		}else if(taskType.equals("4")){
+			try{
+				Param p = new Param(jacper);
+				DataServiceClient dsc = new DataServiceClient(conPlat, parent_id);
+				dsc.execute(p);
+				jacper.print("{success:true}");
+			}catch(Exception e){
+				e.printStackTrace();
+				jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+			}
+		}else if(taskType.equals("5")){
+				String type=jacper.getStr("type");
+				Connection conTmp1 = null;
+				String[][] prgBase=conPlat.get("select tab_id,query_id,index_id from $[plat].ctrl_tabquery  where object_id=? order by index_id desc",new String[]{parent_id});
+				
+				if(prgBase.length == 0){
+					jacper.print("{success:false,message:'"+jacper.trans("没有定义映射关系")+"'}");
+				}else{
+					if(type.equals("condition")){
+					try{
+							JSONObject contitionJSON=new JSONObject("{}");	
+							JSONObject searchFieldJSON;
+							contitionJSON.put("success","true");
+							String[] queryArr=new String[prgBase.length];
+							for(int i=0;i<prgBase.length;i++){
+								queryArr[i]=prgBase[i][1];
+							}
+							searchFieldJSON= getSearchEditor(jacper,conPlat,true,queryArr);
+							contitionJSON.put("searchEditor",searchFieldJSON);
+							<??>contitionJSON.toString()<??>;
+						}catch(Exception e){
+						    e.printStackTrace();
+						}
+					}else if(type.equals("exec")){
+						try{
+							Logger log = Logger.getLogger("com.kinglib.ExeExtract");
+							log.setLevel(Level.ALL);
+							for(int m=0;m<prgBase.length;m++){	
+								
+								String tab_id=prgBase[m][0];
+								String index_id=prgBase[m][2];
+
+								MetaTable mt = MetaFactory.getObject(tab_id);
+								MetaColumn[] mc= mt.getPrimaryKeys();
+								String DbLink=mt.getDblink();
+								String tab_pname=mt.getName();
+
+								conTmp1=jacper.getConnection(DbLink);
+
+								String queryId="";
+								if(prgBase!=null) queryId=prgBase[m][1];
+		
+								Map p = Factory.newHashMap();
+
+								Connection con =null;
+								QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+								QueryExtend QE=queryEF.getQueryExtend(conPlat,queryId);
+								Query query =QE.getQuery();
+								String server=QE.getServer(conPlat,queryId+"");
+								con = jacper.getConnection(server);
+
+								p=QE.getAllQuerySearchCondition(jacper,con,query,p);
+							
+								String[][] lcolum=conPlat.get("select a.id, a.lname, a.pname, a.data_type,a.special_set,b.source_column from $[plat].meta_column a inner join $[plat].ctrl_transfer b on a.id = b.tabitem_id where b.module_id=?  and index_id=? order by a.id",new String[]{parent_id,index_id});
+
+								String[] fromColumn=new String[lcolum.length];
+								String[] toColumn=new String[lcolum.length];
+								if(lcolum.length!=0){
+										for(int i=0;i<lcolum.length;i++){	
+											toColumn[i]=lcolum[i][2];
+											fromColumn[i]=lcolum[i][5];
+									}
+								}
+								String[][] dataFrom = query.getData(con,fromColumn,p);
+
+								Param param=new Param(jacper);
+								param.set("local", conTmp1);
+								param.set("tableId", Integer.parseInt(tab_id));
+								log.info(query.getName()+"--->"+mt.getLname()+"("+mt.getName()+")");
+								ExtractSave extSave=new ExtractSave(param);
+								extSave.init(param);
+								
+								try{	
+									extSave.save(param,toColumn,dataFrom);
+									for(Attribute att:mt.getAttributes()){
+										if(att instanceof AttributeSequence){
+											MetaColumn col=mt.getColumn(att.getColumnId());
+											StringBuilder sb=new StringBuilder();
+											sb.append("select max(").append(col.getPname()).append(") from ");
+											sb.append(mt.getName());
+											String[] v=conTmp1.getRow(sb.toString());
+											int max=0;
+											if(v!=null && v.length>0){
+												try{
+													max=Integer.parseInt(v[0]);
+												}catch(Exception e){
+													max=0;
+												}
+											}
+											sb=new StringBuilder();
+											sb.append("UPDATE $[plat].A_APP_GLOBNUM set VALUE=").append(max);
+											sb.append(" WHERE ID=").append(((AttributeSequence)att).getSequenceId());
+											conPlat.exec(sb.toString());
+										}
+									}
+								}catch(Exception e){
+									e.printStackTrace();
+								}finally{
+									param.closeAllConnection();
+								}
+							}
+							jacper.print("{success:true}");
+						}catch(Exception e){
+							e.printStackTrace();
+							jacper.print("{success:false,message:"+e.getMessage()+"}");
+							throw new RuntimeException(e);
+						}
+					}else{
+						jacper.print("{success:true,taskType:5}");
+					}
+				}
+		}else if(taskType.equals("6")){
+			String[][] data=null;
+			String notifyContent="";
+			String notifyType="";
+			String replacedContent="";
+			Object[] result =null;
+			try{
+				result = conPlat.getLarge("select notify_type,query_id,address_item,content,subject,smpt_server,smtp_user,smtp_passwd,from_address from $[plat].CTRL_NOTIFY where object_id=?",new String[]{parent_id});
+				
+				notifyType=result[0].toString();
+				ArrayList scolumList =new ArrayList();
+				int totalNum=0;
+
+				notifyContent=result[3].toString();
+				Configuration cfg = new Configuration();
+				cfg.setObjectWrapper(new DefaultObjectWrapper());
+				Reader reader = new StringReader(notifyContent);
+				Template temp=new Template("notifyText",reader,cfg); 
+				String[] queryArray=NotifyUtils.getQueryArray(notifyContent);
+				
+				Map root=new HashMap();
+				root=NotifyUtils.getQueryHash(jacper,conPlat,queryArray,root);
+
+				try{
+					StringWriter out = new StringWriter();
+					temp.process(root, out);
+					replacedContent=out.toString();
+					replacedContent=NotifyUtils.replaceSpan(replacedContent);
+				}catch(Exception e){e.printStackTrace();}
+
+				Map p = Factory.newHashMap();
+
+				String query_id=result[1].toString();
+
+				QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+				QueryExtend QE=queryEF.getQueryExtend(conPlat,query_id);
+				Query query =QE.getQuery();
+
+				String server=QE.getServer(conPlat,query_id);
+				Connection conTemp= jacper.getConnection(server);
+				
+				p=QE.getQueryImportCondition(jacper,conPlat,query_id);
+
+				String[] addressArray =new String[]{result[2].toString()};
+
+				data=query.getData(conPlat,addressArray,p); 
+
+				for(int j=0;j<data.length;j++){
+					if(notifyType.equals("1")){
+						try{
+							IMSNotify ks=(IMSNotify)KingleSystem.getService("即时通信服务");
+							String reason=ks.send(data[j][0],replacedContent) ;
+						}catch(Throwable e){
+							e.printStackTrace();
+							return;
+						}
+					}else if(notifyType.equals("2")){
+						Reader reader1 = new StringReader(result[4].toString());
+						Template temp1=new Template("notifyTitle",reader1,cfg); 
+						String replaceTitle="";
+						try{
+							StringWriter out = new StringWriter();
+							temp1.process(root, out);
+							replaceTitle=out.toString();
+							replaceTitle=NotifyUtils.replaceSpan(replaceTitle);
+						}catch(Exception e){e.printStackTrace();}
+
+						String subject=replaceTitle;
+						String m_server=result[5].toString();
+						String smtpUser=result[6].toString();
+						String smtpPWD=result[7].toString();
+						String from=result[8].toString();
+						SendMail em=null;
+						try{
+							em=new SendMail(m_server,smtpUser,smtpPWD);
+						}catch(Throwable e){
+							 e.printStackTrace();
+							return;
+						}
+						 try{
+							sun.misc.BASE64Encoder enc = new sun.misc.BASE64Encoder();
+							em.setSubject(enc.encode(subject.getBytes())+"?=");
+						 }catch(Throwable eee){
+							return;
+						}
+						 em.setFrom(from);
+						 em.setTo(data[j][0]);
+						 em.setMailContent(replacedContent);			
+						try{
+							em.sendHtml();		
+						}catch(Throwable e){
+							 e.printStackTrace();
+							return;
+						}
+
+					}else if(notifyType.equals("3")){
+						try{
+							SMSServer sms=new SMSServer("utils","COM1");
+							sms.sendMessage(data[j][0],replacedContent);
+						}catch(Throwable e){
+                            e.printStackTrace();
+							return;
+						}
+					}
+				}
+			}catch(Throwable eee){
+				eee.printStackTrace();
+				return;
+			}
+		}else if(taskType.equals("7")){
+	
+			String[][] searchArray=conPlat.get("select search_id from $[plat].ctrl_searchindex  where ctrl_id=?",new String[]{parent_id});
+
+			for(int k=0;k<searchArray.length;k++){
+				String objectId=searchArray[k][0];
+				String searchId=objectId;
+				com.kinglib.workbench.search.IndexSearch indexSearch=SearchFactory.getInstance().getIndexSearch(conPlat,searchId);
+				String queryId=indexSearch.getQueryId();
+
+				HashMap p = new HashMap();
+				//p=jacper.getParameterMap(); 
+				QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+				QueryExtend QE=queryEF.getQueryExtend(conPlat,queryId);
+				Query query =QE.getQuery();
+
+				String server=QE.getServer(conPlat,queryId+"");
+				Connection con = jacper.getConnection(server);
+
+				boolean  fullTextSearch=indexSearch.isFullTextSearch();
+				String logicName=indexSearch.getLogicName();
+				String searchType=indexSearch.getSearchType();
+				String subCategory=indexSearch.getSubCategory();
+				String indexCol=indexSearch.getIndexColumn();
+				String titleCol=indexSearch.getNameColumn();
+				String countCol=indexSearch.getCountColumn();
+				String startCol=indexSearch.getStartColumn();
+				String endCol=indexSearch.getEndColumn();
+				String expCol=indexSearch.getExpItem();
+				String[] exportItem=expCol.split(",");
+				int expLenth=exportItem.length;
+				String[] titles=new String[5];
+				titles[0]=indexCol;
+				titles[1]=titleCol;
+				titles[2]=countCol;
+				titles[3]=startCol;
+				titles[4]=endCol;
+				String[] finalTitles=new String[expLenth+5];
+				System.arraycopy(titles,0,finalTitles,0,titles.length);
+				System.arraycopy(exportItem,0,finalTitles,titles.length,exportItem.length);
+				String sql=query.parseSql(conPlat,finalTitles,p);
+				String[][] dataFrom = con.get(sql,null,0);
+
+				for(int i=0;i<dataFrom.length;i++){
+					String[] values=new String[10];
+					values[0]=dataFrom[i][0];
+					values[1]=dataFrom[i][1];
+					values[2]=dataFrom[i][2];
+					values[3]=dataFrom[i][3];
+					values[4]=dataFrom[i][4];
+					String exportData="";
+					for(int j=5;j<dataFrom[i].length;j++){
+						exportData+="::"+dataFrom[i][j];
+					}
+					values[5]=exportData.substring(2);
+					values[6]=logicName;
+					values[7]=searchType;
+					values[8]=subCategory;
+					values[9]=searchId+"";
+					try{
+						conPlat.exec("delete from $[plat].search_index where index_string=? and search_id=? and search_type=? and sub_category=?",new String[]{values[0],values[9],values[7],values[8]});
+						conPlat.exec("insert into $[plat].search_index(index_string,title,row_count,row_start,row_end,export_data,search_name,search_type,sub_category,search_id,search_date) values (?,?,?,?,?,?,?,?,?,?,$getdate())",values);
+					}catch(Exception e){
+					}
+				}
+				if(k==searchArray.length-1){
+					SearchIndexFactory SIF=SearchIndexFactory.getInstance();
+					SIF.reLoad(conPlat,searchType);
+				}
+			}
+			conPlat.close();
+			jacper.print("{success:true}");
+	}
+  }
+  public JSONObject getSearchEditor(Jacper jacper,Connection con,boolean fullSearch,String[] queryArr){
+		ArrayList scolumList =new ArrayList();
+		int totalNum=0;
+		for(int i=0;i<queryArr.length;i++){
+			String queryId=queryArr[i];		
+			QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+			QueryExtend QE=queryEF.getQueryExtend(con,queryId);
+			QuerySearch qs=QE.getQuerySearch(con,fullSearch);
+			String[][] scolum=qs.getSearchColum();		
+			if(scolum.length>0){	
+				 for(int j=0;j<scolum.length;j++){
+					 if(scolum[j].length!=0){
+						 totalNum++;
+						scolumList.add(scolum[j]);
+					}
+				 }
+			}
+		}
+
+		String[][] scolumArray=new String[totalNum][];
+		scolumList.toArray(scolumArray);
+		
+		ArrayList list = new ArrayList();
+		ArrayList list1 = new ArrayList();
+		ArrayList list2 = new ArrayList();
+
+		for(int i=0;i<scolumArray.length;i++){
+			if(!list1.contains(scolumArray[i][0])&&!list2.contains(scolumArray[i][1])){
+				list1.add(scolumArray[i][0]);
+				list2.add(scolumArray[i][1]);
+				list.add(scolumArray[i]);
+			}
+		}
+
+		String[][] arr  = new String[list.size()][];
+		list.toArray(arr);
+
+		ArrayList<String> idList = new ArrayList<String>();
+		ArrayList<String> titleList = new ArrayList<String>();
+		ArrayList<String> dataTypeList = new ArrayList<String>();
+		ArrayList<String> defaultValueList = new ArrayList<String>();
+		ArrayList<String> specialSetList = new ArrayList<String>();
+		ArrayList<String> notNullList = new ArrayList<String>();
+		ArrayList<String> optionList = new ArrayList<String>();
+		ArrayList<String> paramTypeList = new ArrayList<String>();
+		ArrayList<String> tabIdList = new ArrayList<String>();
+
+		if(arr.length>0){
+			for(int i=0;i<arr.length;i++){	
+				int paramType=Integer.parseInt(arr[i][2]);
+				paramTypeList.add(paramType+"");
+				String id=arr[i][0];
+				idList.add(id);
+				String title=arr[i][1];
+				titleList.add(title);	
+				String defaultValue=arr[i][3];
+				defaultValueList.add(defaultValue);
+				String dataType=arr[i][4];
+				dataTypeList.add(dataType);
+				String specialSet=arr[i][5];
+				specialSetList.add(specialSet);	
+				String notNull=arr[i][7];
+				notNullList.add(notNull);
+				String optionId=arr[i][6];
+				optionList.add(optionId);
+				tabIdList.add(arr[i][9]);
+			}
+		}
+
+		JSONObject retj = new JSONObject();
+		try {
+			Param param = new Param();
+			param.put("plat", con);
+			MetaColumn mc;
+			String paramType;
+			JSONObject js;
+			SearchEditorBuilder sep = new SearchEditorBuilder();
+			JSONArray editors = new JSONArray();
+
+			for (int i = 0; i < idList.size(); i++) {
+				mc = MetaFactory.getColumn((new StringBuilder(15)).append(
+						tabIdList.get(i)).append(MetaFactory.idDelimiter)
+						.append(idList.get(i)).toString());
+				if (mc != null) {
+					sep.setJSON(new JSONObject());
+
+					paramType = paramTypeList.get(i);
+					if(paramType.equals(""))
+						paramType = "0";
+					
+					if ((Strings.isNumeric(paramType)&&Integer.parseInt(paramType)>100)||(!Strings.isNumeric(paramType))){
+
+						Widget wid = WidgetFactory.getWidget((Connection)param.getObject("plat"), paramType);
+						if (wid != null) {
+							sep.dealWidget(param, mc, wid);
+						} else {
+							sep.deal(param, mc);
+						}
+					} else {
+						sep.deal(param, mc);
+					}
+					js = sep.getJSON();
+					if (js != null) {
+						js.put("xtitleList", titleList.get(i));
+						if (notNullList.get(i).equals("y")) {
+							js.put("allowBlank", false);
+							js.put("blankText", titleList.get(i) + jacper.trans("必须填写"));
+						}
+						if (!defaultValueList.get(i).equals("")){
+							String tempValue=DefaultValue.getInstance().replace(jacper, defaultValueList.get(i));
+							js.put("value",tempValue);
+						}
+						if (!js.has("width"))
+							js.put("width", 120);
+						editors.put(titleList.get(i) + ".");
+						editors.put(js);
+						editors.put(" ");
+					}
+				}
+			}
+			if (editors.length() > 0) {
+				retj.put("editors", editors);
+				retj.put("libs", sep.getLibString());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return retj;
+	 }
+ }

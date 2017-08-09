@@ -1,0 +1,471 @@
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.HTMLPage;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+
+import com.susing.core.KingleSystem;
+
+@class{
+
+	private HashMap<String, HashSet<String>> allCaches;
+
+	public void doGet(Jacper jacper) {
+
+		allCaches = new HashMap<String, HashSet<String>>();
+
+		int uid = jacper.getSession().uid;
+		String userId = String.valueOf(uid);
+
+		String path = jacper.getString("path");
+		JSONObject result = new JSONObject();
+		if (path.indexOf("::") == -1) {
+			try {
+				result.put("success", false);
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+			return;
+		}
+
+		String[] ts = path.split("::");
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		HTMLPage page = service.getCache(ts[0]);
+
+		if (page == null) {
+			if (ts[1].equals("lanmu")) {
+				page = service.getLanMu(ts[0]);
+			} else {
+				page = service.getZhanDian(ts[0]);
+			}
+		}
+
+		try {
+			if (page == null) {
+				result.put("success", false);
+				jacper.print(result);
+				return;
+			}
+
+			JSONArray children = null, cus;
+			boolean lmChild = false;
+
+			HashSet<String> userPermitted = getPermittedZhandianCache(service, uid);
+
+			while (page != null) {
+				cus = new JSONArray();
+				if (page instanceof LanMu) {
+					LanMu lm = (LanMu) page;
+					HashSet<String> guanliyuans = getZhandianquanbuguanliyuan(lm.getZhanDian());
+					if (lm.getFulanmuid().length() > 0) {
+						LanMu flm = lm.getFulanmu();
+						for (LanMu c : flm.getZilanmu()) {
+							if (!c.getGuanliyuan().equals(userId) && !userPermitted.contains(c.id)
+									&& !guanliyuans.contains(userId))
+								continue;
+							boolean isControlLanmu = c.getGuanliyuan().equals(userId) || guanliyuans.contains(userId);
+							boolean isViewChild = getPermittedLanmuCache(c, uid).size() > 0;
+							JSONObject cj = lanMu2JSON(c, isControlLanmu, isViewChild);
+							if (c == lm && children != null) {
+								cj.put("children", children);
+								cj.put("expanded", true);
+							}
+							cus.put(cj);
+						}
+						page = flm;
+
+					} else {
+						ZhanDian zd = lm.getZhanDian();
+						for (LanMu c : zd.getLanmu()) {
+							if (!c.getGuanliyuan().equals(userId) && !userPermitted.contains(c.id)
+									&& !guanliyuans.contains(userId))
+								continue;
+							boolean isControlLanmu = c.getGuanliyuan().equals(userId) || guanliyuans.contains(userId);
+							boolean isViewChild = getPermittedLanmuCache(c, uid).size() > 0;
+							JSONObject cj = lanMu2JSON(c, isControlLanmu, isViewChild);
+							if (c == lm && children != null) {
+								cj.put("children", children);
+								cj.put("expanded", true);
+							}
+							cus.put(cj);
+						}
+						page = zd;
+					}
+					lmChild = true;
+				} else {
+					ZhanDian zd = (ZhanDian) page;
+					if (zd.getFuzhandianid().length() > 0) {
+						ZhanDian fzd = service.getZhanDian(zd.getFuzhandianid());
+						for (ZhanDian c : fzd.getZizhandian()) {
+							HashSet<String> guanliyuans = getZhandianquanbuguanliyuan(c);
+							if (!userPermitted.contains(c.id) && !guanliyuans.contains(userId))
+								continue;
+							JSONObject cj = zhanDian2JSON(service, c, uid);
+							if (c == zd && children != null) {
+								this.addChild(cj, children, lmChild);
+							}
+							cus.put(cj);
+						}
+						page = fzd;
+					} else {
+						for (ZhanDian c : service.getZhanDian()) {
+							HashSet<String> guanliyuans = getZhandianquanbuguanliyuan(c);
+							if (!userPermitted.contains(c.id) && !guanliyuans.contains(userId))
+								continue;
+							JSONObject cj = zhanDian2JSON(service, c, uid);
+							if (c == zd && children != null) {
+								this.addChild(cj, children, lmChild);
+							}
+							cus.put(cj);
+						}
+						page = null;
+					}
+					lmChild = false;
+				}
+				children = cus;
+			}
+			result.put("success", true);
+			result.put("childs", children);
+		} catch (JSONException e) {
+			e.printStackTrace();
+			try {
+				result.put("success", false);
+				result.put("message", e.getMessage());
+			} catch (JSONException e1) {
+			}
+		}
+		jacper.print(result);
+	}
+
+	/**
+	 * @param ret
+	 * @param children
+	 * @param lmChild
+	 * @throws JSONException
+	 */
+	private void addChild(JSONObject ret, JSONArray children, boolean lmChild) throws JSONException {
+		String text = lmChild ? "栏目" : "子站点";
+		JSONArray arr = ret.getJSONArray("children");
+		JSONObject json = null;
+		for (int i = 0; i < 2; i++) {
+			json = arr.getJSONObject(i);
+			if (json.getString("text").equals(text)) {
+				break;
+			}
+		}
+		json.put("children", children);
+		json.put("expanded", true);
+		ret.put("expanded", true);
+	}
+
+	public void doPost(Jacper jacper) {
+
+		allCaches = new HashMap<String, HashSet<String>>();
+
+		int uid = jacper.getSession().uid;
+		String userId = String.valueOf(uid);
+		String id = jacper.getString("node");
+
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		JSONArray arr = new JSONArray();
+
+		try {
+
+			HashSet<String> userPermitted = getPermittedZhandianCache(service, uid);
+
+			if (id.equals("root")) {
+				ZhanDian[] zhandians = service.getZhanDian();
+				for (ZhanDian zhandian : zhandians) {
+					if (zhandian.getGuanliyuan().equals(userId) || userPermitted.contains(zhandian.id)) {
+						arr.put(zhanDian2JSON(service, zhandian, uid));
+					}
+				}
+			} else {
+				String[] ids = id.split("::");
+				HTMLPage hp = service.getCache(ids[0]);
+				if (hp instanceof ZhanDian) {
+					if (ids.length == 1) {
+						addFolderJSON(arr, (ZhanDian) hp, uid);
+					} else if ("1".equals(ids[1])) {
+						for (ZhanDian zzd : ((ZhanDian) hp).getZizhandian()) {
+							HashSet<String> guanliyuans = getZhandianquanbuguanliyuan(zzd);
+							// TODO zizhandian
+							if (!guanliyuans.contains(userId) && !userPermitted.contains(zzd.id))
+								continue;
+							arr.put(zhanDian2JSON(service, zzd, uid));
+						}
+					} else if ("2".equals(ids[1])) {
+						HashSet<String> guanliyuans = getZhandianquanbuguanliyuan((ZhanDian) hp);
+						for (LanMu lm : ((ZhanDian) hp).getLanmu()) {
+							boolean isReadableLanmu = lm.getGuanliyuan().equals(userId) || guanliyuans.contains(userId)
+									|| userPermitted.contains(lm.id);
+							boolean isControlLanmu = lm.getGuanliyuan().equals(userId) || guanliyuans.contains(userId);
+							boolean isViewChild = getPermittedLanmuCache(lm, uid).size() > 0;
+							if (isReadableLanmu)
+								arr.put(lanMu2JSON(lm, isControlLanmu, isViewChild));
+						}
+					}
+				} else if (hp instanceof LanMu) {
+					HashSet<String> guanliyuans = getZhandianquanbuguanliyuan(((LanMu) hp).getZhanDian());
+					for (LanMu lm : ((LanMu) hp).getZilanmu()) {
+						boolean isReadableLanmu = lm.getGuanliyuan().equals(userId) || guanliyuans.contains(userId)
+								|| userPermitted.contains(lm.id);
+						boolean isControlLanmu = lm.getGuanliyuan().equals(userId) || guanliyuans.contains(userId);
+						boolean isViewChild = getPermittedLanmuCache(lm, uid).size() > 0;
+						if (isReadableLanmu)
+							arr.put(lanMu2JSON(lm, isControlLanmu, isViewChild));
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		jacper.print(arr);
+	}
+
+	public HashSet<String> getZhandianquanbuguanliyuan(ZhanDian zhandian) {
+
+		String key = zhandian.id + "_A";
+
+		if (allCaches.containsKey(key))
+			return allCaches.get(key);
+
+		HashSet<String> quanbuguanliyuan = new HashSet<String>();
+		while (zhandian != null) {
+			quanbuguanliyuan.add(zhandian.getGuanliyuan());
+			zhandian = zhandian.getFuzhandian();
+		}
+		quanbuguanliyuan.add("0");
+		allCaches.put(key, quanbuguanliyuan);
+		return quanbuguanliyuan;
+	}
+
+	public JSONObject lanMu2JSON(LanMu zlm, boolean isAction, boolean isLeaf) throws JSONException {
+		JSONObject js = new JSONObject();
+		js.put("text", zlm.getMingcheng());
+		js.put("type", "lanmu");
+		js.put("action", isAction);
+		js.put("nodeType", "async");
+		js.put("id", zlm.getId());
+		js.put("leaf", zlm.getZilanmu().length == 0 || !isLeaf);
+		js.put("icon", "/themes/icon/all/application_view_tile.gif");
+		return js;
+	}
+
+	public JSONObject zhanDian2JSON(CMSService service, ZhanDian zd, int uid) throws JSONException {
+		String userId = String.valueOf(uid);
+		JSONObject json = new JSONObject();
+		json.put("text", zd.getMingcheng());
+		json.put("type", "zhandian");
+		json.put("nodeType", "async");
+		json.put("id", zd.getId());
+		json.put("leaf", !(zd.getZizhandian().length > 0 || zd.getLanmu().length > 0));
+		json.put("icon", "/themes/icon/all/world.gif");
+
+		HashSet<String> guanliyuanCache = getZhandianquanbuguanliyuan(zd);
+
+		if (guanliyuanCache.contains(userId)) {
+			json.put("action", true);
+		}
+
+		JSONArray arrChild = new JSONArray();
+		addFolderJSON(arrChild, zd, uid);
+		if (arrChild.length() > 0) {
+			json.put("children", arrChild);
+		}
+		return json;
+	}
+
+	public void addFolderJSON(JSONArray arrChild, ZhanDian zd, int uid) throws JSONException {
+		String userId = String.valueOf(uid);
+		HashSet<String> guanliyuans = getZhandianquanbuguanliyuan(zd);
+		if (zd.getZizhandian().length > 0) {
+			HashSet<String> userZhandianCache = getPermittedZhandianCache(zd, uid);
+			if (zd.getGuanliyuan().equals(userId) || userZhandianCache.size() > 0) {
+				JSONObject js = new JSONObject();
+				js.put("text", "子站点");
+				js.put("id", zd.getId() + "::1");
+				js.put("type", "mulu");
+				js.put("nodeType", "async");
+				js.put("leaf", false);
+				arrChild.put(js);
+			}
+		}
+		if (zd.getLanmu().length > 0) {
+			HashSet<String> userLanmusCache = getPermittedLanmuCache(zd, uid);
+			if (guanliyuans.contains(userId) || userLanmusCache.size() > 0) {
+				JSONObject js = new JSONObject();
+				js.put("text", "栏目");
+				js.put("type", "mulu");
+				js.put("nodeType", "async");
+				js.put("id", zd.getId() + "::2");
+				js.put("leaf", false);
+				arrChild.put(js);
+				js = new JSONObject();
+				js.put("text", "回收站");
+				js.put("type", "recycle");
+				js.put("nodeType", "async");
+				js.put("id", zd.getId() + "::3");
+				js.put("action", true);
+				js.put("leaf", true);
+				js.put("icon", "/themes/icon/xp/bin_empty.gif");
+				arrChild.put(js);
+			}
+
+		}
+	}
+
+	// 返回用户可以访问的所有站点和栏目，最高一级。
+	public HashSet<String> getPermittedZhandianCache(CMSService service, int uid) throws JSONException {
+
+		String userId = String.valueOf(uid);
+		HashSet<String> set = new HashSet<String>();
+
+		if (allCaches.containsKey(userId))
+			set = allCaches.get(userId);
+		else {
+			loadingCaches(userId, service.getZhanDian());
+			set = allCaches.containsKey(userId) ? allCaches.get(userId) : set;
+		}
+
+		return set;
+	}
+
+	// 返回用户可以访问站点下的站点，最高一级。
+	public HashSet<String> getPermittedZhandianCache(ZhanDian zhandian, int uid) throws JSONException {
+
+		String userId = String.valueOf(uid);
+		String key = zhandian.id + "_" + userId;
+
+		HashSet<String> set = new HashSet<String>();
+
+		if (allCaches.containsKey(key))
+			set = allCaches.get(key);
+		else {
+			loadingCaches(userId, zhandian);
+			set = allCaches.containsKey(key) ? allCaches.get(key) : set;
+		}
+
+		return set;
+
+	}
+
+	// 返回该站点下，用户可以访问站点下的栏目，最高一级。
+	public HashSet<String> getPermittedLanmuCache(ZhanDian zhandian, int uid) throws JSONException {
+
+		String userId = String.valueOf(uid);
+		String key = zhandian.id + "_ZL_" + userId;
+
+		HashSet<String> set = new HashSet<String>();
+
+		if (allCaches.containsKey(key))
+			set = allCaches.get(key);
+		else {
+			loadingCaches(userId, zhandian);
+			set = allCaches.containsKey(key) ? allCaches.get(key) : set;
+		}
+
+		return set;
+	}
+
+	// 返回该站点下，用户可以访问栏目下的栏目，向下找一级。
+	public HashSet<String> getPermittedLanmuCache(LanMu lanmu, int uid) throws JSONException {
+
+		String userId = String.valueOf(uid);
+		String key = lanmu.id + "_" + userId;
+
+		HashSet<String> set = new HashSet<String>();
+
+		if (allCaches.containsKey(key))
+			set = allCaches.get(key);
+		else {
+			loadingCaches(userId, lanmu);
+			set = allCaches.containsKey(key) ? allCaches.get(key) : set;
+		}
+
+		return set;
+	}
+
+	public void addToallCaches(String key, String value) {
+		HashSet<String> set = allCaches.containsKey(key) ? allCaches.get(key) : new HashSet<String>();
+		set.add(value);
+		allCaches.put(key, set);
+	}
+
+	public void loadingCaches(String userId, ZhanDian... zds) {
+		if (zds.length == 0)
+			return;
+
+		ArrayList<HTMLPage> al = new ArrayList<HTMLPage>();
+
+		toCacheZhandian(userId, al, zds);
+
+		for (int i = 0; i < al.size(); i++) {
+			HTMLPage page = al.get(i);
+			while (page != null) {
+				addToallCaches(userId, page.id);
+				if (page instanceof LanMu) {
+					LanMu lm = (LanMu) page;
+					if (lm.getFulanmu() != null) {
+						page = lm.getFulanmu();
+						addToallCaches(page.id + "_" + userId, lm.id);
+					} else {
+						page = lm.getZhanDian();
+						addToallCaches(page.id + "_ZL_" + userId, lm.id);
+					}
+				} else {
+					ZhanDian zd = (ZhanDian) page;
+					if (zd.getFuzhandian() != null) {
+						page = zd.getFuzhandian();
+						addToallCaches(zd.getFuzhandianid() + "_" + userId, zd.id);
+					} else
+						page = null;
+				}
+			}
+		}
+	}
+
+	public void toCacheZhandian(String userId, ArrayList<HTMLPage> al, ZhanDian... zds) {
+		if (zds.length == 0)
+			return;
+		for (ZhanDian zd : zds) {
+			HashSet<String> controllers = getZhandianquanbuguanliyuan(zd);
+			if (userId.equals(zd.getGuanliyuan()) || controllers.contains(zd.id))
+				al.add(zd);
+			else {
+				if (zd.getZizhandian().length > 0)
+					toCacheZhandian(userId, al, zd.getZizhandian());
+				toCacheLammu(userId, al, controllers, zd.getLanmu());
+			}
+		}
+	}
+
+	public void toCacheLammu(String userId, ArrayList<HTMLPage> al, HashSet<String> controllers, LanMu... lms) {
+		if (lms.length == 0)
+			return;
+		for (LanMu lm : lms) {
+			if (userId.equals(lm.getGuanliyuan()) || controllers.contains(userId))
+				al.add(lm);
+			if (lm.getZilanmu().length > 0)
+				toCacheLammu(userId, al, controllers, lm.getZilanmu());
+		}
+	}
+
+	public void loadingCaches(String userId, LanMu lanmu) {
+		if (lanmu.getZilanmu().length == 0)
+			return;
+		HashSet<String> controllers = getZhandianquanbuguanliyuan(lanmu.getZhanDian());
+		for (LanMu zilanmu : lanmu.getZilanmu()) {
+			if (userId.equals(zilanmu.getGuanliyuan()) || controllers.contains(userId))
+				addToallCaches(lanmu.id + "_" + userId, zilanmu.id);
+			loadingCaches(userId, zilanmu);
+		}
+	}
+}

@@ -1,0 +1,162 @@
+
+import java.io.IOException;
+import com.kinglib.*;
+import java.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+	
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String parent_id = jacper.getStr("parent_id");
+	
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{	
+
+			JSONObject actJSON = new JSONObject("{}");
+			String[] rs = conPlat.getRow("select a.act_name,a.act_pname,a.frame_type,up_height,down_height,a.note from $[plat].workflowact a where  a.object_id=?",	new String[]{parent_id});
+			actJSON.put("act_name",rs[0]);
+			actJSON.put("act_pname",rs[1]);
+			actJSON.put("frame_type",rs[2]);
+			actJSON.put("up_height",rs[3]);
+			actJSON.put("down_height",rs[4]);
+			actJSON.put("note",rs[5]);	
+			actJSON.put("object_id",parent_id);
+			ObjectNode node=ObjectManager.getObject(parent_id);
+			if(node!=null){
+				actJSON.put("lastModifyTime",node.getLastModifyTime());
+				actJSON.put("lastModifyName",node.getLastModifyName());
+			}
+			 <?{success:true,data:?>actJSON.toString()<?}?>;
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}
+
+public void doPost(Jacper jacper){
+	
+	Connection conPlat = jacper.getConnection("plat");
+	
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;   
+
+	String type = jacper.getStr("type");
+	String act_name = jacper.getStr("act_name");
+	String act_pname = jacper.getStr("act_pname");
+	String note = jacper.getStr("note");
+	String frameType = jacper.getStr("frame_type");
+	String parent_id = jacper.getStr("parent_id");
+	String up_height = jacper.getStr("up_height");
+	String down_height = jacper.getStr("down_height");
+
+	String object_name ="";
+
+	ObjectManager OM=ObjectManager.getInstance();
+
+	if(type.equals("save")){
+		try{	
+			conPlat.setAutoCommit(false);	
+			int modt =Integer.parseInt(frameType);
+			String object_id="";
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+			ObjectNode workflowNode=OM.getObject(parent_id);
+			workflowNode.addChild(conPlat,object_id,act_name,ObjectType.WORKFLOWACT,user_id);	
+			
+			ObjectNode actNode=OM.getObject(object_id);
+			String temp_id=object_id;
+
+			switch(modt){
+				case 1:
+					if(idType==null||idType.equals("0")){
+						object_id = SQLUtils.getNextVal(conPlat,1)+"";
+					}else{
+						object_id =UUID.randomUUID().toString();
+					}
+					object_name = jacper.trans("主窗口");
+					actNode.addChild(conPlat,object_id,object_name,ObjectType.MAINFRAME,user_id);	
+					break;
+				case 3:  
+					if(idType==null||idType.equals("0")){
+						object_id = SQLUtils.getNextVal(conPlat,1)+"";
+					}else{
+						object_id =UUID.randomUUID().toString();
+					}
+					object_name = jacper.trans("上框架");
+					actNode.addChild(conPlat,object_id,object_name,ObjectType.UPPERFRAME,user_id);				
+					if(idType==null||idType.equals("0")){
+						object_id = SQLUtils.getNextVal(conPlat,1)+"";
+					}else{
+						object_id =UUID.randomUUID().toString();
+					}
+					object_name = jacper.trans("下框架");
+					actNode.addChild(conPlat,object_id,object_name,ObjectType.LOWERFRAME,user_id);
+					break;
+			}
+			conPlat.exec("INSERT INTO $[plat].workflowact (object_id, act_name, act_pname,frame_type,up_height,down_height,note) VALUES (?,?,?,?,?,?,?)",new String[]{temp_id+"",act_name,act_pname,frameType,up_height,down_height,note});
+			<?{success:true,id:'?>object_id<?'}?>;
+			conPlat.commit();
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.close();
+				conPlat.setAutoCommit(true);
+			}catch(Exception e2) {}
+		}
+	}else if(type.equals("updatesave")){
+		try{	
+			conPlat.setAutoCommit(false);	
+			ObjectNode actNode=OM.getObject(parent_id);
+			actNode.updateName(conPlat,act_name);
+			conPlat.exec("UPDATE $[plat].workflowact SET act_name =?,note=?,up_height=?,down_height=? WHERE object_id=?",new String[]{act_name,note,up_height,down_height,parent_id+""});
+			conPlat.commit();
+			<?{success:true,id:'?>parent_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.close();
+				conPlat.setAutoCommit(true);
+			}catch(Exception e2) {}
+		}
+	}else if(type.equals("delete")){
+			try{	
+				ObjectNode actNode=OM.getObject(parent_id);
+				conPlat.setAutoCommit(false);	
+				actNode.destroy(conPlat);
+				conPlat.commit();
+				<?{success:true}?>;
+			}catch(Exception e){
+				try {
+					conPlat.rollback();
+				}catch(Exception e1) {}
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally {
+				try {
+					conPlat.close();
+					conPlat.setAutoCommit(true);
+				}catch(Exception e2) {}
+			}
+	}
+}
+}

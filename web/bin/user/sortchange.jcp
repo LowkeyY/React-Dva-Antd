@@ -1,0 +1,76 @@
+import com.kinglib.Jacper;
+import com.kinglib.ui.core.utils.Param;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.Role;
+import com.social.api.core.model.User;
+
+@class{
+	
+	
+	public void doPost(Jacper jacper){
+		String changeType = jacper.getStr("changeType");
+		String changes = jacper.getStr("changes");
+		
+		int preSortId = jacper.getInt("preSortId", -1) , nextSortId = jacper.getInt("nextSortId", -1);
+		
+		if((preSortId == -1 && nextSortId == -1) || changes.length() == 0 || changeType.length() == 0){
+			jacper.print("{success:true}");
+			return;
+		}
+		
+		String[] changeArray = changes.split(",");
+		int curSortId = getCurrentSort(preSortId , nextSortId) , index = 0;
+		if("user".equals(changeType)){
+			User user =null;
+			for(String uid : changeArray){
+				if((user = CertManager.getUser(uid)) != null){
+					Param param = new Param(jacper);
+					param.set("realName" , user.getRealName());
+					param.set("roleId" , user.getRoleId());
+					param.set("phone" , user.getPhone());
+					param.set("phoneHome" , user.getPhoneHome());
+					param.set("email" , user.getEmail());
+					param.set("celler" , user.getCeller());
+					param.set("duty" , "");
+					param.set("userType" , String.valueOf(user.getUserType().getValue()));
+					param.set("msn" , user.getMsn());
+					param.set("isMaster", user.isMaster() ? "y" : "n");
+					param.set("inActive", user.isActive() ? "y" : "n");
+					curSortId = index++ > 0 ? getCurrentSort(curSortId , nextSortId) : curSortId;
+					param.set("sortId", curSortId);
+					user.update(param);
+				}
+			}
+		} else if("role".equals(changeType)){
+			Role role =null;
+			for(String rid : changeArray){
+				if((role = CertManager.getRole(rid)) != null){
+					Param param = new Param(jacper);
+					param.set("roleName" , role.getRoleTitle());
+					param.set("positionId" , role.getPositionId());
+					param.set("roles" , role.getRoleName());
+					param.set("duty" , "");
+					curSortId = index++ > 0 ? getCurrentSort(curSortId , nextSortId) : curSortId;
+					param.set("sortId", curSortId);
+					role.update(param);
+				}
+			}
+		}
+		
+		jacper.print("{success:true}");
+	}
+
+	/**
+	 * @param preSortId
+	 * @param nextSortId
+	 * @return
+	 */
+	private int getCurrentSort(int preSortId, int nextSortId) {
+		if(preSortId == -1)
+			return nextSortId / 2;
+		if(nextSortId == -1)
+			return preSortId + 1000;
+		return preSortId + (nextSortId - preSortId) / 2;
+	}
+}

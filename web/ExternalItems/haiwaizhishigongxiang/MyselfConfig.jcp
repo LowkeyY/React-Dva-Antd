@@ -1,0 +1,19 @@
+import gpra.filesystem.space.HWSpaceFactory.HWSessions;
+
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.UserData;
+
+@class{
+	public void doPost(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		String userId= String.valueOf(hs.uid); 
+		String userConfig = jacper.getStr("userConfig");
+		if(userConfig.length() > 0){
+			UserData.set(userId , HWSessions.HWUSERSELF.name() , HWSessions.HW_UPLOADCONFIG.name() , userConfig);
+			jacper.print("{success:true,message:'您设置的默认属性，保存成功。'}");
+		}else{
+			jacper.print("{success:false,message:'您设置的默认属性为空，请刷新重试。'}");
+		}
+	}
+}

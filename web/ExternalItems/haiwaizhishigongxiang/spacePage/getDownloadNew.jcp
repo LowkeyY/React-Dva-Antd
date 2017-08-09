@@ -1,0 +1,36 @@
+import java.text.SimpleDateFormat;
+import gpra.filesystem.HWUnits;
+import com.kinglib.*;
+import com.kinglib.user.*;
+
+	//public class up{
+@class{
+	public void doPost(Jacper jacper) {
+		Connection con=jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			String spaceid=(String) jacper.getSession().get("HW_BASE_SPACEID");
+			String sql="select * from( select file_name,APPLY_DATA,APPLY_USER from DIR_APPLY_BASIC where space_id='"+spaceid+"' order by apply_data desc) where  rownum<=30";
+			System.out.println(sql);
+			String[][]rs=con.get(sql);
+			String date="";
+			for (int i = 0; i < rs.length; i++) {
+				
+				User user = CertManager.getUser(rs[i][2]);
+				
+				SimpleDateFormat sf = null;
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+				String sdate=rs[i][1];
+				if(sdate.indexOf(":")>-1){
+					sf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				}else{
+					sf=new SimpleDateFormat("yyyy-MM-dd");
+				}
+				String da= sdf.format(sf.parse(sdate));
+				date+="<div style = \"padding-top:10px;padding-left:15px;height:auto;\"><p style=\"border-top: 1px dotted #e9e9e9;font: 400 14px Microsoft Yahei;\">"+rs[i][0]+" <span style=\"float:right\">"+da+"("+user.getRealName()+")</span></p></div>";
+			}
+			jacper.print("{success:true,data:{'data':'"+date+"'}}");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

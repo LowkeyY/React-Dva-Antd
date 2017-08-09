@@ -1,0 +1,144 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+
+@class{
+
+ public void doGet(Jacper jacper){
+
+	 Connection conPlat = jacper.getConnection("plat");
+
+	 boolean isLogin = jacper.setSession();
+	 HttpSession hs = jacper.getSession();
+	 String real_name = hs.getString("real_name");
+	 long user_id = hs.uid;
+	
+	 String parent_id = jacper.getStr("parent_id");
+	 String newpart = "";
+	 boolean delName = false;
+	 String type = jacper.getStr("type");
+	 String help_name= "";
+	 int seatype = -1;
+	 Object[] rss=null;		
+	 String[] rs = null;
+	 String[] gp = null;
+	jacper.getResponse().setContentType("application/x-json");
+		try{
+			JSONObject helpJSON = new JSONObject("{}");
+			rs = conPlat.getRow("select category_id from $[plat].help_content where category_id=?",new String[]{parent_id});
+			newpart=rs==null?"":"newpart";
+		    gp = conPlat.getRow("select son from $[plat].help_category where category_id=?",new String[]{parent_id});
+
+			if(gp!=null&&!gp[0].equals("0")){
+				delName = true;
+			}
+			rss = conPlat.getLarge("select category_name,note from $[plat].help_category where category_id=?",new String[]{parent_id});
+
+			helpJSON.put("forder_name",rss[0].toString());
+			helpJSON.put("forder_detail",rss[1].toString());
+			helpJSON.put("category_id",parent_id);
+			helpJSON.put("newpart",newpart);
+			helpJSON.put("delName",delName);
+
+			jacper.print("{success:true,data:"+helpJSON+"}");
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+
+public void doPost(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid;   
+	
+	String parent_id = jacper.getString("parent_id","error");
+	String type = jacper.getStr("type");
+	try{
+		conPlat.setAutoCommit(false);	
+		if(type.equals("updatesave")){
+			String category_name = jacper.getStr("forder_name");
+			String order_by = jacper.getStr("order_by");
+			String url = "";
+			String category_detail = jacper.getStr("forder_detail");
+			String app_id = jacper.getStr("app_id");
+		
+			if("".equals(app_id))
+				app_id="0";
+
+			
+			String[] pi =conPlat.getRow(" select parent_id from $[plat].help_category where category_id=?",new String[]{parent_id+""});
+
+			if(pi[0].equals("1")){
+				url=jacper.trans("商典协同商务平台")+">>"+category_name;
+			}else if(pi[0].equals("a")){
+				url="";
+			}else{
+				String[] iu = conPlat.getRow(" select url from $[plat].help_category where category_id=(select parent_id from $[plat].help_category where category_id=?)",new String[]{parent_id+""});
+				url=url+iu[0]+">>"+category_name;
+			}   
+
+			conPlat.execLarge("update $[plat].help_category set category_name=?,update_user=?,update_time=$getdate(),note=?,url=?,app_id=? where category_id=?",new Object[]{category_name,user_id+"",category_detail,url,app_id,parent_id+""});
+
+		}else if(type.equals("")||type.equals("new")){
+			String forderdetail="";
+			type = "save";
+			parent_id = jacper.getString("parent_id","error");
+		}else if(type.equals("save")){
+			String category_name = jacper.getStr("forder_name");
+			String order_by = jacper.getStr("order_by");
+			String url = "";
+			String category_detail = jacper.getStr("forder_detail");
+			String app_id = jacper.getStr("app_id");
+			String category_id = SQLUtils.getNextVal(conPlat,"13");
+
+			if(!parent_id.equals("1")){
+				String[] iu =conPlat.getRow(" select url from $[plat].help_category where category_id=?",new String[]{parent_id+""});
+				url=url+iu[0]+">>"+category_name;
+			}else{
+				url=jacper.trans("商典协同商务平台")+">>"+category_name;
+			}
+			conPlat.execLarge("insert into $[plat].help_category (category_id,parent_id,category_name,create_user,create_time,update_user,update_time,note,son,url,app_id) values (?,?,?,?,$getdate(),?,$getdate(),?,0,?,?)",new String[]{category_id,parent_id+"",category_name,user_id+"",user_id+"",category_detail,url,app_id});
+
+			conPlat.exec("update $[plat].help_category set son=son+1 where category_id=?",new  String[]{parent_id+""});
+
+		}else if(type.equals("delete")){
+			String[] gp = conPlat.getRow("select parent_id from $[plat].help_category where category_id=?",new String[]{parent_id+""});
+			String out_id=gp[0];
+			conPlat.exec("update $[plat].help_category set son=son-1 where category_id=?",new  String[]{out_id});
+			conPlat.exec("delete from $[plat].help_category where category_id=?",new  String[]{parent_id+""});
+			conPlat.exec("delete from $[plat].help_content where category_id=?",new  String[]{parent_id+""});
+		}else if("objectDelete".equals(type)){
+			String[] category_id = conPlat.getRow("select category_id from $[plat].help_category where object_id=?",new String[]{parent_id+""});
+			parent_id = category_id[0];
+			String[] gp = conPlat.getRow("select parent_id from $[plat].help_category where category_id=?",new String[]{parent_id+""});
+			String out_id=gp[0];
+			if(!("0".equals(out_id))){
+			conPlat.exec("update $[plat].help_category set son=son-1 where category_id=?",new  String[]{out_id});
+			conPlat.exec("delete from $[plat].help_category where category_id=?",new  String[]{parent_id+""});
+			} else {
+			conPlat.exec("delete from $[plat].help_category where category_id=?",new  String[]{parent_id+""});
+			}
+			
+		}
+		<?{success:true,id:'?>parent_id<?',type:'true'}?>;
+		conPlat.commit();
+	}catch(Exception e){
+		try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+		<?{success:false,message:"?>e.toString()<?"}?>;
+	}finally{
+		try {
+			conPlat.setAutoCommit(true);
+			conPlat.close();
+		}catch(Exception e2) {}
+	}
+}
+}

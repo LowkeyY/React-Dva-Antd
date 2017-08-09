@@ -1,0 +1,1 @@
+文档建表时，不同的文档需要修改dev/database/docTemplate\default.xml,每次新建一个xml并把他改名为default。

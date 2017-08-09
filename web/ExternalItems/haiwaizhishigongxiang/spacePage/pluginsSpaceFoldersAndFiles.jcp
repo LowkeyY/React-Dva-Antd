@@ -1,0 +1,401 @@
+import gpra.filesystem.space.HWSpaceFactory;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import gpra.filesystem.HWUnits;
+import com.kinglib.*;
+
+	//public class pluginsSpaceFoldersAndFiles{
+@class{
+	public void doPost(Jacper jacper) {
+		HttpSession hs = jacper.getSession();
+		Connection con=jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			String spaceId=(String) hs.get("HW_BASE_SPACEID");
+			ArrayList<String> result = new ArrayList<String>();
+			HashMap<String , ArrayList<Double>> resultMap = new HashMap<String , ArrayList<Double>>();
+
+			StringBuilder xCount = new StringBuilder();
+			StringBuilder xSize = new StringBuilder();
+			String spaceName = "本空间";
+
+			if(HWSpaceFactory.getSpaceById(spaceId) != null){
+				spaceName = HWSpaceFactory.getSpaceById(spaceId).getSpaceName();
+				HashMap<String , String> map = new HashMap<String , String>();
+				map.put("项目背景", "项目信息");
+				map.put("商务资料", "项目信息");
+				map.put("勘探", "综合报告");
+				map.put("开发", "综合报告");
+				map.put("新项目评价", "综合报告");	
+				
+				String[][] rows = con.get("select i.node_value, count(f.file_id), sum(f.file_size), i.sort_seq from DIR_FILE_BASE f " +
+						"left outer join DIR_NODE_INFO i on substr(f.file_dir , 112 ,36) = i.node_id where f.space_id = ? " +
+						"group by i.node_value , i.sort_seq order by i.sort_seq" , new String[]{spaceId});
+				
+				if(rows != null && rows.length > 0){
+					Pattern patt = Pattern.compile("^([\\d\\.]+)");
+					
+					for(String row[] : rows){
+						String name = row[0];
+						Matcher mat = patt.matcher(name);
+						if(mat.find()){
+							int pos = mat.group(1).length();
+							name = pos != -1 ? name.substring(pos).trim() : name;
+						}
+						
+						String key = map.containsKey(name) ? map.get(name) : name;
+						if(!result.contains(key))
+							result.add(key);
+						
+						Double count = Double.parseDouble(row[1]);
+						Double size = Double.parseDouble(row[2]);
+						if(resultMap.containsKey(key)){
+							ArrayList<Double> nums = resultMap.get(key);
+							nums.set(0, nums.get(0) + count);
+							nums.set(1, nums.get(1) + size);
+						} else{
+							ArrayList<Double> nums = new ArrayList<Double>();
+							nums.add(count);
+							nums.add(size);
+							resultMap.put(key, nums);
+						}
+					}			
+				}
+				
+				for(String name : result){
+					xCount.append("<point name='"+name+"' y='"+resultMap.get(name).get(0)+"'><label enabled='true'><format>{%Value}{numDecimals:0,thousandsSeparator:}</format><label_style rotation='90' /></label></point>");
+					xSize.append("<point name='"+name+"' y='"+(resultMap.get(name).get(1) / (1024 * 1024 * 1024))+"'/>");
+				}
+			}
+			
+/*			StringBuilder results = new StringBuilder("<anychart>"
+					+"  <settings>"
+					+"    <animation enabled='True'/>"
+					+"  </settings>  "
+					+"  <margin all='0'/>"
+					+"  <charts>"
+					+"    <chart name='chart69135' plot_type='CategorizedVertical' leftLen='192' rightLen='0'> "
+					+"      <data_plot_settings/>"
+					+"      <chart_settings>"
+					+"        <title>"
+					+"          <text>本空间目录与文件统计</text>"
+					+"        </title>"
+					+"        <chart_background> "
+					+"          <fill enabled='true' type='Solid' color='#FFFFFF'/>"
+					+"          <border enabled='False'/>"
+					+"          <inside_margin all='8'/> "
+					+"        </chart_background>"
+					+"        <legend enabled='True' position='Top' align='Far' inside_dataplot='false' align_by='Chart' Columns='2'> "
+					+"          <title enabled='false'/>"
+					+"        </legend>"
+					+"        <data_plot_background>"
+					+"          <border enabled='False'/>  "
+					+"          <fill type='Solid' color='#FFFFFF'/>"
+					+"        </data_plot_background>"
+					+"        <axes>"
+					+"          <x_axis> "
+					+"            <zero_line enabled='False'/>"
+					+"            <labels rotation='0'> "
+					+"              <format>{%Value}{numDecimals:0,thousandsSeparator:}</format>"
+					+"            </labels>"
+					+"            <title>"
+					+"              <text>目录名称</text>"
+					+"            </title>"
+					+"            <scale minimum='DefaultValue'/>  "
+					+"            <major_grid>"
+					+"              <line color='#C0C0C0'/>"
+					+"            </major_grid>"
+					+"            <minor_grid>"
+					+"              <line color='#C0C0C0' opacity='0.5'/> "
+					+"            </minor_grid>"
+					+"          </x_axis>"
+					+"          <extra>"
+					+"            <y_axis name='yaxis69135-1' position='Normal'>"
+					+"              <zero_line enabled='False'/>  "
+					+"              <title>"
+					+"                <font bold='True'/>"
+					+"                <text>文件大小</text>"
+					+"              </title>"
+					+"              <labels> "
+					+"                <format>{%Value}{numDecimals:2,thousandsSeparator:}</format>"
+					+"              </labels>"
+					+"              <scale type='Linear' minimum='0'/>  "
+					+"              <major_grid>"
+					+"                <line color='#C0C0C0'/>"
+					+"              </major_grid>"
+					+"              <minor_grid>"
+					+"                <line color='#C0C0C0' opacity='0.5'/> "
+					+"              </minor_grid>"
+					+"            </y_axis>"
+					+"          </extra>"
+					+"          <y_axis name='yaxis69135-0' position='Normal'>"
+					+"            <zero_line enabled='False'/>  "
+					+"            <title>"
+					+"              <font bold='True'/>"
+					+"              <text>文件个数</text>"
+					+"            </title>"
+					+"            <labels>"
+					+"              <format>{%Value}{numDecimals:0,thousandsSeparator:}</format>"
+					+"            </labels>"
+					+"            <scale type='Linear' minimum='0'/>"
+					+"            <major_grid>"
+					+"              <line color='#C0C0C0'/> "
+					+"            </major_grid>"
+					+"            <minor_grid>"
+					+"              <line color='#C0C0C0' opacity='0.5'/>"
+					+"            </minor_grid>"
+					+"          </y_axis> "
+					+"        </axes>"
+					+"      </chart_settings>"
+					+"      <styles>"
+					+"        <bar_style name='lineColor0'>"
+					+"          <fill color='#99CC00' opacity='0.8' type='Solid'/>  "
+					+"          <line color='#99CC00'/>"
+					+"        </bar_style>"
+					+"        <bar_style name='lineColor1'> "
+					+"          <fill color='#33CCCC' opacity='0.8' type='Solid'/>"
+					+"          <line color='#33CCCC'/> "
+					+"        </bar_style>"
+					+"      </styles>"
+					+"      <data>"
+					+"        <series name='文件大小' id='s1' color='#33CCCC' shape_type='Cylinder' type='Bar' y_axis='yaxis69135-1' style='lineColor1'> "
+					+"          <tooltip enabled='True'> "
+					+"            <format>{%Name}{numDecimals:0,thousandsSeparator:} {%SeriesName}:{%YValue}{numDecimals:2,thousandsSeparator:}GB</format> "
+					+"          </tooltip> "
+					+			xSize.toString()
+					+"        </series>"
+					+"        <series name='文件个数' id='s0'  color='#FF6600' shape_type='Cylinder' type='Bar'  y_axis='yaxis69135-0' style='lineColor0'> "
+					+"          <tooltip enabled='True'> "
+					+"            <format>{%Name}{numDecimals:0,thousandsSeparator:} {%SeriesName}:{%YValue}{numDecimals:0,thousandsSeparator:}个</format> "
+					+"          </tooltip> "
+					+			xCount.toString()
+					+"        </series>"
+					+"      </data>"
+					+"    </chart>"
+					+"  </charts>"
+					+"</anychart>");*/
+			StringBuilder results = new StringBuilder("<anychart>"
+					+"  <settings>"
+					+"    <animation enabled='True'/>"
+					+"  </settings>"
+					+"  <margin all='0'/>"
+					+"  <charts>"
+					+"    <chart name='chart69135' plot_type='CategorizedVertical' leftLen='208' rightLen='0'>"
+					+"      <data_plot_settings enable_3d_mode='True'>"
+					+"			<bar_series point_padding='0.1' group_padding='1.4'/>"
+					+"      </data_plot_settings>"
+					+"      <chart_settings>"
+					+"        <title>"
+					+"          <text>"+spaceName+"文件统计</text>"
+					+"        </title>"
+					+"        <chart_background>"
+					+"          <fill enabled='true' type='Solid' color='#FFFFFF'/>"
+					+"          <border enabled='False'/>"
+					+"          <inside_margin all='8'/>"
+					+"        </chart_background>"
+					+"        <legend enabled='True' position='Top' align='Far' inside_dataplot='false' align_by='Chart' Columns='1'>"
+					+"          <title enabled='false'/>"
+					+"        </legend>"
+					+"        <data_plot_background>"
+					+"          <border enabled='False'/>"
+					+"          <fill type='Solid' color='#FFFFFF'/>"
+					+"        </data_plot_background>"
+					+"        <axes>"
+					+"          <x_axis tickmarks_placement='Center'>"
+					+"            <zero_line enabled='False'/>"
+					+"            <labels rotation='0'>"
+					+"              <format>{%Value}{numDecimals:0,thousandsSeparator:}</format>"
+					+"            </labels>"
+					+"            <title>"
+					+"              <text></text>"
+					+"            </title>"
+					+"            <scale minimum='DefaultValue'/>"
+					+"            <major_grid>"
+					+"              <line color='#C0C0C0'/>"
+					+"            </major_grid>"
+					+"            <minor_grid>"
+					+"              <line color='#C0C0C0' opacity='0.5'/>"
+					+"            </minor_grid>"
+					+"          </x_axis>"
+					+"          <extra>"
+					+"            <y_axis name='yaxis69135-1' position='Opposite'>"
+					+"              <zero_line enabled='False'/>"
+					+"              <title>"
+					+"                <font bold='True'/>"
+					+"                <text>文件大小</text>"
+					+"              </title>"
+					+"              <labels padding='0'>"
+					+"                <format>{%Value}{numDecimals:2,thousandsSeparator:}</format>"
+					+"              </labels>"
+					+"              <scale type='Linear' minimum='0'/>"
+					+"              <major_grid>"
+					+"                <line color='#C0C0C0'/>"
+					+"              </major_grid>"
+					+"              <minor_grid>"
+					+"                <line color='#C0C0C0' opacity='0.5'/>"
+					+"              </minor_grid>"
+					+"            </y_axis>"
+					+"          </extra>"
+					+"          <y_axis name='yaxis69135-0' position='Normal'>"
+					+"            <zero_line enabled='False'/>"
+					+"            <title>"
+					+"              <font bold='True'/>"
+					+"              <text>文件数量</text>"
+					+"            </title>"
+					+"            <labels padding='0'>"
+					+"              <format>{%Value}{numDecimals:0,thousandsSeparator:}</format>"
+					+"            </labels>"
+					+"            <scale type='Linear' minimum='0'/>"
+					+"            <major_grid>"
+					+"              <line color='#C0C0C0'/>"
+					+"            </major_grid>"
+					+"            <minor_grid>"
+					+"              <line color='#C0C0C0' opacity='0.5'/>"
+					+"            </minor_grid>"
+					+"          </y_axis>"
+					+"        </axes>"
+					+"      </chart_settings>"
+					+"      <styles>"
+					+"        <bar_style name='lineColor0'>"
+					+"          <fill color='#FF6600' opacity='0.8' type='Solid'/>"
+					+"          <line color='#FF6600'/>"
+					+"        </bar_style>"
+					+"        <bar_style name='lineColor1'>"
+					+"          <fill color='#33CCCC' opacity='0.8' type='Solid'/>"
+					+"          <line color='#33CCCC'/>"
+					+"        </bar_style>"
+					+"      </styles>"
+					+"      <data>"
+					+"        <series name='文件大小' id='s1' color='#33CCCC' type='Bar' y_axis='yaxis69135-1' style='lineColor1'>"
+					+"          <tooltip enabled='True'>"
+					+"            <format>{%Name}{numDecimals:0,thousandsSeparator:} {%SeriesName}:{%YValue}{numDecimals:2,thousandsSeparator:}GB</format>"
+					+"          </tooltip>"
+					+			xSize.toString()
+					+"        </series>"
+					+"        <series name='文件数量' id='s0' color='#FF6600' type='Bar' y_axis='yaxis69135-0' style='lineColor0'>"
+					+"          <tooltip enabled='True'>"
+					+"            <format>{%Name}{numDecimals:0,thousandsSeparator:} {%SeriesName}:{%YValue}{numDecimals:0,thousandsSeparator:}个</format>"
+					+"          </tooltip>"
+					+			xCount.toString()
+					+"        </series>"
+					+"      </data>"
+					+"    </chart>"
+					+"  </charts>"
+					+"</anychart>");
+			StringBuilder results1 = new StringBuilder("<anychart>"
+					+"  <settings>"
+					+"    <animation enabled='True'/>"
+					+"  </settings>"
+					+"  <margin all='0'/>"
+					+"  <charts>"
+					+"    <chart name='chart69135' plot_type='CategorizedVertical' leftLen='88' rightLen='80'>"
+					+"      <data_plot_settings enable_3d_mode='True'>"
+					+"			<bar_series point_padding='0.1' group_padding='1.4'/>"
+					+"      </data_plot_settings>"
+					+"      <chart_settings>"
+					+"        <title>"
+					+"          <text>"+spaceName+"文件统计</text>"
+					+"        </title>"
+					+"        <chart_background>"
+					+"          <fill enabled='true' type='Solid' color='#FFFFFF'/>"
+					+"          <border enabled='False'/>"
+					+"          <inside_margin all='8'/>"
+					+"        </chart_background>"
+//					+"        <legend enabled='True' position='Top' align='Far' inside_dataplot='false' align_by='Chart' Columns='1'>"
+					+"        <legend enabled='True' position='Float' anchor='RightTop' horizontal_padding='100' vertical_padding='10'>" 
+					+"          <title enabled='false'/>"
+					+"        </legend>"
+					+"        <data_plot_background>"
+					+"          <border enabled='False'/>"
+					+"          <fill type='Solid' color='#FFFFFF'/>"
+					+"        </data_plot_background>"
+					+"        <axes>"
+					+"          <x_axis>"
+					+"            <zero_line enabled='False'/>"
+					+"            <labels rotation='20'>"
+					+"              <format>{%Value}{numDecimals:0,thousandsSeparator:}</format>"
+					+"            </labels>"
+					+"            <title>"
+					+"              <text></text>"
+					+"            </title>"
+					+"            <scale minimum='DefaultValue'/>"
+					+"            <major_grid>"
+					+"              <line color='#C0C0C0'/>"
+					+"            </major_grid>"
+					+"            <minor_grid>"
+					+"              <line color='#C0C0C0' opacity='0.5'/>"
+					+"            </minor_grid>"
+					+"          </x_axis>"
+					+"          <extra>"
+					+"            <y_axis name='yaxis69135-1' position='Opposite'>"
+					+"              <zero_line enabled='False'/>"
+					+"              <title>"
+					+"                <font bold='True'/>"
+					+"                <text>文件大小(GB)</text>"
+					+"              </title>"
+					+"              <labels>"
+					+"                <format>{%Value}{numDecimals:2,thousandsSeparator:}</format>"
+					+"              </labels>"
+					+"              <scale type='Linear' minimum='0'/>"
+					+"              <major_grid>"
+					+"                <line color='#C0C0C0'/>"
+					+"              </major_grid>"
+					+"              <minor_grid>"
+					+"                <line color='#C0C0C0' opacity='0.5'/>"
+					+"              </minor_grid>"
+					+"            </y_axis>"
+					+"          </extra>"
+					+"          <y_axis name='yaxis69135-0' position='Normal'>"
+					+"            <zero_line enabled='False'/>"
+					+"            <title>"
+					+"              <font bold='True'/>"
+					+"              <text>文件数量(个)</text>"
+					+"            </title>"
+					+"            <labels>"
+					+"              <format>{%Value}{numDecimals:0,thousandsSeparator:}</format>"
+					+"            </labels>"
+					+"            <scale type='Linear' minimum='0'/>"
+					+"            <major_grid>"
+					+"              <line color='#C0C0C0'/>"
+					+"            </major_grid>"
+					+"            <minor_grid>"
+					+"              <line color='#C0C0C0' opacity='0.5'/>"
+					+"            </minor_grid>"
+					+"          </y_axis>"
+					+"        </axes>"
+					+"      </chart_settings>"
+					+"      <styles>"
+					+"        <bar_style name='lineColor0'>"
+					+"          <fill color='#FF6600' opacity='0.8' type='Solid'/>"
+					+"          <line color='#FF6600'/>"
+					+"        </bar_style>"
+					+"        <bar_style name='lineColor1'>"
+					+"          <fill color='#33CCCC' opacity='0.8' type='Solid'/>"
+					+"          <line color='#33CCCC'/>"
+					+"        </bar_style>"
+					+"      </styles>"
+					+"      <data>"
+					+"        <series name='文件大小' id='s1' color='#33CCCC' type='Bar' y_axis='yaxis69135-1' style='lineColor1'>"
+					+"          <tooltip enabled='True'>"
+					+"            <format>{%Name}{numDecimals:0,thousandsSeparator:} {%SeriesName}:{%YValue}{numDecimals:2,thousandsSeparator:}(GB)</format>"
+					+"          </tooltip>"
+					+			xSize.toString()
+					+"        </series>"
+					+"        <series name='文件数量' id='s0' color='#FF6600' type='Bar' y_axis='yaxis69135-0' style='lineColor0'>"
+					+"          <tooltip enabled='True'>"
+					+"            <format>{%Name}{numDecimals:0,thousandsSeparator:} {%SeriesName}:{%YValue}{numDecimals:0,thousandsSeparator:}(个)</format>"
+					+"          </tooltip>"
+					+			xCount.toString()
+					+"        </series>"
+					+"      </data>"
+					+"    </chart>"
+					+"  </charts>"
+					+"</anychart>");
+			jacper.print("{success:true,data:\""+results1.toString()+"\"}");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

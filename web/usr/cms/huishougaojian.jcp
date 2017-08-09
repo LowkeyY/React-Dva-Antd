@@ -1,0 +1,44 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+import java.sql.SQLException;
+import java.util.UUID;
+import com.susing.core.KingleSystem;
+
+@class{
+	public void doPost(Jacper jacper) {
+
+		HttpSession hs = jacper.getSession();
+		Connection conEdu = jacper.getConnection("education");
+		String userid = String.valueOf(hs.uid);
+		String[] ids = jacper.getArray("id");
+
+		try {
+			StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < ids.length; i++) {
+			if (i > 0)
+				sb.append(',');
+			sb.append('?');
+		}
+			
+		
+			String intoGjRh = "update cms_gaojian set huishouzhuangtai='"+userid+"' where ";
+			intoGjRh=intoGjRh+"id in ("+sb+")";
+			conEdu.exec(intoGjRh,ids);
+			conEdu.commit();
+		} catch (SQLException e) {
+			try {
+				conEdu.rollback();
+			} catch (SQLException e1) {
+			}
+			jacper.print("{success:false,message:'操作中出现错误，请联系管理员。'}");
+			e.printStackTrace();
+			return;
+		}
+
+		jacper.print("{success:true,message:'操作成功。'}");
+	}
+}

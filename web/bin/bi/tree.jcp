@@ -1,0 +1,114 @@
+            
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+
+                
+@class{
+	public void doGet(Jacper jacper){    
+	
+		Connection conPlat = jacper.getConnection("plat"); 
+		Connection conCert=jacper.getConnection("cert");
+		
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		String dept_id=hs.getString("dept_id");
+		String role_id=hs.getString("role_id");
+
+		String forder_id=jacper.getStr("_id");
+		String type= jacper.getStr("type");
+
+		String method= jacper.getStr("method");
+		String parentType= jacper.getStr("parentType");
+
+		String paramString="";
+		String starticon="";
+		String[][] forders=null;
+
+
+		<?<root _id="?>forder_id<?">
+		<forder _parent="?>forder_id<?" event="event0">?>; 
+
+		String[][] rs=null;              
+		if(parentType.equals("query")){
+				rs = conPlat.get("select max(a.forder_id),max(a.forder_title),count(b.forder_id)+count(c.query_id),0 from $[plat].sys__forder a left outer join $[plat].app_query c on a.forder_id=c.forder_id  left outer join $[plat].sys__forder b on a.forder_id=b.parent_id  where a.parent_id=? and a.forder_id>=20000 group by a.forder_id",new String[]{forder_id+""},0);
+				paramString="params=\"method="+method+"\"";
+				for(int i=0;i<rs.length;i++){				
+					if (Integer.parseInt(rs[i][2])>1) rs[i][2]="1";
+					<?<e _id="?>rs[i][0]<?" _hasChild ="?>rs[i][2]<?"  title="?>rs[i][1]<?"  ?>paramString<? objectType="1" url="/bin/bi/tree.jcp?_id=?>rs[i][0]<?&amp;method=?>method<?&amp;parentType=?>parentType<?"/>?>;
+				}
+		} else if(parentType.equals("report")){
+			rs = conPlat.get("select max(a.forder_id),max(a.forder_title),count(b.forder_id)+count(c.report_id),0 from $[plat].sys__forder a left outer join $[plat].app_query_report c on a.forder_id=c.forder_id left outer join   $[plat].sys__forder b on a.forder_id=b.parent_id   where a.parent_id=? group by a.forder_id",new String[]{forder_id+""},0);
+			paramString="params=\"method="+method+"\"";
+
+			String is_master = "";
+			if(user_id!=1&&user_id!=0){
+				is_master = conCert.getRow("select is_developer from $[cert].user_base where user_id=?",new String[]{user_id+""})[0];
+			}
+			if(is_master.equals("0")&&user_id!=0&&user_id!=1){
+					String[][] d = conCert.getTree("$[cert].dept_base","parent_dept","dept_id","",new String[]{dept_id});
+					String s = "";
+					for(int i=0;i<d.length;i++){
+						if(i!=0)
+							s +=",";
+						s +="'"+d[i][0]+"'";
+					}
+					String authType=(String)com.susing.core.KingleSystem.getProperty("auth_type");
+					if(authType.equals("0")){
+						forders=conPlat.get("select distinct forder_id from $[plat].app_report_auth  where user_id=? or (user_id='-999' and dept_id=?) or (user_id='-999999' and dept_id in ("+s+"))",new String[]{user_id+"",dept_id});
+					}else if(authType.equals("1")){
+						forders=conPlat.get("select distinct forder_id from $[plat].app_report_auth  where user_id=? or (user_id='-999' and dept_id=?) or (user_id='-999999' and dept_id in ("+s+"))",new String[]{role_id+"",dept_id});
+					}
+
+			}
+			for(int i=0;i<rs.length;i++){				
+				if (Integer.parseInt(rs[i][2])>1) rs[i][2]="1";
+				if(is_master.equals("0")&&user_id!=0&&user_id!=1){
+						if(parentType.equals("report") && !hasAuth(rs[i][0],forders)){
+							continue;		
+						}
+						if (parentType.equals("report"))
+							paramString="params=\"\"";
+				}
+				<?<e _id="?>rs[i][0]<?" _hasChild ="?>rs[i][2]<?"  title="?>rs[i][1]<?"  ?>paramString<?  objectType="1" url="/bin/bi/tree.jcp?_id=?>rs[i][0]<?&amp;method=?>method<?&amp;parentType=?>parentType<?"/>?>;
+			}
+		}
+
+		if(parentType.equals("query")){
+		  if(method.equals("user")){
+				rs = conPlat.get("select query_id,query_name,is_join,1 from $[plat].app_query where forder_id=? and type=2 ",new String[]{forder_id});
+		   }
+		   starticon="/themes/icon/xp/search1.gif";
+		}else if(parentType.equals("report")){
+			rs = conPlat.get("select report_id,report_name,0,1 from $[plat].app_query_report where forder_id=? order by seq",new String[]{forder_id});
+			starticon="/themes/icon/xp/table.gif";
+		}
+
+		conPlat.close();
+		conCert.close();
+
+		if(rs!=null&&rs.length != 0){
+			for(int i=0;i<rs.length;i++){
+				String query_id = rs[i][0];
+				String query_name = rs[i][1];					
+				if(parentType.equals("query")){										
+					paramString="params=\"query_name="+query_name+"&amp;query_id="+query_id+"\"";;
+				}else if(parentType.equals("report")){
+					paramString="params=\"report_id="+query_id+"\"";;
+				}
+				<?<e _id="?>query_id<?" _parent="?>forder_id<?" icon0="?>starticon<?" title="?>query_name<?" objectType="2"  ?>paramString<? />?>;
+			}
+		}
+		<?</forder></root>?>;
+	}
+	private boolean hasAuth(String s,String[][] arr){
+		for(int i=0;i<arr.length;i++){
+			if(arr[i][0].equals(s))   
+				return true;
+		}
+		return false;
+	}
+}

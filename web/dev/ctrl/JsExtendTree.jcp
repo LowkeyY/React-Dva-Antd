@@ -1,0 +1,205 @@
+            
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.ui.core.CustomizeFactory;
+import com.kinglib.ui.core.input.*;
+import com.kinglib.ui.core.listinput.AbstractListInput;
+import com.kinglib.ui.core.linkinput.AbstractLinkInput;
+import com.kinglib.ui.core.crossinput.AbstractCrossInput;
+import com.kinglib.workbench.program.*;
+import com.kinglib.util.json.*;
+import com.kinglib.database.*;
+import java.util.*;
+import javax.servlet.http.*;
+
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+@class{
+
+	public void doGet(Jacper jacper){  
+
+		Param param=new Param(jacper);
+		String id = param.getStr("node");
+		String[] ids=id.split("_");
+		Connection conPlat=param.getConnection("plat");
+		boolean showTableName=false;
+		try {
+			if(ids.length<4){
+				JSONArray treeArr = new JSONArray();
+				JSONObject js = null;
+				ObjectNode node = ObjectManager.getObject(ids[0]);
+				InputColumn[] columns=null;
+				if (node.getType() == ObjectType.PROGRAM){
+					String cid=node.getId();
+					Program prg=ProgramFactory.getInstance().getProgram(conPlat,
+							node.getId());
+					switch(prg.getType()){
+						case 1:
+							columns=((AbstractInput)CustomizeFactory.getCustomizeObject(param,"ProgramInput", cid)).getColumns();
+						break;
+						case 3:
+							columns=((AbstractListInput)CustomizeFactory.getCustomizeObject(param,"ProgramListInput", cid)).getInput().getColumns();
+						break;
+						case 6:
+							AbstractLinkInput ali=(AbstractLinkInput)CustomizeFactory.getCustomizeObject(param,"ProgramLinkInput", cid);
+							InputColumn[] main=ali.getColumns();
+							InputColumn[] sub=ali.getSubInput().getColumns();
+							columns=new InputColumn[main.length+sub.length];
+							System.arraycopy(main,0,columns,0,main.length);
+							showTableName=true;
+							System.arraycopy(sub,0,columns,main.length,sub.length);
+						break;
+						case 13:
+							columns=((AbstractCrossInput)CustomizeFactory.getCustomizeObject(param,"ProgramCrossInput", cid)).getInput().getColumns();
+						break;
+					}
+				}else if (node.getType() == ObjectType.WIDGET){
+					//WidgetFactory.getWidget(conPlat, node.getId()).getTab1Id();
+				}
+				if(ids.length==1){
+					StringBuilder sb=null;
+					String fcas="";
+					String[][] rs=conPlat.get("select FIELD_NAME,tab_id from $[plat].prg_jsext where object_id=?",ids,0);
+					if(rs!=null && rs.length>0){
+						StringBuilder fca=new StringBuilder(200);
+						for(String[] r:rs){
+							fca.append(",").append(r[0]).append(r[1]);
+						}
+						fca.append(",");
+						fcas=fca.toString();
+					}
+					String events="";
+					js = new JSONObject();
+					js.put("id",ids[0]+"_0_0");
+					js.put("text","Panel");
+					js.put("annotation",jacper.trans("表单面板")+"(Ext.form.FormPanel)");
+					js.put("events",new JSONValue(CtrlEvent.getFormPanelEvents()));
+					js.put("leaf", fcas.indexOf(",00,")==-1);
+					js.put("isObject", true);
+					js.put("icon", "/themes/icon/all/application_form.gif");
+					treeArr.put(js);
+					if(columns!=null){
+						for (InputColumn ic : columns) {
+							js = new JSONObject();
+							js.put("id",ids[0]+"_"+ic.getObjectId()+"_"+ic.getId());
+							if(showTableName){
+								MetaTable mt=MetaFactory.getObject(ic.getObjectId());
+								js.put("text", mt.getLname()+"."+ic.getLname());
+							}else
+								js.put("text", ic.getLname()+"("+ic.getPname()+")");
+							sb=new StringBuilder(120);
+							sb.append("&nbsp;").append(ic.getDataType().toString());
+							sb.append(" ,").append(ic.getCtrlType().toString());
+							if(ic.getSpecialSet()!=SpecialSet.NoSpecialSet){
+								sb.append(",").append(ic.getSpecialSet().toString());
+							}
+							js.put("annotation",sb.toString());
+							events=CtrlEvent.getEvents(ic.getCtrlType());
+							if(events==null){
+								js.put("events",new JSONValue("[[' ',' ']]"));
+							}else
+								js.put("events",new JSONValue(events));
+							js.put("leaf", fcas.indexOf(","+ic.getId()+ic.getObjectId()+",")==-1);
+							js.put("isObject", true);
+							js.put("icon", "/themes/icon/all/html.gif");
+							treeArr.put(js);
+						}
+					}
+				}else{
+					
+					String tabId=ids[1];
+					
+					String filter="";
+					boolean userDefined=false;
+					
+					if(!tabId.equals("0")){
+						CtrlType ctype=null;
+						if(columns!=null){
+							for(InputColumn ic:columns){
+								if(ic.getObjectId()==tabId && String.valueOf(ic.getId()).equals(ids[2])){
+									ctype=ic.getCtrlType();
+									break;
+								}
+							}
+						}
+						if(ctype!=null){
+							filter=CtrlEvent.getEventNames(ctype);
+							if(filter==null) filter="";
+						}
+					}else{
+						filter=CtrlEvent.getEventNames("FormPanel");
+					}
+
+					String[][] rs=conPlat.get("select EVENT_NAME from $[plat].prg_jsext where object_id=? and tab_id=?  and FIELD_NAME=? ",ids,0);
+					if(rs!=null && rs.length>0){
+						for(String[] r:rs){
+							userDefined=filter.indexOf(","+r[0]+",")==-1;
+							js = new JSONObject();
+							js.put("id",id+"_"+r[0]);
+							js.put("text", r[0]);
+							js.put("leaf", true);
+							js.put("icon", "/themes/icon/all/script_code"+(userDefined?"_red":"")+".gif");
+							treeArr.put(js);
+						}
+					}				
+				}
+				jacper.print(treeArr.toString());
+			}else if(ids.length==4){
+					Object[] enventBody=conPlat.getLarge("select event_body from $[plat].prg_jsext where object_id=?  and    tab_id=? and field_name=? and event_name=?",ids);
+					if(enventBody.length>0){
+						jacper.print(enventBody[0].toString());
+					}
+			
+			}
+		} catch (Exception e) {
+			jacper.getResponse().setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR );
+			jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+	public void doPost(Jacper jacper){  
+		String data = jacper.getStr("data");
+		String objectId = jacper.getStr("objectId");
+		Connection conPlat=jacper.getConnection("plat");
+		try {
+			JSONObject js=new JSONObject(data);
+			Iterator keys=js.keys();
+			String k=null,value=null;
+			String[] ks=null;
+			JSExtend je=JSExtend.getInstance();
+			while(keys.hasNext()){
+				k=(String)keys.next();
+				ks=k.split("_");
+				
+				if(ks.length==4){
+					try{
+						conPlat.exec("delete from $[plat].prg_jsext where  object_id=? and tab_id=? and field_name=? and event_name=?",ks);
+						je.remove(ks[0]);
+					}catch(Exception e){
+					
+					}
+				}
+				
+				value=js.getString(k);
+				if(!value.trim().equals("")){
+					je.regist(ks[0]);
+					conPlat.execLarge("insert into $[plat].prg_jsext(object_id,tab_id,field_name,event_name,event_body) values(?,?,?,?,?)",new Object[]{ks[0],ks[1],ks[2],ks[3].trim(),value});
+				}
+				CustomizeFactory.remove(objectId);
+			}
+			
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+			CustomizeFactory.remove(objectId);
+		}
+	}
+
+}

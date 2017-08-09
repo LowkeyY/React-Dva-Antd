@@ -1,0 +1,48 @@
+
+import java.io.IOException;
+
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.workbench.*;
+import com.kinglib.database.*;
+import java.util.*;
+
+@class{
+ public void doPost(Jacper jacper){
+		
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		Connection conPlat = jacper.getConnection("plat"); 
+		String  parent_id = jacper.getString("object_id","1");
+		jacper.getResponse().setContentType("application/x-json");
+
+		String  type = jacper.getStr("type");
+		
+		String sql="select f.object_id,f.logicName from $[plat].search_base f,$[plat].object_base e,$[plat].object_base d where f.object_id=e.object_id and d.object_id=e.parent_id and d.parent_id=?  order by f.logicName";
+
+		try{
+			JSONObject optionJSON = new JSONObject("{}");
+			ObjectNode taskNode=ObjectManager.getObject(parent_id);
+			ObjectNode appNode=taskNode.upTo(1);
+			String appId=appNode.getId();
+			String[][] searchs  = conPlat.get(sql,new String[]{appId+""});
+			conPlat.close();
+			JSONArray jarr=new JSONArray();
+			for(int i=0;i<searchs.length;i++){
+				JSONObject items = new JSONObject("{}");
+				items.put("value",searchs[i][0]);
+				items.put("text",searchs[i][1]);
+				jarr.put(items);
+			}
+			optionJSON.put("items",jarr);	
+			<??>optionJSON.toString()<??>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+}

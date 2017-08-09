@@ -1,0 +1,51 @@
+            
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.ui.core.utils.*;
+import com.kinglib.ui.core.CustomizeFactory;
+import com.kinglib.ui.core.input.*;
+import com.kinglib.ui.core.listinput.AbstractListInput;
+import com.kinglib.ui.core.linkinput.AbstractLinkInput;
+import com.kinglib.ui.core.crossinput.AbstractCrossInput;
+import com.kinglib.workbench.program.*;
+import com.kinglib.util.json.*;
+import com.kinglib.database.*;
+import java.util.*;
+import javax.servlet.http.*;
+import com.kinglib.*;
+
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+import com.kinglib.workbench.ObjectType;
+@class{
+	public void doGet(Jacper jacper){  
+		Param param=new Param(jacper);
+		String id = param.getStr("node");
+		String objectId = param.getStr("objectId");
+		Connection conPlat=param.getConnection("plat");
+		try {
+				JSONArray treeArr = new JSONArray();
+				JSONObject js = null;
+				String[][] rs=conPlat.get("select a.id,a.dir_name,a.start_icon,a.end_icon,b.id from $[plat].prg_folder a left outer join (select max(id) as id ,parent_id as parent_id  from $[plat].prg_folder  group by parent_id)  b on  a.id=b.parent_id where a.object_id=? and a.parent_id=? order by a.seq",new String[]{objectId,id},0);
+				if(rs!=null && rs.length>0){
+					for(int i=0;i<rs.length;i++){
+						js = new JSONObject();
+						js.put("id",rs[i][0]);
+						js.put("text",rs[i][1]);
+						js.put("allowSelect",true);
+						js.put("leaf", rs[i][4].equals(""));
+						js.put("icon", "/themes/icon"+rs[i][2]);
+						treeArr.put(js);
+					}
+				}
+				jacper.print(treeArr.toString());
+		} catch (Exception e) {
+			jacper.getResponse().setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR );
+			jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+}

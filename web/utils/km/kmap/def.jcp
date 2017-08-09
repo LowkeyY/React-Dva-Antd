@@ -1,0 +1,43 @@
+
+/*
+ * @(#)/file/def.jcp	1.0.0 03/03/31
+ *
+ * Copyright 2003 Bizdict Co.,Ltd. All rights reserved.
+ *
+ * 主程序作者：
+ * @author lzy
+ *
+ * 修改者：
+ *
+ * 修改日期:
+ *
+ * 修改理由:
+ *
+ */
+
+
+
+
+
+import java.io.IOException;
+
+import com.kinglib.*;
+
+
+@class{
+
+
+	public void doGet(Jacper jacper){
+
+<?
+<html><head>
+<meta http-equiv="Content-Type" content="text/html">
+</head>
+<body>
+<font style="font-size:16px;color:red">?>jacper.trans("详细操作请点击左侧文件夹")<?</font>
+</body>
+</html>
+?>;
+
+	}
+}

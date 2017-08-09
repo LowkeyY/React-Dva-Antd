@@ -1,0 +1,122 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+
+import com.kinglib.util.json.*;
+import com.kinglib.database.*;
+import com.kinglib.database.ConstraintType;
+
+@class{
+	public void doGet(Jacper jacper){
+		
+		String type=jacper.getStr("type");
+		String object_id=jacper.getString("object_id","-1");
+		boolean onlyMeta=jacper.getStr("onlyMeta").equals("true");
+		String constraint_name=jacper.getStr("constraint_name");
+		String message="";
+		boolean success=true;
+		Connection conPlat=null;
+		try{
+			conPlat=jacper.getConnection("plat");
+			MetaTableDesigner mt=MetaFactory.getObjectDesigner(object_id);
+			if(type.equals("P")){
+				mt.dropPrimaryKey(conPlat,constraint_name,onlyMeta);
+			}else if(type.equals("F")){
+				mt.dropForeignKey(conPlat,constraint_name,onlyMeta);
+			}else if(type.equals("U")){		
+				mt.dropIndex(conPlat,constraint_name,onlyMeta);
+			}else if(type.equals("R")){		
+				mt.dropReference(conPlat,constraint_name);
+			}
+		}catch(Exception e){
+				e.printStackTrace();
+				success=true;
+				message=e.getMessage();
+		}finally{
+			if(conPlat!=null)
+				conPlat.close();
+		}
+		jacper.print("{success:"+success+",message:'"+message+"'}");	
+	}
+
+
+
+	public void doPost(Jacper jacper){
+
+
+		String type=jacper.getStr("type");
+		String object_id=jacper.getString("object_id","-1");
+		boolean onlyMeta=jacper.getStr("onlyMeta").equals("true");
+		String constraint_name=jacper.getStr("constraint_name");
+		String fields=jacper.getStr("fields");
+		boolean success=true;
+		String message="";
+		String[] columnIDs=null;
+		Connection conPlat=null;
+
+		try{
+	
+			conPlat=jacper.getConnection("plat");
+			JSONArray jarr=new JSONArray(fields);
+			columnIDs=new String[jarr.length()];
+			MetaTable mt=MetaFactory.getObject(object_id);
+			MetaTableDesigner md=MetaFactory.getObjectDesigner(object_id);
+			for(int i=0;i<jarr.length();i++)
+				columnIDs[i]=jarr.getJSONObject(i).getString("item_id");
+
+			if(type.equals("P")){
+				if(constraint_name.equals("")){
+					constraint_name=md.generateConstraintName(ConstraintType.PrimaryKey);
+					md.addPrimaryKey(conPlat,constraint_name,columnIDs,onlyMeta);
+				}else{
+					md.dropPrimaryKey(conPlat,constraint_name,onlyMeta);
+				}
+			}else if(type.equals("F") || type.equals("R")){
+				String[] columnNames=new String[jarr.length()];
+				String[] fkNames=new String[jarr.length()];
+				String fkid=jacper.getString("link_table","-1");
+				MetaTable referenceTable=MetaFactory.getObject(fkid);
+    
+				for(int i=0;i<jarr.length();i++){
+					columnNames[i]=mt.getColumn(columnIDs[i]).getPname();
+					fkNames[i]=jarr.getJSONObject(i).getString("link_item_id");
+					fkNames[i]=referenceTable.getColumn(fkNames[i]).getPname();
+				}
+
+				if((type.equals("F"))){
+					if(constraint_name.equals(""))
+						constraint_name=md.generateConstraintName(ConstraintType.ForeignKey);
+					else
+						md.dropForeignKey(conPlat,constraint_name,onlyMeta);
+					md.addForeignKey(conPlat,constraint_name,columnNames,referenceTable,fkNames,onlyMeta);	
+				}else{
+					if(constraint_name.equals(""))
+						constraint_name=md.generateConstraintName(ConstraintType.Reference);
+					else
+						md.dropReference(conPlat,constraint_name);
+					md.addReference(conPlat,constraint_name,columnNames,referenceTable,fkNames);	
+				}
+			
+			}else if(type.equals("U")){
+				if(constraint_name.equals("")){
+					constraint_name=md.generateConstraintName(ConstraintType.Unique);
+					md.addIndex(conPlat,constraint_name,columnIDs,onlyMeta);		
+				}else{
+					md.dropIndex(conPlat,constraint_name,onlyMeta);
+				}
+			}
+			
+			MetaFactory.reloadMetaTable(conPlat,mt);
+			jacper.print("{success:"+success+",constraintName:'"+constraint_name+"'}");	
+		}catch(Exception e){
+				success=false;
+				message=e.getCause().getMessage();
+				message=message.replaceAll("\n","");
+				jacper.print("{success:"+success+",message:'"+message+"'}");	
+				e.printStackTrace();
+		}finally{
+			if(conPlat!=null)
+				conPlat.close();
+		}
+	}
+}

@@ -1,0 +1,44 @@
+import com.kinglib.*;
+
+import java.io.InputStream;
+import javax.servlet.http.HttpServletResponse;
+import com.kinglib.util.Files;
+import com.susing.upload.FileExtend;
+import java.io.FileInputStream;
+import gpra.filesystem.HWUnits;
+
+//public class SearchFilePreview{
+@class{
+	public void doGet(Jacper jacper) {
+		String file_id = jacper.getString("file_id", ""), fileName = "preview", fileType = ".jpg" , file_path = "K:\\web\\themes\\icon\\all\\transparent.gif";
+		InputStream in = null;
+		try {
+			if(file_id.length() > 0){
+				Connection conDocmgr = jacper.getConnection(HWUnits.HW_DBLINK);
+				String[] row = conDocmgr.getRow("select p.file_perview_url from DIR_FILE_BASE b left outer join DIR_FILE_PHYSICAL p on b.phy_file_id = p.phy_file_id where b.file_id = ?" , new String[]{file_id});				
+				file_path = row != null && row.length > 0 && !"".equals(row[0]) ? (row[0]+fileType) : file_path;
+			}
+			//System.out.println(file_id + "," + file_path);
+			HttpServletResponse res = jacper.getResponse();
+			
+			fileName = fileName + fileType;
+			in = new FileInputStream(file_path);
+			res.setContentType(FileExtend.getContentType(fileType));
+			res.setHeader("Content-Disposition", "inline;filename="+ fileName);
+			res.setHeader("Content-Length", String.valueOf(in.available()));
+			res.setHeader("Accept-ranges", "bytes");
+			Files.copyRange(in, res.getOutputStream(), 1024);
+		} catch (Exception e) {
+			e.printStackTrace();
+			jacper.print("对不起，文件暂时无法预览 ，请直接下载。");
+		} finally {
+			try {
+				if (in != null) {
+					in.close();
+				}
+			} catch (Exception e2) {
+			}
+		}
+	
+	}
+}

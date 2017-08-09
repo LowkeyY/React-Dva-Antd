@@ -1,0 +1,64 @@
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.grid.*;
+
+@class{
+	public void doGet(Jacper jacper){
+		
+		Connection conPlat = jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+
+		String parent_id = jacper.getStr("parent_id");
+		String schedule_id = jacper.getStr("schedule_id");
+
+		String type = jacper.getStr("type");
+
+		String sql ="";
+		String[] param=new String[]{};
+
+		if(type.equals("delete")){			
+			try{	
+				if(parent_id.equals("")&&schedule_id.equals("")){		
+					sql ="delete from $[plat].sys_task_logger where $getdate()-log_date<7";	
+				}else if(!parent_id.equals("")&&schedule_id.equals("")){
+					sql ="delete from $[plat].sys_task_logger  where task_id=?";
+					param=new String[]{parent_id};
+				}else{
+					sql ="delete from $[plat].sys_task_logger  where schedule_id=?";	
+					param=new String[]{schedule_id};
+				}
+				conPlat.exec(sql,param);
+				<?{success:true}?>;
+			}catch(Exception e){
+				<?{success:false,message:"?>e.toString()<?"}?>;
+			}finally{
+				conPlat.close();
+			}
+		}else{
+			
+			String sort = jacper.getStr("sort");
+			String dir = jacper.getStr("dir");
+			int startRow = jacper.getInt("start",0);
+			int rowCount = jacper.getInt("limit",0);
+			if(parent_id.equals("")&&schedule_id.equals("")){	
+				sql ="select a.log_date,$date_str(a.log_date,111),c.task_name,a.log_level,a.log_msg from $[plat].sys_task_logger a,$[plat].sys_task c where a.task_id=c.task_id and $getdate()-log_date<7";	
+			}else if(!parent_id.equals("")&&schedule_id.equals("")){
+				sql ="select a.log_date,$date_str(a.log_date,111),c.task_name,a.log_level,a.log_msg from $[plat].sys_task_logger a,$[plat].sys_task c where a.task_id=c.task_id and a.task_id=? ";	
+				param=new String[]{parent_id};
+			}else{
+				sql ="select a.log_date,$date_str(a.log_date,111),c.task_name,a.log_level,a.log_msg from $[plat].sys_task_logger a,$[plat].sys_task c where a.task_id=c.task_id and a.schedule_id=? ";
+				param=new String[]{schedule_id};
+			}
+			Grid gd=new Grid(sql,jacper.trans("时间"),	new String[]{jacper.trans("时间"),jacper.trans("日期"),jacper.trans("任务名称"),jacper.trans("任务状态"),jacper.trans("任务信息")});
+
+			JSONObject gridJSON=gd.getJSON(conPlat,param,startRow,rowCount,dir,sort);
+			conPlat.close();
+
+			jacper.getResponse().setContentType("application/x-json");
+			<?(?>gridJSON.toString()<?)?>;
+		}
+	}
+}

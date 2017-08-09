@@ -1,0 +1,113 @@
+import java.io.IOException;
+import com.kinglib.*;
+
+import com.susing.sql.*;
+import java.sql.*;
+import java.io.*;
+import com.susing.core.KingleSystem;
+                                                                                                                 
+@class{
+ public void doPost(Jacper jacper){
+		String content = jacper.getStr("content");
+		String conName = jacper.getStr("conName");
+		if(conName.equals("")) conName="plat";
+		com.kinglib.Connection conPlat = jacper.getConnection(conName);
+
+		if(!content.equals("")){
+			PrintStream ps=null;
+			Statement stmt = null;
+			ResultSet rs = null;
+			try{
+				ps=new PrintStream(jacper.getResponse().getOutputStream(),false,"utf-8");
+			}catch(Exception ea){
+				jacper.print("{recordBack:false,message:'"+jacper.trans("运行失败,系统内部错误")+"'}");
+			}
+
+			try{
+				/*
+					注下面这句如果不能运行,需要在com.susing中的以下几个文件中加入以下代码
+						1、在com.susing.sql.GenericDataSource.java中加入:
+							String parseSQL(String sql){
+								return SQLParser.parse(sql.toCharArray(),this);
+							}
+						2、在com.susing.sql.QueryTool.java中加入:
+							public String parseSql(String sql);
+						3、在com.susing.sql.GenericConnection.java中加入:
+							public String parseSql(String sql){
+								return gdc.parseSQL(sql);
+							}
+						4、在com.kinglib.Connection.java中加入:
+							public String parseSql(String sql){
+								return con.parseSql(sql);
+							}
+				*/
+				content=conPlat.parseSql(content).trim();
+			}catch(Exception ea){
+				jacper.print("{recordBack:false,message:'"+jacper.trans("运行失败,获取数据连接错误")+"'}");
+			}
+
+			try{
+				stmt = conPlat.createStatement();
+				stmt.setMaxRows(100);
+				if(stmt.execute(content)){
+					rs = stmt.getResultSet();
+					ResultSetMetaData rsmd = rs.getMetaData();
+					StringBuffer sbf=new StringBuffer(500);
+					int numberOfColumns = rsmd.getColumnCount()+1;
+					sbf.append("{recordBack:true,st:[");
+					for(int i=1,j=0;i<numberOfColumns;i++){
+						if(i>1) sbf.append(",");
+						sbf.append("{name: '"+rsmd.getColumnName(i)+"'");
+						if(rsmd.getColumnType(i)==2)
+							sbf.append(",type:'int'");
+						sbf.append("}");
+					}
+					
+					sbf.append("],cm:[");
+					for(int i=1,j=0;i<numberOfColumns;i++){
+						if(i>1) sbf.append(",");					
+						sbf.append("{header: '"+rsmd.getColumnName(i)+"'");
+						sbf.append(", sortable: true, dataIndex: '"+rsmd.getColumnName(i)+"'");
+						sbf.append("}");
+					}
+					sbf.append("],data:[");
+					int j=0;
+					while(rs.next()){
+						if(j++>0) sbf.append(",");
+						sbf.append("[");
+						for(int i=1;i<numberOfColumns;i++){
+							if(i>1) sbf.append(",");
+							sbf.append("\""+rs.getString(i)+"\"");
+						}
+						sbf.append("]");
+					}
+					sbf.append("]}");
+					ps.print(sbf.toString());
+				}else{ 
+					int rows=stmt.getUpdateCount();
+					if(rows!=-1)
+						ps.print("{recordBack:false,message:'"+jacper.trans("运行成功,此次运行影响")+rows+jacper.trans("行")+"'}");
+					else
+						ps.print("{recordBack:false,message:'"+jacper.trans("运行成功")+"'}");
+				}
+			}catch(Exception e){
+				ps.print("{recordBack:false,message:'"+jacper.trans("运行失败,错误为")+":<br>");
+				ps.print(e.getMessage().replaceAll("\\n","<br>").replaceAll("\\r","").replaceAll("\\'","\\\\'"));
+				ps.print("'}");
+				e.printStackTrace();
+			}finally{
+				try{
+					if(rs!=null)
+						rs.close();
+					if(stmt!=null)
+						stmt.close();
+					conPlat.close();
+					ps.flush();
+					ps.close();
+				}catch(SQLException ex){}
+			}		
+		}else{
+				jacper.print("{recordBack:false,message:'"+jacper.trans("运行失败,必须填写sql语句")+"'");
+		}
+}
+}

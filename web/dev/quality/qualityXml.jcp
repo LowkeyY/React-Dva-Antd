@@ -1,0 +1,65 @@
+import com.kinglib.*;
+import com.susing.core.*;
+import com.susing.server.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.quality.*;
+@class{
+
+	public void doGet(Jacper jacper){
+		
+		String object_id = jacper.getStr("object_id");
+		Connection conPlat = jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		try{	
+			Object[] data = conPlat.getLarge("SELECT SCRIPT_CONTENT FROM $[plat].QUALITY_BASE WHERE object_id=?",new String[]{object_id});
+			/*JSONObject scriptJSON = new JSONObject();
+			if(data!=null && data.length>0){
+				scriptJSON.put("script",data[0]);
+			}else{
+				scriptJSON.put("script","");
+			}
+			jacper.print(scriptJSON.toString());*/
+			if(data[0]==null){
+				//<?xml version="1.0" encoding="UTF-8"?>
+				String tempXml = "<dataAnalysisRules xmlns=\"http://www.sun.com/schema/DI\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.sun.com/schema/DIDataAnalysisSchema.xsd\"><cleansingRules><ruleList><rule><if><condition></condition><then><reject fieldName=\"\" errorType=\"\" errorMessage=\"\" errorLevel=\"\"/></then></if></rule></ruleList></cleansingRules></dataAnalysisRules>";
+				<??>tempXml<??>;
+			}else{	
+				<??>data[0]<??>;
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally {
+			conPlat.close();
+		}
+	}
+
+	public void doPost(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		String object_id = jacper.getStr("object_id");
+		String content = jacper.getStr("content");
+		String type = jacper.getString("type");
+
+		QualityFactory  QF=QualityFactory.getInstance();
+
+		try{	
+			conPlat.setAutoCommit(false);
+			QF.remove(object_id);
+			conPlat.exec("update $[plat].quality_base set have_script='true' where object_id=?",new String[]{object_id});
+			conPlat.execLarge("update $[plat].quality_base set SCRIPT_CONTENT = ? where object_id=?",new Object[]{new StringBuffer(content),object_id});
+			conPlat.commit();
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+			e.printStackTrace();
+		}finally {
+			try{
+				conPlat.setAutoCommit(true);
+			}catch(Exception e2){}
+			conPlat.close();
+		}
+	}
+}

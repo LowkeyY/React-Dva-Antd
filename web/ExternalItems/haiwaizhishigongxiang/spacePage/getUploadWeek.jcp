@@ -1,0 +1,113 @@
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import gpra.filesystem.HWUnits;
+import com.kinglib.*;
+
+	//public class up{
+@class{
+	public void doPost(Jacper jacper) {
+		Connection con=jacper.getConnection(HWUnits.HW_DBLINK);
+		try {
+			String spaceid=(String) jacper.getSession().get("HW_BASE_SPACEID");
+			String date="";
+			for (int i = -6; i <=0 ; i++) {
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+	        	Calendar c = Calendar.getInstance();  
+	        	c.add(Calendar.DATE, i);  
+	        	Date monday = c.getTime();
+	        	String preMonday = sdf.format(monday);
+				String sql="select count(*) from dir_file_base ba inner join  DIR_DATUM_FILE_REVIEWED fr on ba.file_id=fr.file_id where fr.file_audit='1'  and ba.space_id='"+spaceid+"' and  to_char(fr.audit_date,'yyyy-MM-DD')='"+preMonday+"'";
+				String[][] rs = con.get(sql);
+				for (String[] strings : rs) {
+					SimpleDateFormat sdfn = new SimpleDateFormat("MM-dd");
+		        	String notyear = sdfn.format(monday);
+					date+="<point name=\""+notyear+"\" y=\""+strings[0]+"\"/>";
+				}
+			}
+			
+			String data="<anychart>"
+			+"<settings>"
+			+"<animation enabled=\"True\"/>"
+			+"</settings>"
+			+"<margin all=\"0\"/>"
+			+"<charts>"
+			+"<chart name=\"chart69087\" plot_type=\"CategorizedVertical\" leftLen=\"52\" rightLen=\"0\">"
+			+"<data_plot_settings/>"
+			+"<chart_settings>"
+			+"<title>"
+			+"<text>一周内上传排行</text>"
+			+"</title>"
+			+"<chart_background>"
+			+"<fill enabled=\"true\" type=\"Solid\" color=\"#FFFFFF\"/>"
+			+"<border enabled=\"False\"/>"
+			+"<inside_margin all=\"8\"/>"
+			+"</chart_background>"
+			+"<data_plot_background>"
+			+"<border enabled=\"False\"/>"
+			+"<fill type=\"Solid\" color=\"#FFFFFF\"/>"
+			+"</data_plot_background>"
+			+"<axes>"
+			+"<x_axis>"
+			+"<zero_line enabled=\"False\"/>"
+			+"<labels rotation=\"0\">"
+			+"<format>{%Value}</format>"
+			+"</labels>"
+			+"<title>"
+			+"<text>日期</text>"
+			+"</title>"
+			+"<scale minimum=\"DefaultValue\"/>"
+			+"<major_grid>"
+			+"<line color=\"#C0C0C0\"/>"
+			+"</major_grid>"
+			+"<minor_grid>"
+			+"<line color=\"#C0C0C0\" opacity=\"0.5\"/>"
+			+"</minor_grid>"
+			+"</x_axis>"
+			+"<y_axis name=\"yaxis690870\" position=\"Normal\">"
+			+"<zero_line enabled=\"False\"/>"
+			+"<line color=\"#33CCCC\"/>"
+			+"<title>"
+			+"<font color=\"#33CCCC\" bold=\"True\"/>"
+			+"<text>文件数量</text>"
+			+"</title>"
+			+"<labels>"
+			+"<format>{%Value}{numDecimals:0,thousandsSeparator:}</format>"
+			+"</labels>"
+			+"<scale type=\"Linear\" minimum=\"0\"/>"
+			+"<major_grid>"
+			+"<line color=\"#C0C0C0\"/>"
+			+"</major_grid>"
+			+"<minor_grid>"
+			+"<line color=\"#C0C0C0\" opacity=\"0.5\"/>"
+			+"</minor_grid>"
+			+"</y_axis>"
+			+"</axes>"
+			+"</chart_settings>"
+			+"<styles>"
+			+"<bar_style name=\"lineColor0\">"
+			+"<fill color=\"#33CCCC\" opacity=\"0.8\" type=\"Solid\"/>"
+			+"<line color=\"#33CCCC\"/>"
+			+"</bar_style>"
+			+"</styles>"
+			+"<data>"
+			+"<series name=\"上传总数\" id=\"s0\" color=\"#33CCCC\" type=\"Bar\" y_axis=\"yaxis690870\" style=\"lineColor0\">"
+			+"<tooltip enabled=\"True\">"
+			+"<format>"
+			+"{%Name}{numDecimals:0,thousandsSeparator:} {%SeriesName}:{%YValue}{numDecimals:0,thousandsSeparator:}"
+			+"</format>"
+			+"</tooltip>"
+			+date
+			+"</series>"
+			+"</data>"
+			+"</chart>"
+			+"</charts>"
+			+"</anychart>";
+		
+			
+			jacper.print("{success:true,data:'"+data+"'}");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

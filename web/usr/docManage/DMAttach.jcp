@@ -1,0 +1,100 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+import com.social.api.core.model.CertManager;
+import com.susing.upload.FileExtend;
+
+@class{
+	public void doGet(Jacper jacper) {
+		HttpSession hs = jacper.getSession();
+		
+		String ids = jacper.getString("pmk", "");
+		String type = jacper.getString("type", "");
+		if(ids.indexOf("::")!=-1)
+			ids = ids.split("::")[1];
+		JSONObject json = new JSONObject();
+		
+		if(type.length()>0 && "download".equals(type)){
+			String froms = jacper.getString("froms", "");
+			Connection con = jacper.getConnection("education");
+			try{
+				String id = "";
+				if(froms.length()>0){
+					if("text".equals(froms))
+						id = FileExtend.getId("select a.zwnr," +
+							"case when b.fwzh is null then '审批正文'||substr(a.wjmc,instr(a.wjmc,'.',-1)) " +
+							"else b.fwzh||substr(a.wjmc,instr(a.wjmc,'.',-1)) end" +
+							",a.wjlx,a.wjdx from OA_OD_CONTENT a left outer join " +
+							"OA_OFFICIAL_DOCUMENT b on a.gwxh = b.gwxh where a.gwxh='"+ids+"'");
+				}else
+					id = FileExtend.getId("select fj,fjwjm,fjlx,fjdx from OA_OD_ATTACHMENT where fjxh='"+ids+"'");
+				if(id.length()>0)
+					FileExtend.downLoadFile(jacper, con, id);
+				jacper.print("{success:true}");
+			}catch (Exception e) {
+				e.printStackTrace();
+				jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+			}finally{
+				con.close();
+			}
+		}else{
+			if(ids.length()>0){
+				
+				String realName = CertManager.getUser(String.valueOf(hs.uid)).getRealName();
+				Connection con = jacper.getConnection("education");
+				try{
+					json.put("realName", realName);
+					String[] rs = con.getRow("select fjxh,fjwjm,fjdx,scrq,scz from OA_OD_ATTACHMENT where fjxh=?",
+							new String[]{ids});
+					
+					if(rs!=null && rs.length>0){
+						json.put("fjxh", rs[0]);
+						json.put("fjwjm", rs[1]);
+						json.put("fjdx", rs[2]);
+						json.put("scrq", rs[3].length()>= 19 ? rs[3].substring(0, 19) : rs[3]);
+						json.put("scz", CertManager.getUser(rs[4]).getRealName());
+						json.put("sczid", rs[4]);
+						json.put("hasBtn", new JSONArray("[{type:'delete',id : '"+rs[0]+"'}]"));
+					}
+					jacper.print("{success:true,data:"+json+"}");
+				}catch (Exception e) {
+					e.printStackTrace();
+					jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+				}finally{
+					con.close();
+				}			
+			}else{
+				jacper.print("{success:false,message:'页面未找到。'}");
+			}
+		}
+	}
+	
+	public void doPost(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		
+		String ids = jacper.getString("pmk", "");
+		String type = jacper.getString("type", "");
+		if(ids.indexOf("::")!=-1)
+			ids = ids.split("::")[1];
+		
+		if(ids.length()>0 && type.length()>0){
+			Connection con = jacper.getConnection("education");
+			try{
+				if("delete".equals(type)){
+					con.exec("delete from OA_OD_ATTACHMENT where fjxh = ? ", new String[]{ids});
+				}
+				jacper.print("{success:true}");
+			}catch (Exception e) {
+				e.printStackTrace();
+				jacper.print("{success:false,message:'"+e.getMessage()+"'}");
+			}finally{
+				con.close();
+			}			
+		}else{
+			jacper.print("{success:false,message:'页面未找到。'}");
+		}
+	}
+}

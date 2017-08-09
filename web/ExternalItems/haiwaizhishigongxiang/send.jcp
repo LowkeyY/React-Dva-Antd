@@ -1,0 +1,88 @@
+import java.util.Date;
+import java.util.UUID;
+import java.text.SimpleDateFormat;
+import com.kinglib.*;
+import com.social.api.core.model.*;
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.HWUnits.HWSpaceConfig;
+
+//public class send{
+@class{
+	public void doPost(Jacper jacper){		
+		Date date = new Date();
+    	SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");// 可以方便地修改日期格式
+  		String mailDate = dateFormat.format(date);
+  		try {
+ 	        Connection conDocmgr = jacper.getConnection(HWUnits.HW_DBLINK);
+ 	        conDocmgr.setAutoCommit(false);
+ 	        
+	        String fileIdArr=jacper.getString("file_id","");
+	        String filename=jacper.getString("filename","");
+	        String mess=jacper.getString("mess","");
+	        HttpSession hs = jacper.getSession();
+		    String userId=hs.uid+"";
+		    String allmail="";
+		    String alluser="";
+		    User user=CertManager.getUser(userId);
+		    
+		    String username="";
+		    if(user!=null) username=user.getRealName();
+            String[] deptId=null;
+            StringBuffer msg=new StringBuffer();
+            msg.append("{success:true,message:'您好！<br>您申请使用的资料文档");
+		    if(!"".equals(fileIdArr)){
+		         for(String fileid:fileIdArr.split(",")){
+		         
+		         	//fileid=fileid.substring(fileid.indexOf("::")+2);
+		         	String[] rs=conDocmgr.getRow("select count(*) from  DIR_APPLY_BASIC where FILE_ID=? and APPLY_USER=? and (APPLY_STATUS='0' or END_DATA > sysdate)",new String[]{fileid,userId});
+		         	deptId=conDocmgr.getRow("select space_id,file_info_name from DIR_FILE_BASE where FILE_ID=? ",new String[]{fileid});
+	                
+	               System.out.println("---------"+fileid);
+	                
+	                if("0".equals(rs[0])){
+	                	conDocmgr.exec("delete from DIR_APPLY_BASIC where FILE_ID=? and APPLY_USER=? ",new String[]{fileid,userId});
+	                	//conDocmgr.exec("delete from DIR_USER_AUTH where AUTH_ID=? and USER_ID=? and AUTH_FILE_TYPE='0' and AUTH_OPT_TYPE=30 ",new String[]{fileid,userId});
+	                
+	                    String deptname="";
+						String[] getspaceName=conDocmgr.getRow("select SPACE_NAME from DIR_SPACE_BASE where SPACE_ID=?",new String[]{deptId[0]});	                    
+	                    
+                              deptname=getspaceName[0];
+	                    msg.append(" -- 《").append(deptId[1]).append("》");
+	                    filename=deptId[1];
+	                    msg.append("属于：\"").append(deptname).append("\"。<br> ");
+						
+						String[][] spaseU=conDocmgr.get("select USER_ID from DIR_USER_AUTH where AUTH_ID='"+deptId[0]+"' and AUTH_OPT_TYPE='60'");
+			
+						for (String[] strings : spaseU) {
+							User spaceuser=CertManager.getUser(strings[0]);
+							alluser+=","+spaceuser.getUserName();
+			         	 	String email= spaceuser.getEmail();
+			         	 	allmail+=allmail.equals("")?email:","+email;
+						}
+						
+						//msg.append("<br>").append(alluser).append("<br>");
+						//String sql="insert into FILE_AUTH(FILE_NAME,FILE_ID,USER_ID,STATUS,A_DATE,user_name,dept_id) values(?,?,?,?,$str_date(?,111),?,?)";
+						
+						String sql="insert into DIR_APPLY_BASIC(APPLY_ID,FILE_ID,APPLY_USER,APPLY_USER_DEPT,APPLY_USER_MAIL,APPLY_USER_TEL,APPLY_REASON,APPLY_DATA,APPLY_STATUS,AUDITOR,AUDIT_DATA,END_DATA,AUDIT_MSG,FILE_NAME,SPACE_ID) values(?,?,?,?,?,?,?,sysdate,?,?,?,?,?,?,?)";
+						String uuid=UUID.randomUUID().toString();
+						conDocmgr.exec(sql,new String[]{uuid,fileid,userId,user.getDept().getName(),user.getEmail(),user.getPhone(),mess,"0","","","","",filename,deptId[0]});
+						//conDocmgr.exec(sql,new String[]{filename,fileid,userId,"1",mailDate,username,deptId[0]});
+					}else{
+					   jacper.print("{success:false,message:'您不能重复申请此文档！'}");
+					   return;
+					}
+				 }
+		    } 
+		    msg.append("我们已给上述空间的审批人员发去资料使用申请，请等待审批。<br>"+mailDate+"'}");
+		    System.out.println(HWSpaceConfig.SHENPI_APPLY +"," + allmail +"," + username + "," +filename + "," + dateFormat.format(new Date()));        
+	    	//HWUnits.sendMails(HWSpaceConfig.SHENPI_APPLY , allmail , username , filename , dateFormat.format(new Date()));
+			
+			conDocmgr.commit();
+			jacper.print(msg.toString());
+		} catch (Exception e) {
+			jacper.print("{success:false,message:'邮件发送错误!'}");
+			e.printStackTrace();
+		}
+		
+	}
+}

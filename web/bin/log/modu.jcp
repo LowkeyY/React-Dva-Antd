@@ -1,0 +1,101 @@
+
+
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.KingleServlet;
+import com.social.api.core.model.User;
+import com.social.api.core.model.User;
+import com.social.api.core.model.UserType;
+import com.kinglib.workbench.ObjectManager;
+import com.kinglib.workbench.ObjectNode;
+
+@class{
+
+  public void doGet(Jacper jacper)
+  {
+    String sql;
+    String[] paramsArray;
+    String[][] rs;
+    int i;
+    Connection conPlat = jacper.getConnection("plat");
+
+    boolean isLogin = jacper.setSession();
+    HttpSession hs = jacper.getSession();
+    String userId = hs.uid + "";
+    String deptId = hs.getString("dept_id");
+    User u = User.getUser(userId + "");
+    UserType userType = u.getUserType();
+
+    String rootNode = jacper.getString("rootNode");
+    String type = jacper.getString("type");
+
+    String forder_id = jacper.getString("_id");
+    String nodeType = "";
+
+    String hasChild = "1";
+    String endicon = "";
+    String starticon = "";
+    String params = "";
+    String url = "";
+    String eventName = "event0";
+
+    jacper.print("<root _id=\""); jacper.print(forder_id); jacper.print("\">");
+    if ("0".equals(rootNode))
+    {
+      sql = "";
+      paramsArray = new String[0];
+      if ((userType.getValue() == 1) || (userType.getValue() == 0)) {
+        sql = "select max(a.system_id),max(a.system_name),count(c.object_id) from $[plat].system_base a left outer join $[plat].object_base  b on a.system_id=b.parent_id  left outer join $[plat].object_base  c on b.object_id=c.parent_id  group by a.system_id";
+      } else {
+        paramsArray = new String[] { deptId, userId };
+        sql = "select max(a.system_id),max(a.system_name),count(c.object_id) from $[plat].system_base a left outer join $[plat].object_base  b on a.system_id=b.parent_id  left outer join $[plat].object_base  c on b.object_id=c.parent_id  inner join $[plat].system_auth f on a.system_id=f.id where f.deptid=? and f.roleid=? group by a.system_id";
+      }
+
+      rs = conPlat.get(sql, paramsArray, 0);
+
+      jacper.print("<forder _parent=\""); jacper.print(forder_id); jacper.print("\">");
+      for (i = 0; i < rs.length; ++i) {
+        starticon = "/themes/icon/xp/dhd.gif";
+        endicon = "/themes/icon/xp/dhd.gif";
+        params = "params=\"parent_id=" + rs[i][0] + "\"";
+        if (Integer.parseInt(rs[i][2]) > 1) rs[i][2] = "1";
+        jacper.print("<e _id=\""); jacper.print(rs[i][0]); jacper.print("\"  _parent=\""); jacper.print(forder_id); jacper.print("\" _hasChild =\""); jacper.print(rs[i][2]); jacper.print("\" icon0=\""); jacper.print(starticon); jacper.print("\" objectType=\"0\" icon1=\""); jacper.print(endicon); jacper.print("\" title=\""); jacper.print(rs[i][1]); jacper.print("\"  "); jacper.print(params); jacper.print("  url=\"/bin/log/modu.jcp?_id="); jacper.print(rs[i][0]); jacper.print("&amp;rootNode=1&amp;type="); jacper.print(type); jacper.print("\"/>");
+      }
+      jacper.print("</forder>");
+    } else if ("1".equals(rootNode))
+    {
+      jacper.print("<forder _parent=\""); jacper.print(forder_id); jacper.print("\"  event=\"event0\">");
+      sql = "";
+      paramsArray = new String[] { type, forder_id + "" };
+      if ((userType.getValue() == 1) || (userType.getValue() == 0)) {
+        sql = "select max(b.object_id),max(a.applogic_name),count(e.object_id),max(a.appphy_name),max(b.object_type) from $[plat].application_base a,$[plat].object_base b left outer join $[plat].object_base e on b.object_id=e.parent_id and e.object_type=? ,$[plat].application_group c where a.object_id=b.object_id and b.parent_id=c.group_id  and c.system_id=? group  by b.object_id";
+      } else {
+        paramsArray = new String[] { type, forder_id + "", deptId, userId };
+        sql = "select max(b.object_id),max(a.applogic_name),count(e.object_id),max(a.appphy_name),max(b.object_type) from $[plat].application_base a,$[plat].object_base b left outer join $[plat].object_base e on b.object_id=e.parent_id and e.object_type=? ,$[plat].application_group c,$[plat].system_auth d where a.object_id=b.object_id and b.parent_id=c.group_id  and c.system_id=? and a.object_id=d.id and d.deptid=? and d.roleid=?  group  by b.object_id";
+      }
+      rs = conPlat.get(sql, paramsArray, 0);
+      starticon = "/themes/icon/xp/spzl.gif";
+      endicon = "/themes/icon/xp/spzl.gif";
+      for (i = 0; i < rs.length; ++i) {
+        params = "params=\"parent_id=" + rs[i][0] + "\"";
+        if (Integer.parseInt(rs[i][2]) > 1) rs[i][2] = "1";
+        jacper.print("<e _id=\""); jacper.print(rs[i][0]); jacper.print("\" _parent=\""); jacper.print(forder_id); jacper.print("\" _hasChild =\""); jacper.print(rs[i][2]); jacper.print("\" icon0=\""); jacper.print(starticon); jacper.print("\" icon1=\""); jacper.print(endicon); jacper.print("\"  objectType=\"1\"  title=\""); jacper.print(rs[i][1]); jacper.print("\"  "); jacper.print(params); jacper.print("  url=\"/bin/log/modu.jcp?_id="); jacper.print(rs[i][0]); jacper.print("&amp;rootNode=3&amp;type="); jacper.print(type); jacper.print("\"/>");
+      }
+      jacper.print("</forder>");
+    } else {
+      jacper.print("<forder _parent=\""); jacper.print(forder_id); jacper.print("\"  event=\"event0\">");
+      ObjectNode cNode = ObjectManager.getObject(forder_id);
+      ObjectNode[] appNode = cNode.findAllChildsByType(5);
+      starticon = "/themes/icon/xp/report.gif";
+      endicon = "/themes/icon/xp/report.gif";
+      for (int j = 0; j < appNode.length; ++j)
+      {
+        jacper.print("<e _id=\""); jacper.print(appNode[j].getId()); jacper.print("\" _parent=\""); jacper.print(forder_id); jacper.print("\" _hasChild =\""); jacper.print(false); jacper.print("\" icon0=\""); jacper.print(starticon); jacper.print("\" icon1=\""); jacper.print(endicon); jacper.print("\"  objectType=\"5\"  title=\""); jacper.print(appNode[j].getName()); jacper.print("\"  />");
+      }
+      jacper.print("</forder>");
+    }
+    conPlat.close();
+    jacper.print("</root>");
+  }
+}

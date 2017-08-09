@@ -1,0 +1,158 @@
+
+import java.io.IOException;
+
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.workbench.*;
+import com.kinglib.workbench.module.*;
+import com.kinglib.database.*;
+import java.util.*;
+
+@class{
+
+	private String getJson(String[][] data,String[] columns){
+		if(data==null) return "";
+		JSONArray jarr=new JSONArray();
+		try{
+			for(int i=0;i<data.length;i++){
+				JSONObject items = new JSONObject();
+				for(int j=0;j<columns.length;j++)
+					items.put(columns[j],data[i][j]);
+				jarr.put(items);
+			}
+		}catch(Exception e){}
+		return "{items:"+jarr+"}";
+	}
+	
+
+	public void doPost(Jacper jacper){
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		Connection conPlat = jacper.getConnection("plat"); 
+		String type= jacper.getStr("type");
+		String gettype = jacper.getStr("gettype");
+		String parent_id = jacper.getStr("parent_id");
+
+		String[][] groups=null;
+		if(type.equals("maintable")){
+			ObjectNode widgetNode=ObjectManager.getObject(parent_id);
+			ObjectNode appNode=widgetNode.upTo(1);
+			ObjectNode app=ObjectManager.getObject(appNode.getId());
+			ObjectNode[] nodes=app.getChilds(2);
+			JSONArray jarr=new JSONArray();
+			try{
+				for(int i=0;i<nodes.length;i++){
+					JSONObject items = new JSONObject();
+					items.put("tabID",String.valueOf(nodes[i].getId()));
+					items.put("tab",String.valueOf(nodes[i].getName()));
+					jarr.put(items);
+				}
+			}catch(Exception e){}
+			jacper.print("{items:"+jarr+"}");
+		}else if(type.equals("widgettype")){
+			groups = conPlat.get("SELECT b.option_code, b.option_value from $[plat].first_dict a,$[plat].second_dict b WHERE a.option_id=b.option_id and a.option_name='"+jacper.trans("控件类型")+"'",new String[]{});
+			conPlat.close();
+			jacper.print(getJson(groups,new String[]{"id","label"}));
+		}else if(type.equals("subtable")){
+			String object_id=jacper.getString("parent_id","-1");
+			if(object_id.equals("-1")) return;
+			MetaTable[] mts=MetaFactory.getSubTables(object_id);
+			JSONArray jarr=new JSONArray();
+			try{
+				for(MetaTable mt:mts){
+					JSONObject items = new JSONObject();
+					items.put("sub",mt.getLname());
+					items.put("subID",mt.getObjectId());
+					jarr.put(items);
+				}
+			}catch(Exception e){}
+			jacper.print("{items:"+jarr+"}");
+		}else if(type.equals("export")){ 
+			String object_id = jacper.getStr("object_id");
+			groups = conPlat.get("select id,lname||'  '||pname from $[plat].meta_column where object_id=? order by id",new String[]{object_id});
+			conPlat.close();	
+			JSONArray jarr=new JSONArray();
+			try{
+				for(int i=0;i<groups.length;i++){
+					JSONObject items = new JSONObject();
+					items.put("value",groups[i][0]);
+					items.put("text",groups[i][1]);
+					jarr.put(items);
+				}
+			}catch(Exception e){}
+			jacper.print("{items:"+jarr+"}");
+		}else if(type.equals("title")){ 
+			String object_id = jacper.getStr("object_id");
+			groups = conPlat.get("select id,lname from $[plat].meta_column where object_id=? and data_type in ('12','4','2') order by id",new String[]{object_id});
+			conPlat.close();
+			JSONArray jarr=new JSONArray();
+			try{
+				for(int i=0;i<groups.length;i++){
+					JSONObject items = new JSONObject();
+					items.put("value",groups[i][0]);
+					items.put("text",groups[i][1]);
+					jarr.put(items);
+				}
+			}catch(Exception e){}
+			jacper.print("{items:"+jarr+"}");
+		}else if(type.equals("listMagSearch")){ 
+			String object_id = jacper.getStr("object_id");
+			groups = conPlat.get("select id,lname||'  '||pname from $[plat].meta_column where object_id in (select tab1_id from $[plat].widget_base where object_id=?) order by id",new String[]{object_id});
+			conPlat.close();
+			JSONArray jarr=new JSONArray();
+			try{
+				for(int i=0;i<groups.length;i++){
+					JSONObject items = new JSONObject();
+					items.put("value",groups[i][0]);
+					items.put("text",groups[i][1]);
+					jarr.put(items);
+				}
+			}catch(Exception e){}
+			jacper.print("{items:"+jarr+"}");
+		}else if(type.equals("simpleListInterface")){ 
+			String object_id = jacper.getStr("object_id");
+			groups = conPlat.get("select a.id,b.lname||':'||a.pname||'{'||a.lname||'}' from $[plat].meta_column a,$[plat].meta_table b where a.object_id=b.object_id and a.object_id in (select tab1_id from $[plat].widget_base where object_id=?) order by id",new String[]{object_id});
+			conPlat.close();
+			JSONArray jarr=new JSONArray();
+			try{
+				for(int i=0;i<groups.length;i++){
+					JSONObject items = new JSONObject();
+					items.put("value",groups[i][0]);
+					items.put("text",groups[i][1]);
+					jarr.put(items);
+				}
+			}catch(Exception e){}
+			jacper.print("{items:"+jarr+"}");
+		}else if(type.equals("isWidgetReference")){ 
+			String objectId = jacper.getStr("objectId");
+			String[] tmp = conPlat.getRow("SELECT b.OBJECT_ID from $[plat].ctrl_button a,$[plat].prg_base b where a.MODULE_ID=b.object_id and a.TARGET=?",new String[]{objectId});
+			conPlat.close();
+			if(tmp!=null && tmp.length>0){
+				try{
+					ObjectNode node=ObjectManager.getObject(tmp[0]);
+					if(node!=null){
+						node=node.upTo(ObjectType.MODULE);
+						if(node!=null){
+							Module md=ModuleFactory.getInstance().getModule(conPlat,String.valueOf(node.getId()));
+							if(md!=null){
+								JSONObject js=new JSONObject();
+								js.put("objectId",tmp[0]);
+								js.put("modType",md.getModType()); 
+								jacper.print(js);
+							}
+						}
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+			}
+		}
+		conPlat.close();
+	}
+}

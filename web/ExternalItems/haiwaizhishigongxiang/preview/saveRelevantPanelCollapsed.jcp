@@ -1,0 +1,15 @@
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.UserData;
+
+import gpra.filesystem.search.SearchUnits.SearchSessions;
+
+//public class saveRelevantPanelCollapsed {
+@class{
+	public void doPost(Jacper jacper){
+		HttpSession hs = jacper.getSession();
+		String userId= String.valueOf(hs.uid); 
+		String userConfig = jacper.getString("checked", "false");
+		UserData.set(userId , SearchSessions.REPUSERSELF.name() , SearchSessions.REP_collapsed.name() , userConfig);
+	}
+}

@@ -1,0 +1,97 @@
+
+/* 保存箱
+ * @(#)/docflow/authwait.jcp	1.0.0 03/05/06
+ *
+ * Copyright 2003 Bizdict Co.,Ltd. All rights reserved.
+ *
+ * 主程序作者：
+ * @author ch
+ *
+ * 修改者：
+ *
+ * 修改日期:
+ *
+ * 修改理由:
+ *
+ */
+                      
+import java.io.IOException;
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.grid.*;
+import com.kinglib.workbench.*;
+@class{
+ public void doGet(Jacper jacper){
+
+		Connection conWork = jacper.getConnection("work");
+
+ 		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		String role_id= hs.getString("role_id");
+		String type = jacper.getStr("type");
+
+		String sort = jacper.getStr("sort");
+		String dir = jacper.getStr("dir");
+
+		int startRow = jacper.getInt("start",0);
+		int rowCount = jacper.getInt("limit",0);
+
+		String[] param=null;
+
+		String roleString="";
+		String roleString1="";
+		String sql="";
+
+		String extendCondition="";
+		String optionCode = jacper.getStr("optionCode");
+		if(!optionCode.equals("")){
+			extendCondition=" and d.parent_id="+optionCode;
+		}
+		extendCondition = extendCondition + " and h.workflowphy_name not like '_DO_NOT_DISPLAY_%'";
+        jacper.getResponse().setContentType("application/x-json");
+
+		if(type.equals("wait")){
+			param=new String[]{"a:"+role_id,user_id+""};
+			String[][] wf=conWork.get("SELECT strategy_id from  $[plat].SYS_STRATEGY_ROLE  where role_id=?",new String[]{role_id});
+			if(wf!=null&&wf.length!=0){
+				for(int i=0;i< wf.length;i++){
+					roleString+=",'r:"+wf[i][0]+"'";
+					roleString1+=",'d:"+wf[i][0]+"'";
+				}
+				roleString=roleString.substring(1,roleString.length());
+				roleString1=roleString1.substring(1,roleString1.length());
+				sql="SELECT  h.workflowlogic_name,case when a.title is not null then i.instance_name||'/'||a.title else i.instance_name end,h.workflowphy_name||'-'||a.id ,$date_str(a.start_date,111),c.status,i.instance_id,c.step_id,h.object_id,a.id,a.caller,c.owner from $[work].wfentry a ,$[work].currentstep c,$[plat].workflow_base h,$[plat].workflow_instance i,$[plat].object_base d where  h.object_id=d.object_id and i.workflowid=h.object_id and a.name=i.instance_id and a.id=c.entry_id and a.state=1  and (c.owner=? or c.owner=? or c.owner in ("+roleString+")  or c.owner in ("+roleString1+"))"+extendCondition;
+			}else{
+				sql="SELECT   h.workflowlogic_name,case when a.title is not null then i.instance_name||'/'||a.title else i.instance_name end,h.workflowphy_name||'-'||a.id ,$date_str(a.start_date,111),c.status,i.instance_id,c.step_id,h.object_id,a.id,a.caller,c.owner  from $[work].wfentry a ,$[work].currentstep  c,$[plat].workflow_base h,$[plat].workflow_instance i,$[plat].object_base d  where  h.object_id=d.object_id and i.workflowid=h.object_id and a.name=i.instance_id  and a.id=c.entry_id and a.state=1  and  (c.owner=? or c.owner=?)"+extendCondition;
+				System.out.println("a:"+role_id+","+user_id+"");
+			}
+			Grid gd=new Grid(sql,"instanceName",new String[]{"workFlowType","instanceName","applyCode","applyDatetime","status","instanceId","stepId","objectId","entryId","applier","owner"});
+			
+			JSONObject gridJSON=gd.getWorkflowJSON(jacper,conWork,param,startRow,rowCount,dir,sort);
+			<?(?>gridJSON.toString()<?)?>;
+		}else if(type.equals("send")){
+			param=new String[]{user_id+""};
+			sql="SELECT  h.workflowlogic_name,case when a.title is not null then i.instance_name||'/'||a.title else i.instance_name end,h.workflowphy_name||'-'||a.id ,$date_str(a.start_date,111),c.status,c.step_id,h.object_id,i.instance_id,a.id,a.id,a.caller  from $[work].wfentry a,$[work].currentstep  c,$[plat].workflow_base h,$[plat].workflow_instance i,$[plat].object_base d  where  h.object_id=d.object_id and  i.workflowid=h.object_id and a.name=i.instance_id   and a.id=c.entry_id  and a.state=1 and  a.caller=?"+extendCondition;
+			Grid gd=new Grid(sql,"instanceName",new String[]{"workFlowType","instanceName","applyCode","applyDatetime","Status","stepId","objectId","instanceId","entryId","stepName","applier"});
+			JSONObject gridJSON=gd.getWorkflowJSON(jacper,conWork,param,startRow,rowCount,dir,sort);
+			<?(?>gridJSON.toString()<?)?>;
+		}else if(type.equals("authed")){
+			param=new String[]{user_id+""};
+			sql="SELECT  h.workflowlogic_name,case when a.title is not null then i.instance_name||'/'||a.title else i.instance_name end,h.workflowphy_name||'-'||a.id ,$date_str(a.start_date,111),i.instance_id,case when c.step_id is null then b.step_id else c.step_id end,case when c.status is null then '已结案' else c.status end,h.object_id,a.id,a.id,a.caller from $[work].wfentry a join $[work].historystep  b on a.id=b.entry_id join  $[plat].workflow_instance i on a.name=i.instance_id join $[plat].workflow_base h  on i.workflowid=h.object_id join  $[plat].object_base d on  h.object_id=d.object_id left join $[work].currentstep c on a.id=c.entry_id where   a.state>0 and  b.caller=? and b.step_id<>1 "+extendCondition;
+			Grid gd=new Grid(sql,"instanceName",new String[]{"workFlowType","instanceName","applyCode","applyDatetime","instanceId","stepId","Status","objectId","entryId","stepName","applier"});
+			JSONObject gridJSON=gd.getWorkflowJSON(jacper,conWork,param,startRow,rowCount,dir,sort);
+			<?(?>gridJSON.toString()<?)?>;
+		}else if(type.equals("finish")){
+			param=new String[]{user_id+""};
+			sql="SELECT  h.workflowlogic_name,case when a.title is not null then k.instance_name||'/'||a.title else k.instance_name end,h.workflowphy_name||'-'||a.id ,$date_str(a.start_date,111),$date_str(a.finish_date,111),a.id,k.instance_id,h.object_id from $[work].wfentry  a,$[plat].workflow_base h,$[plat].workflow_instance k,$[plat].object_base d where h.object_id=d.object_id and  k.workflowid=h.object_id and a.name=k.instance_id  and a.caller=?  and a.state=4"+extendCondition;
+			Grid gd=new Grid(sql,"instanceName",new String[]{"workFlowType","instanceName","applyCode","applyDatetime","finishDatetime","id","instanceId","objectId"});
+			JSONObject gridJSON=gd.getJSON(conWork,param,startRow,rowCount,dir,sort);
+			<?(?>gridJSON.toString()<?)?>;
+		}
+		conWork.close();
+}
+}

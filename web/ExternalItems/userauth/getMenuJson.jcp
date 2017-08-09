@@ -1,0 +1,33 @@
+
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+//public class test{
+@class{
+	public void doGet(Jacper jacper){
+	
+		Connection con = jacper.getConnection("plat");
+		try {
+			JSONObject jo = new JSONObject();
+			String[][]rs=con.get("select m.application_id , m.default_title FROM potal_menu m where m.default_has_auth = 'true' and m.default_isValid = 'true'");
+			//String[][]rs=con.get("select t.top_id,t.top_title from SYS_TOP t where t.parent_top = '0' and t.is_valid = 'true'  and t.menu_type != '0' and t.terminal_type is not null order by t.top_seq");
+			JSONArray allja = new JSONArray();
+			for (String[] strings : rs) {
+				JSONObject jo2 = new JSONObject();
+				jo2.put("id",strings[0]);
+				jo2.put("text",strings[1]);
+				allja.put(jo2);
+			}
+			jo.put("data", allja);
+			jacper.print(jo);
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+	}
+	
+	public void doPost(Jacper jacper){
+		doGet(jacper);
+	}
+}

@@ -1,0 +1,144 @@
+
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+import java.util.HashMap;
+
+import com.social.api.core.model.CertManager;
+import com.social.api.core.model.Dept;
+import com.social.api.core.model.User;
+
+//public class usermenulist{
+@class{
+	public void doGet(Jacper jacper){
+
+		boolean isLogin = jacper.setSession();  
+		HttpSession hs = jacper.getSession();
+		String orgId=jacper.getString("org_id");
+
+		String sort = jacper.getStr("sort");
+		String dir = jacper.getStr("dir");
+		
+		HashMap<String, String> authMap = new HashMap<String, String>();
+		Connection con = jacper.getConnection("plat");
+		try{
+			String dept_id = jacper.getStr("dept_id");
+			String[][] rows = con.get("select userId , value from GATEWAY_USER_AUTH");
+			
+			if(rows != null && rows.length > 0)
+				for(String[] row : rows)
+					authMap.put(row[0], row[1]);
+			
+			JSONArray JArr=new JSONArray();
+			if (dept_id.equals("99999")){
+				String query_type = jacper.getStr("query_type");
+				String keyword = jacper.getStr("keyword");
+				for(String userId : CertManager.getAllUserID()){
+					User u = CertManager.getUser(userId);
+					dept_id = u.getDeptId();
+					if (query_type.equals("1") && u.getUserName().equals(keyword) && u.getOrgId().equals(orgId)) { //user_name
+						putUser(JArr, u, dept_id , authMap.get(u.getUserId()));
+					}else if (query_type.equals("2")  && u.getRealName().indexOf(keyword) != -1 && u.getOrgId().equals(orgId) ) { //real_name
+						putUser(JArr, u, dept_id , authMap.get(u.getUserId()));
+					}else if (query_type.equals("3") && u.getPhone().equals(keyword )&& u.getOrgId().equals(orgId) ) { //phone
+						putUser(JArr, u, dept_id , authMap.get(u.getUserId()));
+					}else if (query_type.equals("4") && userId.equals(keyword )&& u.getOrgId().equals(orgId) ) {  //user_id
+						putUser(JArr, u, dept_id , authMap.get(u.getUserId()));
+					}
+				}
+			}else{
+				Dept dept = CertManager.getDept(dept_id);
+				if(dept != null)
+					for(User u : dept.getUsers()){
+						if(!u.getUserId().equals("0") && !u.getUserId().equals("1"))
+							putUser(JArr, u, dept_id , authMap.get(u.getUserId()) , true);
+					}
+			}
+			sortJSONArray(JArr, sort, dir);
+			JSONObject item = new JSONObject();
+			item.put("id", "real_name");
+			item.put("totalCount", JArr.length()); 
+			item.put("dataItem", JArr); 
+			jacper.print(item);	
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+
+	}
+	
+	private void putUser(JSONArray JArr, User u, String dept_id, String auths){
+		putUser(JArr, u, dept_id ,auths , false);
+	}
+
+	private void putUser(JSONArray JArr, User u, String dept_id , String auths , boolean onlySelfDept){
+		try{
+			JSONObject JObj = new JSONObject();
+   			JObj.put("user_name", u.getUserName());
+   			JObj.put("dept_id",dept_id);
+   			JObj.put("index", u.getUserId());
+   			JObj.put("phone", u.getPhone());
+   			JObj.put("real_name", u.getRealName());
+   			JObj.put("dept_name", onlySelfDept ? u.getDept().getName() : getDeptPathName(u.getDept()));
+   			if(auths != null && (auths = auths.replaceAll(" ","")).length() > 0){
+   				String[] authArr = auths.split(",");
+   				for (String authStr : authArr) {
+   					if(authStr == null || authStr.length() == 0)
+   						continue;
+					JObj.put(authStr, true);
+				}
+   			}
+   			JArr.put(JObj);
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+	private String getDeptPathName(Dept dept){
+		StringBuilder result = new StringBuilder();
+		do{
+			result.insert(0, (dept.getParent() != null && !dept.getParent().isRoot() ? " - " : "") + dept.getName());
+			dept = dept.getParent();
+		}while(dept != null && !dept.isRoot());
+		return result.toString();
+	}
+	
+	private void sortJSONArray(JSONArray JArr, String sort, String dir){
+	    String str1="";
+	    String str2="";
+		try{	
+	    	JSONObject JTemp=new JSONObject() ;
+	    
+			for(int i=0; i<JArr.length()-1; i++){
+				for(int j = 0; j<JArr.length()-i-1; j++){
+				    JSONObject J1 =JArr.optJSONObject(j);
+					JSONObject J2=JArr.optJSONObject(j+1);
+					str1 = J1.getString(sort);
+					str2 = J2.getString(sort);
+					if( dir.equals("ASC")){
+				   		if(str1.compareTo(str2)>0){
+				       		JTemp = J1;
+				       		J1 = J2;
+				       		J2 = JTemp;
+							JArr.put(j,J1);
+							JArr.put(j+1,J2);
+				   		}
+					}
+					else {  //"DESC"
+						if(str1.compareTo(str2)<0){  
+				       		JTemp = J1;
+				       		J1 = J2;
+				       		J2 = JTemp;
+				       		JArr.put(j,J1);
+							JArr.put(j+1,J2);
+				   		}
+			   		}
+            	} 
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+	
+}

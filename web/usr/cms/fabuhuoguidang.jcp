@@ -1,0 +1,211 @@
+import com.kinglib.Connection;
+import com.kinglib.Err;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.GaoJian;
+import com.kinglib.service.cms.model.HTMLPage;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.TempGaoJian;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.util.Log;
+import com.kinglib.util.event.SystemEvent;
+import com.kinglib.util.json.JSONPart;
+
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.UUID;
+
+import com.susing.core.KingleSystem;
+
+@class{
+	public void doPost(Jacper jacper) {
+
+		HttpSession hs = jacper.getSession();
+
+		String ids = jacper.getString("pmk");
+		String[] pmks = new String[]{};
+		if(ids.indexOf(",")!=-1){
+			pmks = ids.split(",");
+			ids = pmks[0];
+		}
+		String type = jacper.getString("type");
+		String fp = jacper.getString("fromNode");
+
+		CMSService service = (CMSService) KingleSystem.getService("CMS");
+		HTMLPage page = service.getCache(ids);
+
+		if (page == null) {
+			if ("gaojian".equals(fp)) {
+				page = service.getGaoJian(ids);
+			} else if ("lanmu".equals(fp)) {
+				page = service.getLanMu(ids);
+			} else if ("zhandian".equals(fp)) {
+				page = service.getZhanDian(ids);
+			} else if ("tempgaojian".equals(fp)) {
+				try {
+					Object o = getGJ(service, ids, "");
+					if (o instanceof Err) {
+						jacper.print("{success:false,message:'"+((Err) o).getMessage()+"'}");
+						return;
+					}
+					JSONPart msg = new JSONPart();
+					if(SystemEvent.fire("CMS_ALLOWTOLANMU", this , ((GaoJian) o).getLanMu() , msg) == false){
+						jacper.print(msg);
+						return;
+					};
+					page = (GaoJian) o;
+				} catch (Exception e) {
+					jacper.print("{success:false,message:'" + e.toString() + "'}");
+					e.printStackTrace();
+					return;
+				}
+			}
+		}
+
+		if (page == null) {
+			jacper.print("{success:false,message:'页面没有找到！'}");
+		} else {
+			String uuid = UUID.randomUUID().toString();
+			if ("fabu".equals(type)) {
+				try {
+					ArrayList<HTMLPage> hps = new ArrayList<HTMLPage>();
+					if (page instanceof ZhanDian  || page instanceof LanMu) {
+						service.fabuIndexPage(page, uuid);
+					}  else {
+						
+						if (page instanceof TempGaoJian) {
+							try {
+								String mb = ((GaoJian) page).getLanMu().getMuban();
+								Object o = getGJ(service, ids, mb);
+								if (o instanceof Err) {
+									jacper.print("{success:false,message:'"+((Err) o).getMessage()+"'}");
+									return;
+								}
+								JSONPart msg = new JSONPart();
+								if(SystemEvent.fire("CMS_ALLOWTOLANMU", this , ((GaoJian) o).getLanMu() , msg) == false){
+									jacper.print(msg);
+									return;
+								};
+								page = (GaoJian) o;
+							} catch (Exception e) {
+								jacper.print("{success:false,message:'" + e.toString() + "'}");
+								e.printStackTrace();
+								return;
+							}
+						} else {
+							for(String pmk : pmks){
+								HTMLPage hp = service.getGaoJian(pmk);
+								if(hp != null){
+									hps.add(hp);
+								}
+							}
+						}
+						HTMLPage[] commitPages = hps.size() > 0 ? hps.toArray(new HTMLPage[hps.size()]) : new HTMLPage[]{page};
+						//service.fabuIndexPage(page, uuid);
+						service.fabu(uuid, commitPages);
+					}
+					LogInfo("发布", String.valueOf(hs.uid), page);
+					jacper.print("{success:true,uuid:\"" + uuid + "\"}");
+				} catch (Exception e) {
+					jacper.print("{success:false,message:'" + e.toString() + "'}");
+					e.printStackTrace();
+				}
+			} else if ("guidang".equals(type)) {
+				if ("true".equals(page.getGuidang())) {
+					String rs = "";
+					if (page instanceof GaoJian) {
+						rs = "标题为：\"" + ((GaoJian) page).getBiaoti() + "\"的页面";
+					} else if (page instanceof LanMu) {
+						rs = "栏目\"" + ((LanMu) page).getMingcheng() + "\"";
+					} else if (page instanceof ZhanDian) {
+						rs = "站点\"" + ((ZhanDian) page).getMingcheng() + "\"";
+					}
+					page.destroy();
+					jacper.print("{success:true,uuid:\"success\",message:'" + rs + "已归档。'}");
+				} else {
+					try {
+						service.guidang(page, uuid);
+						LogInfo("归档", String.valueOf(hs.uid), page);
+						jacper.print("{success:true,uuid:\"" + uuid + "\"}");
+					} catch (Exception e) {
+						jacper.print("{success:false,message:'" + e.toString() + "'}");
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+	}
+	
+	public Object getGJ(CMSService service, String id, String mb) throws SQLException {
+		Object gj = null;
+		Connection con = service.getConnection();
+		String uuid = UUID.randomUUID().toString();
+		String[] r = null;
+		TempGaoJian tgj = null;
+		
+		String tempGJTableName = service.getTableName(TempGaoJian.table);
+		String gJTableName = service.getTableName(GaoJian.table);
+		
+		MetaTable tempGaoJianMt = MetaFactory.getObjectWithFullName(tempGJTableName);
+		MetaTable gaoJianMt = MetaFactory.getObjectWithFullName(gJTableName);
+		
+		if ("".equals(mb)) {
+			r = con.getRow(TempGaoJian.getSql(service, " where id=?"), new String[] { id });
+			if (r != null) {
+				tgj = new TempGaoJian(service, r);
+				mb = ((GaoJian) tgj).getLanMu().getMuban();
+			}
+		}
+		
+		StringBuilder intoGj = new StringBuilder();
+		intoGj.append("insert into "+gJTableName+" select '" + uuid + "',leixing,biaoti,'0',fubiaoti,lanmuid,'" + mb + "',zuozhe,'',");
+		intoGj.append((tempGaoJianMt != null && gaoJianMt !=null) ? "replace(neirong,'"+tempGaoJianMt.getId()+"','"+gaoJianMt.getId()+"')":"neirong");
+		intoGj.append(",tianjiariqi,'0',waibudizhi,'true',daoduneirong,tupian,tupianhouzhuiming,'','false',shujulaiyuan,'','',''");
+		intoGj.append(" from "+tempGJTableName+" where id = ?");
+
+		StringBuilder intoGjRh = new StringBuilder();		
+		intoGjRh.append("insert into "+gJTableName+"__rhfile(id,file_id,file_name,content) select '" + uuid);
+		intoGjRh.append("',file_id,file_name,content from "+tempGJTableName+"__RHFILE where id = ?");
+
+		String updateTGJ = "update "+tempGJTableName+" set zhuangtai = '审批通过，已发布。' where id = ?";
+
+		try {
+			con.setAutoCommit(false);
+			con.exec(intoGj.toString(), new String[] { id });
+			con.exec(intoGjRh.toString(), new String[] { id });
+			con.exec(updateTGJ, new String[] { id });
+			con.commit();
+		} catch (Exception e) {
+			try {
+				con.rollback();
+			} catch (SQLException e1) {
+			}
+			e.printStackTrace();
+			return new Err(Err.OPERATION_ERROR, "数据存储时出错。");
+		}
+		r = con.getRow(GaoJian.getSql(service, " where id=?"), new String[] { uuid });
+		if(r != null && r.length>0)
+			gj = new GaoJian(service, r);
+		else
+			gj = new Err(Err.OPERATION_ERROR, "数据读取时出错。");
+		return gj;
+	}
+	
+	public void LogInfo(String type , String userId , HTMLPage page){
+		StringBuilder message = new StringBuilder();
+		if(page instanceof ZhanDian)
+			message.append("站点。站点名称[" + ((ZhanDian) page).mingcheng + "]，站点ID[" + ((ZhanDian) page).id + "]。");
+		else if(page instanceof LanMu)
+			message.append("栏目。栏目名称[" + ((LanMu) page).mingcheng + "]，栏目ID[" + ((LanMu) page).id + "](所属站点["
+					+ ((LanMu) page).getZhanDian().mingcheng + "])。");
+		else if(page instanceof GaoJian)
+			message.append("稿件。稿件标题[" + ((GaoJian) page).biaoti + "]，" + "稿件ID[" + ((GaoJian) page).id + "](所属栏目["
+					+ ((GaoJian) page).getLanMu().mingcheng + "],所属站点[" + ((GaoJian) page).getZhanDian().mingcheng
+					+ "])。");
+		if(message.length()>0)
+			Log.info(type+"了"+message.toString(), "网站群操作日志", userId);
+	}
+}

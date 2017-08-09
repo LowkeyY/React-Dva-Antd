@@ -1,0 +1,137 @@
+
+
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.i18n.I18n;
+import com.kinglib.i18n.Local;
+import com.kinglib.i18n.runtime.BaseLocal;
+import com.kinglib.util.UserData;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.util.json.JSONPart;
+import com.kinglib.util.json.JSONValue;
+
+import java.util.Locale;
+import java.util.TimeZone;
+
+
+@class{
+
+	public void doPost(Jacper jacper) {
+		HttpSession session = jacper.getSession();
+		String userId = session.getString("user_id");
+		String[] args = new String[] { jacper.getString("locale"), jacper.getString("timezone"),
+				jacper.getString("currency"), jacper.getString("unitSystem"), jacper.getString("dateLong"),
+				jacper.getString("dateShort"), jacper.getString("timeLong"), jacper.getString("timeShort"),
+				jacper.getString("dateTimeLong"), jacper.getString("dateTimeShort") };
+		BaseLocal loc = new BaseLocal();
+		loc.setAttributes(args);
+		I18n.getService().setLocal(userId, loc);
+		UserData.set(userId, "language_region", "main", loc.toJSONString());
+	}
+
+	public void doGet(Jacper jacper) {
+		String lang = jacper.getString("language");
+		String useSystemLocal = jacper.getString("useSystemLocal");
+		String useBaseLocal = jacper.getString("useBaseLocal");
+		HttpSession session = jacper.getSession();
+		String userId = session.getString("user_id");
+		String userLocale = session.getString("locale");
+		if (lang != null && lang.equals("default")) {
+			lang = null;
+		}
+		try {
+			Local local = null;
+			JSONObject result = new JSONObject();
+			Connection conPlat = jacper.getConnection("plat");
+			if(useBaseLocal==null){
+				if (useSystemLocal==null && UserData.has(userId, "language_region", "main") && (lang == null || lang.equals(userLocale))) {
+					local = I18n.getLocal(jacper);
+				} else {
+					local = I18n.getSystemLocal(lang == null ? userLocale : lang);
+				}
+			}else{
+				local=new BaseLocal();
+				String[] row = conPlat
+					.getRow("select  LOCALE,TIMEZONE, CURRENCY, UNIT_SYSTEM,date_long,date_short,time_long,time_short,date_time_long,date_time_short from $[plat].i18n_template where locale=?",new String[]{lang});
+				local.setAttributes(row);
+			}
+			if (lang == null) {
+				String json = I18n.getSupportedLocales(userLocale);
+				result.put("languages", new JSONValue(json));
+			}
+
+			result.put("timezones", new JSONValue(getTimeZones(local.getLocale())));
+			// 
+			String[][] cs = conPlat
+					.get("select description,name from $[plat].unit where group_id='2faf6906-584f-47ea-a063-0cff0b8bf57a'");
+			conPlat.close();
+			StringBuilder sb = new StringBuilder(300);
+			sb.append("[");
+			for (String[] r : cs) {
+				JSONPart json = new JSONPart(50);
+				json.join("value", r[1]);
+				json.join("text", r[0]);
+				if (sb.length() > 1)
+					sb.append(",");
+				sb.append(json.toJSONString());
+			}
+			result.put("currencys", new JSONValue(sb.append("]").toString()));
+			result.put("data", new JSONValue(local.toJSONString()));
+
+			result.put("success", true);
+			jacper.print(result);
+		} catch (Exception e) {
+
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 获取当前语言描述的所有时区
+	 * 
+	 * @return JSONArray格式的所有时区,每行text属性放置时区名称，value属性放置时区id
+	 */
+	private static String getTimeZones(Locale locale) {
+		StringBuilder sb = new StringBuilder(300);
+		sb.append("[");
+		for (String s : TimeZone.getAvailableIDs()) {
+			TimeZone tz = TimeZone.getTimeZone(s);
+			JSONPart json = new JSONPart(30);
+			json.join("value", tz.getID());
+			json.join("text", formatTime(tz.getRawOffset()) + " " + tz.getDisplayName(locale) + "[" + tz.getID() + "]");
+			if (sb.length() > 1)
+				sb.append(",");
+			sb.append(json.toJSONString());
+		}
+		return sb.append("]").toString();
+	}
+
+	private static String formatTime(float time) {
+		StringBuilder sb = new StringBuilder(10);
+		sb.append("(GMT");
+		time /= 3600000;
+		if (time > 0)
+			sb.append("+");
+		int t = (int) time;
+		if (t != 0) {
+			sb.append(t);
+			float at = time - t;
+			if (at < 0)
+				at *= -1;
+			if (at > 0) {
+				int tar = ((int) (at * 100 * 60)) / 100;
+				if (tar > 9)
+					sb.append(":").append(tar);
+				else
+					sb.append(":0").append(tar);
+			} else {
+				sb.append(":00");
+			}
+		}
+		sb.append(")");
+
+		return sb.toString();
+	}
+	
+}

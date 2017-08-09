@@ -1,0 +1,1 @@
+lib.Calendar.lang={"秒 ":"Seconds","时":"H","分":"Mi","毫秒 ":" Millisecond","分钟":"Minutes","年":"Y","月份":"Month","月":"M","毫秒":"ms","年度":"Year","pattern必需设置":"pattern must be set","日":"D","日期":"Date","季度":"Quarter","本项不能为空":"This field can not be empty","秒":"s","Y年m月d日":"Y, m d day","小时":"Hour"}

@@ -1,0 +1,109 @@
+
+import java.io.IOException;
+
+
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.ui.grid.*;
+import com.social.api.core.model.*;
+import com.kinglib.dictionary.*;
+
+@class{
+	public void doGet(Jacper jacper){
+		String dept_id = jacper.getStr("dept_id");
+		Connection conPlat = jacper.getConnection("plat");
+		String sort = jacper.getStr("sort");
+		String dir = jacper.getStr("dir");
+
+		int start = jacper.getInt("start",0);
+		int limit = jacper.getInt("limit",40);
+
+	try{		
+		Dict positionDict = DictFactory.getInstance().getDict(conPlat,4011);
+		Dict roleNameDict = DictFactory.getInstance().getDict(conPlat,4145);
+		
+		JSONArray JArr=new JSONArray();
+		Dept dept = CertManager.getDept(dept_id);
+		int i=0;
+		for (Role r : dept.getRolesBySort()){
+		   JSONObject JObj = new JSONObject();
+		   JObj.put(jacper.trans("序号"), r.getRoleId());
+		   JObj.put(jacper.trans("职位名称"),r.getRoleName());
+		   JObj.put(jacper.trans("称谓"), roleNameDict.getValue(r.getRoleTitle()));
+		   JObj.put(jacper.trans("级别"), positionDict.getValue(r.getPositionId()));
+		   JObj.put(jacper.trans("注册日期"), "");
+		   JObj.put(jacper.trans("优先显示"), r.getSortId());
+		   JArr.put(JObj);
+		   i++;
+		}
+		
+		if(sort.length() > 0 && dir.length() > 0)
+			sortJSONArray(JArr, sort, dir);
+
+
+		if(JArr.length()<limit&&start==0){
+			JSONObject item = new JSONObject();
+			item.put("id", jacper.trans("序号"));
+			item.put("totalCount", i);
+			item.put("dataItem", JArr); 
+			jacper.print(item);
+		}else{
+			JSONArray JRoleArr=new JSONArray();
+			int total=start+limit;
+			if(total>JArr.length()) total=JArr.length();
+			for(int k=start;k<total;k++){
+					JRoleArr.put(JArr.getJSONObject(k));
+			}
+			JSONObject item = new JSONObject();
+			item.put("id", jacper.trans("序号"));
+			item.put("totalCount", JArr.length()); 
+			item.put("dataItem", JRoleArr); 
+			jacper.print(item);
+		}
+
+		conPlat.close();
+	}catch(Exception e){
+			e.printStackTrace();
+	}finally{
+			conPlat.close(); 
+		}
+	}
+	
+	private void sortJSONArray(JSONArray JArr, String sort, String dir){
+	    String str1="";
+	    String str2="";
+		try{	
+	    	JSONObject JTemp=new JSONObject() ;
+	    
+			for(int i=0; i<JArr.length()-1; i++){
+				for(int j = 0; j<JArr.length()-i-1; j++){
+				    JSONObject J1 =JArr.optJSONObject(j);
+					JSONObject J2=JArr.optJSONObject(j+1);
+					str1 = J1.getString(sort);
+					str2 = J2.getString(sort);
+					if( dir.equals("ASC")){
+				   		if(str1.compareTo(str2)>0){
+				       		JTemp = J1;
+				       		J1 = J2;
+				       		J2 = JTemp;
+							JArr.put(j,J1);
+							JArr.put(j+1,J2);
+				   		}
+					}
+					else {  //"DESC"
+						if(str1.compareTo(str2)<0){  
+				       		JTemp = J1;
+				       		J1 = J2;
+				       		J2 = JTemp;
+				       		JArr.put(j,J1);
+							JArr.put(j+1,J2);
+				   		}
+			   		}
+            	} 
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}	
+}

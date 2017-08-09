@@ -1,0 +1,48 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+
+import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.UUID;
+import com.susing.core.KingleSystem;
+
+@class{
+public void doGet(Jacper jacper) {
+doPost(jacper);
+}
+	public void doPost(Jacper jacper) {
+	try {
+			HttpSession hs = jacper.getSession();
+			Connection conEdu = jacper.getConnection("education");
+			
+			String startdate = jacper.getString("startdate");
+			String enddate=jacper.getString("enddate");
+			enddate+="  23:59:59";
+			JSONObject jbout=new JSONObject();
+			JSONArray ja = new JSONArray();
+			String sql="select date_format(login_time,'%H'),count(*),count(distinct ip) from tongjiguanli where  login_time>=str_to_date('"+startdate+"','%Y/%m/%d') and login_time<=str_to_date('"+enddate+"','%Y/%m/%d %T') group by date_format(login_time,'%H')";
+			
+			
+			String[][]rs=conEdu.get(sql);
+			
+			for(int i=0;i<rs.length;i++){
+				JSONObject jb=new JSONObject();
+				jb.put("shijian",rs[i][0]+":00--"+(Integer.parseInt(rs[i][0])+1)+":00");
+				jb.put("shijianjian",rs[i][0]);
+				jb.put("pv",rs[i][1]);
+				jb.put("ip",rs[i][2]);
+				
+				ja.put(jb);
+			}
+			jbout.put("authArray",ja);
+			jacper.print(jbout);
+	} catch (Exception e) {
+			e.printStackTrace();
+	}
+	}}

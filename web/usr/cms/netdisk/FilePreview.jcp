@@ -1,0 +1,44 @@
+import com.kinglib.*;
+import java.io.InputStream;
+import javax.servlet.http.HttpServletResponse;
+import com.kinglib.util.Files;
+import com.susing.upload.FileExtend;
+import java.io.FileInputStream;
+
+	//public class up{
+@class{
+	public void doGet(Jacper jacper) {
+		boolean isLogin = jacper.setSession();
+		boolean isLocal = "true".equals(jacper.getStr("fileIsLocal"));
+		String file_path=jacper.getString("fileDataId");
+		String file_name=jacper.getString("fileDataName");
+		String file_type=jacper.getString("fileDataType");
+		InputStream in = null;
+		if (file_path.length() > 0 && file_name.length() > 0) {
+			try {
+				HttpServletResponse res = jacper.getResponse();
+				if(file_path.toLowerCase().startsWith("file:"))
+					file_path = file_path.substring(5);
+				in = new FileInputStream(file_path);
+				//"application/pdf";
+				res.setContentType(FileExtend.getContentType(file_type));
+				res.setHeader("Content-Disposition", "inline;filename="+ file_name);
+				res.setHeader("Content-Length", String.valueOf(in.available()));
+				res.setHeader("Accept-ranges", "bytes");
+				Files.copyRange(in, res.getOutputStream(), 1024);
+			} catch (Exception e) {
+				e.printStackTrace();
+				jacper.print("对不起，物理文件暂时无法预览 ，请直接下载。");
+			} finally {
+				try {
+					if (in != null) {
+						in.close();
+					}
+				} catch (Exception e2) {
+				}
+			}
+		} else {
+			jacper.print("对不起，文件暂时无法预览 ，请直接下载。");
+		}
+	}
+}

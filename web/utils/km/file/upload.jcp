@@ -1,0 +1,67 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.susing.*;
+import com.susing.upload.FileUpload;
+import javax.servlet.ServletException;
+import com.susing.core.KingleSystem;
+import java.io.File;
+import java.io.IOException;
+
+import java.text.SimpleDateFormat;
+import java.util.regex.Pattern;
+import com.smartkms.file.*;
+import java.io.*;
+import java.util.*;
+
+@class{	 
+	public void doPost(Jacper jacper){
+
+		if(FileUpload.isMultipartContent(jacper.getRequest().getContentType())){
+			jacper=new JacperFile(jacper);
+			((JacperFile)jacper).action();
+		}
+		Connection conUtils=jacper.getConnection("utils");
+
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String user_id = hs.uid+"";
+
+		String postbackId=jacper.getStr("postbackId");
+		String folderId=jacper.getStr("FolderID");
+		EFile[] ufs = ((JacperFile)jacper).getFiles("file-upload");
+		if ( ufs != null && ufs.length>0) {
+			for(EFile uf:ufs){
+				String fileName=uf.getAttribute("file-name");
+				String fileId = UUID.randomUUID().toString();
+				fileName=fileName.substring(fileName.lastIndexOf("\\")+1,fileName.length());
+				String fileType=uf.getAttribute("content-type");
+				String fileSize = (int)uf.length()+"";
+				try{	
+					EFile thumbnail=null;
+					Pattern pattern = Pattern.compile(".+\\.(gif|jpg|png|jpeg|bmp)$",Pattern.CASE_INSENSITIVE);
+					if(pattern.matcher(fileName).matches()){
+						thumbnail=new EFile();
+						FileInputStream fin=uf.getInputStream();
+						FileOutputStream srcStream=thumbnail.getOutputStream();
+						ImageTools.encodeJpeg(srcStream,ImageTools.resizeIn(fin,80,60));
+						conUtils.execLarge("insert into $[utils].files (file_id,forder_id,file_name,file_type,file_size,content,create_user,create_time,update_user,update_time,times,thumbnail)  values(?,?,?,?,?,?,?,$getdate(),?,$getdate(),?,?)",new  Object[]{fileId,folderId,fileName,fileType,fileSize,uf,user_id,user_id,"0",thumbnail});
+					}else{
+						conUtils.execLarge("insert into $[utils].files (file_id,forder_id,file_name,file_type,file_size,content,create_user,create_time,update_user,update_time,times)  values(?,?,?,?,?,?,?,$getdate(),?,$getdate(),?)",new  Object[]{fileId,folderId,fileName,fileType,fileSize,uf,user_id,user_id,"0"});
+					}
+					FileList newfile =FileListFactory.getInstance().getFileList(conUtils,folderId);
+					SimpleDateFormat tempDate = new SimpleDateFormat("yyyy/MM/dd"+" "+"HH:mm"); 
+					String datetime = tempDate.format(new java.util.Date());
+					Object[] fileArray=new Object[]{fileId,folderId,fileName,fileType,user_id,datetime,user_id,datetime,"0",fileSize,thumbnail,"",uf};
+					newfile.addFile(conUtils,fileId,fileArray);
+	
+				}catch(Exception e){
+					e.printStackTrace();
+					jacper.print("{success:false,message:"+e.getMessage()+"}");
+				}
+			}
+			jacper.print("{success:true}");
+			conUtils.close();
+		}
+	}
+}

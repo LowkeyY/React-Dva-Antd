@@ -1,0 +1,26 @@
+
+                  
+import java.io.IOException;
+import com.kinglib.*;
+   
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.gis.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.workbench.search.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String searchId=jacper.getStr("searchId");
+		String exportData=jacper.getStr("exportData");
+		Connection conPlat = jacper.getConnection("plat");
+	    jacper.getResponse().setContentType("application/x-json");	
+		IndexSearch indexSearch =SearchFactory.getInstance().getIndexSearch(conPlat,searchId);
+		<??> indexSearch.getJSON().toString()<??>;
+		conPlat.close();	
+	}
+}
+

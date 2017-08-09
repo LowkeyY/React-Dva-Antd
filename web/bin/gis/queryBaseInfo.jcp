@@ -1,0 +1,65 @@
+
+
+import java.util.Map;
+import java.util.Set;
+import com.kinglib.*;
+import com.kinglib.bi.*;
+import com.kinglib.util.*;
+import com.kinglibx.query.*;
+
+@class{
+
+	public void doGet(Jacper jacper){
+
+		Connection conPlat = jacper.getConnection("plat");
+		Connection con1 =null;
+		
+		String name= jacper.getStr("name");
+		String export= jacper.getStr("export");
+		String query_id = jacper.getString("queryId","-1");
+
+		String sql;
+		String[] title = null;
+
+		QueryExtendFactory queryEF=QueryExtendFactory.getInstance();
+		QueryExtend QE=queryEF.getQueryExtend(conPlat,query_id);
+
+		String server=QE.getConnectString();
+		con1 = jacper.getConnection(server);
+		
+		Query query = QueryFactory.getInstance().getQuery(conPlat,query_id);
+		Map p = Factory.newHashMap();
+		ParamNode[] params=query.getParamNode();
+
+		if(!export.equals("")){			
+			String[] paramsArr=export.split(":");
+			if(params.length!=paramsArr.length){
+				<?<script>alert("?>jacper.trans("参数传递错误")<?!")</script>?>;
+				return;
+			}else{
+				for(int j=0;j<params.length;j++) {
+					String paramCol=params[j].getParamName();
+					p.put(paramCol,paramsArr[j].trim());
+				}
+			}
+		}
+		title = query.getCells();
+		sql = query.parseSql(conPlat,title,p); 
+		String[][] data=query.getData(con1,title,p); 
+
+		String layer = jacper.getStr("layer");
+		String[] paramArr = layer.split("-");
+		String layerId = paramArr[0];
+
+		String[][] menu= conPlat.get("SELECT app_path,menu_title,app_name FROM $[plat].map_menu where layer_id=? ",new String[]{layerId});
+
+	<?<baseinfo>?>;
+		for(int i=0;i<title.length;i++){
+			<?<column  columntitle="?>title[i]<?"   columnvalue="?>data[0][i]<?"/>?>;
+		}
+		for(int i=0;i<menu.length;i++){
+			<?<menu  menutitle="?>menu[i][1]<?"  menudir="?>menu[i][0]<?" program="?>menu[i][2]<?"/>?>;
+		}
+	<?</baseinfo>?>;
+	}
+}

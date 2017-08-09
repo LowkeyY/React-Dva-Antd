@@ -1,0 +1,95 @@
+
+/*
+ * @(#)/bbs/download.jcp	1.0.0 03/04/16
+ *
+ * Copyright 2003 Bizdict Co.,Ltd. All rights reserved.
+ *
+ * 主程序作者：
+ * @author lzy
+ *
+ * 修改者:
+ *
+ * 修改日期:
+ *
+ * 修改理由:
+ *
+ */
+
+import java.io.InputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.ResultSet;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import com.kinglib.*;
+
+import com.kinglib.util.Files;
+
+import com.susing.*;
+
+@class{
+
+public void doGet(Jacper jacper){
+
+
+	Connection conUtils=jacper.getConnection("utils");
+	String file_id = jacper.getStr("file_id");
+	
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id=String.valueOf(hs.uid);
+
+	try{
+
+			Object[] o= conUtils.getLarge("select  content,file_name,file_type,file_size from $[utils].image_files where file_id=? and entry_user=?",new String[] {file_id,user_id});
+
+			if(o==null||o.length==0){
+				<?<script>alert("?>jacper.trans("没有找到指定的图片!")<?");</script>	?>;
+				return ;
+			}else{
+
+				String fileName="";	
+				String fileType="text"; 
+				String fileSize="";
+                
+				if(o.length>1){
+					if(o[1]!=null)  
+						fileName=o[1].toString();	
+					
+					if(o[2]!=null)  
+						fileType=o[2].toString(); 
+					
+					if(o[3]!=null)  
+						fileSize=o[3].toString();
+				}
+				
+				try{
+					fileName = new String(fileName.getBytes(),"iso-8859-1");
+				}catch(Exception e){}
+
+
+				InputStream in=null;
+				
+				if(o[0]!=null)  
+					in=((EFile)o[0]).getInputStream();
+
+				HttpServletResponse res = jacper.getResponse();
+				res.setContentType(fileType);
+				res.setHeader("Content-Disposition", "attachment;filename=" + fileName);
+				res.setHeader("Content-Length", fileSize);
+				res.setHeader("Accept-ranges", "bytes");
+				
+				if(in!=null)
+					Files.copyRange(in, res.getOutputStream(),1024);
+			}	
+		}catch(Exception e){
+			e.printStackTrace();
+			<?<script>alert("?>jacper.trans("下载异常终止!")<?");</script>?>;
+		}
+	}
+}
+

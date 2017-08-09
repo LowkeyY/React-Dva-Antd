@@ -1,0 +1,47 @@
+import java.io.*;
+import com.kinglib.*;
+import com.susing.EFile;
+import com.susing.upload.*;
+import java.util.Arrays;
+import test.MailAttachsTempFiles;
+
+@class{
+
+		public void doPost(Jacper jacper){
+		
+			HttpSession hs = jacper.getSession();
+			
+			
+			try{
+				if (FileUpload.isMultipartContent(jacper.getRequest().getContentType())) {
+					FileUpload upload = new FileUpload(0);
+					upload.parseRequest(jacper.getRequest());
+					
+					EFile uf=upload.getFile("Filedata");
+					
+					String path = (new StringBuffer()).append(uf.getFile()).toString();
+					path = path.replaceAll("\\\\", "//");
+					
+					MailAttachsTempFiles matf = null;
+					if(hs.getString("MailAttachsTempFiles")==null){
+						matf = new MailAttachsTempFiles();
+						hs.set("MailAttachsTempFiles",matf);
+					}else{
+						matf = (MailAttachsTempFiles) hs.get("MailAttachsTempFiles");
+					}
+					matf.addArrayList(uf);
+					
+					jacper.getWriter().print(path);//用来返回flex的DataEvent.UPLOAD_COMPLETE_DATA请求
+					
+				}
+			}catch(Exception e){ 
+				e.printStackTrace();
+				try{
+					jacper.getResponse().resetBuffer();
+					jacper.getResponse().setStatus(500);
+				}catch(Exception ecc){
+					ecc.printStackTrace();
+				}
+			}
+		}
+}

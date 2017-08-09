@@ -1,0 +1,42 @@
+
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.kinglib.gis.*;
+
+@class{
+	public void doPost(Jacper jacper){
+		Connection conPlat = jacper.getConnection("plat");
+		boolean isLogin = jacper.setSession();
+		HttpSession hs = jacper.getSession();
+		String object_id = jacper.getStr("object_id");
+		String type = jacper.getStr("type");
+		jacper.getResponse().setContentType("application/x-json");
+		try{	
+			String[][] rs = conPlat.get("select title,color from $[plat].map_chart where LAYER_ID=? order by index_id",new String[]{object_id});
+			JSONArray jarr=new JSONArray();
+			if(rs!=null&&rs.length!=0){
+				for(int i=0;i<rs.length;i++){
+					JSONObject chartJSON = new JSONObject();
+					chartJSON.put("title",rs[i][0]);
+					chartJSON.put("color",rs[i][1]);
+					jarr.put(chartJSON);
+				}
+				jacper.print("{success:true,dataItem:"+jarr+"}");
+			}else{
+				String[] attrColumnArray= jacper.getArray("attr_column");
+				for(int i=0;i<attrColumnArray.length;i++){
+					JSONObject chartJSON = new JSONObject();
+					chartJSON.put("title",attrColumnArray[i]);
+					chartJSON.put("color","#ff0000");
+					jarr.put(chartJSON);
+				}
+				jacper.print("{success:true,dataItem:"+jarr+"}");
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			conPlat.close();
+		}
+	}
+}

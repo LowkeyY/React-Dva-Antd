@@ -1,0 +1,192 @@
+
+
+import com.kinglib.*;
+import java.util.*;  
+import com.kinglib.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.*;
+import com.susing.core.KingleSystem;
+import  com.kinglib.ui.core.*;
+import com.social.api.core.model.*;
+import com.kinglib.ui.menu.MenuFactory;
+import com.social.api.core.model.User;
+import com.social.api.core.model.UserType;
+import com.kinglib.ui.menu.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+@class{
+
+public void doPost(Jacper jacper){
+
+	Connection conPlat = jacper.getConnection("plat");
+
+	boolean isLogin = jacper.setSession();
+	HttpSession hs = jacper.getSession();
+	String user_id = String.valueOf(hs.uid);
+
+	String type = jacper.getStr("type");
+
+	String applogic_name = jacper.getStr("applogic_name");
+	String appphy_name = jacper.getStr("appphy_name");
+	String database_link =jacper.getStr("database_link");
+	String target_link =jacper.getStr("target_link");
+	String note = jacper.getStr("note");
+	String terminalType = jacper.getStr("terminal_type");
+
+	ObjectManager OM=ObjectManager.getInstance();
+	CertManager cache=CertManager.getInstance();
+
+	if (type.equals("save") ) {
+			
+		String parent_id = jacper.getString("id");
+
+		try{	
+
+			String object_id = "";
+
+			String idType=(String)com.susing.core.KingleSystem.getProperty("id_type");
+			if(idType==null||idType.equals("0")){
+				object_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				object_id =UUID.randomUUID().toString();
+			}
+
+			conPlat.setAutoCommit(false);	
+			
+			ObjectNode groupNode=OM.getObject(parent_id);
+			groupNode.addChild(conPlat,object_id,applogic_name,ObjectType.APPLICATION,hs.uid);
+
+			String portal_id="";
+			String[] portal= conPlat.getRow("SELECT system_id FROM $[plat].application_group WHERE group_id=?",new String[]{parent_id+""});
+			if(portal!=null)
+						portal_id = portal[0];	
+			
+			String menu_id = "";
+			if(idType==null||idType.equals("0")){
+				menu_id = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				menu_id =UUID.randomUUID().toString();
+			}
+
+			String[] menuNum= conPlat.getRow("SELECT count(app_id) FROM $[plat].sys_application WHERE parent_app=?",new String[]{target_link});
+
+			int defaultMenuSeq=(Integer.parseInt(menuNum[0])+1)*10;
+
+			try{
+				if(!target_link.equals("")){
+					conPlat.exec("INSERT INTO $[plat].sys_application (app_id,app_name,app_title,parent_app,all_use,app_seq,son,create_user,is_valid,portal_id,object_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",new String[]{menu_id+"",appphy_name,applogic_name+"",target_link+"","n",defaultMenuSeq+"","0",user_id,"true",portal_id+"",object_id+""});
+					Menu parent=MenuFactory.getInstance().getMenu(target_link);
+					if(parent!=null){
+						Menu menu=new Menu(menu_id, appphy_name, applogic_name, defaultMenuSeq,(new SimpleDateFormat("yyyy/MM/dd")).format(new Date()),object_id, user_id,"",portal_id,false);
+						MenuFactory.getInstance().addToCache(menu);
+						menu.hang(parent);
+					}
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+
+			String fid = "";
+			if(idType==null||idType.equals("0")){
+				fid = SQLUtils.getNextVal(conPlat,1)+"";
+			}else{
+				fid =UUID.randomUUID().toString();
+			}
+
+			ObjectNode systemNode=groupNode.upTo(ObjectType.SYSTEM);;
+			String systemId=systemNode.getId();
+
+			conPlat.exec("insert into $[plat].sys__forder(parent_id,forder_id,forder_title,object_id) values(?,?,?,?)",new String[]{"10000",fid,applogic_name,systemId+""});
+			conPlat.exec("INSERT INTO $[plat].application_base (menu_id,applogic_name,appphy_name,object_id,database_link,target_link,system_id,tab_forder,note,terminal_type) VALUES (?,?,?,?,?,?,?,?,?,?)",new String[]{menu_id,applogic_name,appphy_name,object_id+"",database_link,target_link,parent_id,fid,note,terminalType});
+
+			conPlat.commit();
+			<?{success:true,id:'?>object_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}		
+	}else if(type.equals("updatesave")){		
+		try{	
+			String parent_id = jacper.getString("id");
+			ObjectNode applicationNode=OM.getObject(parent_id);
+			applicationNode.updateName(conPlat,applogic_name);
+
+			conPlat.exec("UPDATE $[plat].application_base SET applogic_name=?,appphy_name=?,target_link=?,terminal_type=? WHERE object_id=?",new String[]{applogic_name,appphy_name,database_link,terminalType,parent_id+""});
+			String[] curMenuId=conPlat.getRow("SELECT menu_id FROM $[plat].application_base WHERE object_id=?",new String[]{parent_id});
+			String  forder_id=conPlat.getRow("SELECT tab_forder FROM $[plat].application_base WHERE object_id=?",new String[]{parent_id})[0];
+			conPlat.exec("UPDATE $[plat].sys__forder SET forder_title=? WHERE forder_id=?",new String[]{applogic_name,forder_id});
+			
+			if(curMenuId!=null){
+				Menu cur=MenuFactory.getInstance().getMenu(curMenuId[0]);		
+				if(cur!=null){
+					Menu parent=cur.getParent();
+					cur.setJson(null);
+					if(!String.valueOf(cur.getId()).equals(target_link)){
+						Menu newParent=MenuFactory.getInstance().getMenu(target_link);
+						if(newParent!=null){
+							parent.removeChild(cur);
+							cur.hang(newParent);
+						}
+					}
+				}
+			}
+			<?{success:true,id:'?>parent_id<?'}?>;
+		}catch(Exception e){
+			e.printStackTrace();
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally {
+			conPlat.close();
+		}
+	}else if (type.equals("delete")) {
+		String parent_id = jacper.getStr("id");
+		ObjectNode applicationNode=OM.getObject(parent_id);
+		try{	
+			conPlat.setAutoCommit(false);	
+			String[] curMenuId=conPlat.getRow("SELECT menu_id FROM $[plat].application_base WHERE object_id=?",new String[]{parent_id});
+			String  forder_id=conPlat.getRow("SELECT tab_forder FROM $[plat].application_base WHERE object_id=?",new String[]{parent_id})[0];
+			
+			String[][] rs=conPlat.get("SELECT strategy_id,group_id FROM $[plat].sys_strategy_auth WHERE app_id=?",new String[]{parent_id},0);
+			if(rs.length>0){
+				for(int i=0;i<rs.length;i++){
+					conPlat.exec("delete from $[plat].sys_strategy_auth where strategy_id=? and group_id=?",new String[]{rs[i][0],rs[i][1]});
+					cache.removeStrategyAuth(rs[i][0]);
+				}
+				ButtonFactory.clearCache();
+				MenuFactory.getInstance().clearMenuPrivilege();
+			}
+			conPlat.exec("delete from $[plat].sys__forder WHERE forder_id=?",new String[]{forder_id});
+			if(curMenuId!=null){
+				Menu cur=MenuFactory.getInstance().getMenu(curMenuId[0]);
+				if(cur!=null){
+					Menu parent=cur.getParent();
+					parent.removeChild(cur);
+				}
+			}
+			applicationNode.destroy(conPlat);
+			conPlat.commit();
+			<?{success:true,id:'?>parent_id<?'}?>;
+		}catch(Exception e){
+		e.printStackTrace();
+			try {
+				conPlat.rollback();
+			}catch(Exception e1) {}
+			<?{success:false,message:"?>e.toString()<?"}?>;
+		}finally{
+			try {
+				conPlat.setAutoCommit(true);
+				conPlat.close();
+			}catch(Exception e2) {}
+		}
+	}
+}
+}

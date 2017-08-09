@@ -1,0 +1,151 @@
+import java.io.*;
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.database.MetaColumn;
+import com.kinglib.database.MetaFactory;
+import com.kinglib.database.MetaTable;
+import com.kinglib.ui.core.utils.Param;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONValue;
+import com.kinglib.util.json.JSONException;
+import com.kinglib.util.json.JSONObject;
+import com.kinglib.workbench.program.ProgramFactory;
+import com.kinglib.workbench.program.Program;
+import com.kinglib.ui.core.CustomizeFactory;
+import com.kinglib.bi.*;
+import com.kinglib.ui.core.input.*;
+import com.kinglib.database.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import com.social.api.core.model.*;
+@class{
+   public void doGet(Jacper jacper) {
+       	String objectId = jacper.getStr("object_id");
+       	Connection conCert = jacper.getConnection("cert");
+       	HttpSession hs=jacper.getSession();
+		String user_id=(int)hs.uid+"";
+		InputColumn[] cm=null;
+		AbstractInput ds=null;		
+		try {
+		    String[][] rs=conCert.get("select HIDE_FLAG,TITLE,ROW_INDEX,DEFAULT_VALUE,USER_ID,TABITEM_ID,WRAP_FLAG from $[cert].user_form_config where OBJECT_ID=? and user_id=? order by ROW_INDEX",new String[]{objectId,user_id});
+		    if(rs.length>0){
+		         	JSONObject retJSON=new JSONObject();
+		            JSONArray data = new JSONArray();		           					
+					for(int i=0;i<rs.length;i++){
+					        JSONObject rowdata = new JSONObject();
+					        boolean hide=true;
+							if("false".equals(rs[i][0])){
+							     hide=false;
+							}
+							rowdata.put("hide_flag",hide);
+							rowdata.put("title_name",rs[i][1]);
+							rowdata.put("title_id",rs[i][5]);
+							rowdata.put("num",rs[i][2]);
+							rowdata.put("default_value",rs[i][3]);
+							boolean warp=true;
+							if("false".equals(rs[i][6])){
+							     warp=false;
+							}
+							rowdata.put("wrap_flag",warp);
+							data.put(rowdata);						
+					}
+					retJSON.put("success",true);
+					retJSON.put("items",data);
+					jacper.print(retJSON);
+		    }else{
+		    ds=(AbstractInput)CustomizeFactory.getCustomizeObject(new Param(jacper),"ProgramInput",objectId);
+		    cm=ds.getColumns(); 
+		    if(cm!=null){      
+		            JSONObject retJSON=new JSONObject();
+		            JSONArray data = new JSONArray();		           					
+					for(int i=0;i<cm.length;i++){
+					        JSONObject rowdata = new JSONObject();
+							rowdata.put("hide_flag",cm[i].isHideFlag());
+							rowdata.put("title_name",cm[i].getTitle());
+							rowdata.put("title_id",cm[i].getId());
+							rowdata.put("num",i*10);
+							rowdata.put("default_value",cm[i].getDefaultValue());
+							rowdata.put("wrap_flag",cm[i].isWrapFlag());
+							data.put(rowdata);						
+					}
+					retJSON.put("success",true);
+					retJSON.put("items",data);
+					jacper.print(retJSON);								
+			}
+			}
+		}catch (Exception e) {
+			e.printStackTrace();
+		}
+   }
+  	public void doPost(Jacper jacper) {
+		Connection conPlat = jacper.getConnection("cert");
+		String objectId = jacper.getStr("object_id");
+		String type = jacper.getStr("type");
+		String fields = jacper.getStr("fields");
+		HttpSession hs=jacper.getSession();
+		String user_id=(int)hs.uid+"";
+		//ProgramInputUserDefine userDf=ProgramInputUserDefine.getInstance();
+		UserType userType=User.getUser(user_id).getUserType();			
+		try{
+		if(userType.getValue()<15){ jacper.print("{success:false}");}
+		else{
+		if(type.equals("save")){
+		if (fields.equals("")) return;
+			conPlat.setAutoCommit(false);
+			JSONArray jarr = new JSONArray(fields);
+			conPlat.exec("delete from $[cert].user_form_config where object_id=? and user_id=?",
+						new String[] { objectId,user_id});
+			int warpIndex=0;			
+			for(int j=jarr.length()-1;j>-1;j--){
+			    if(jarr.getJSONObject(j).getString("hide_flag").equals("false"))
+			    {
+			       warpIndex=j;
+			       break;
+			    }
+			}
+			for (int i = 0; i < jarr.length(); i++) {
+				JSONObject js = jarr.getJSONObject(i);
+				String warp=js.getString("wrap_flag");
+				if(i==warpIndex){warp="true";}			
+				conPlat.exec("insert into $[cert].user_form_config (HIDE_FLAG,TITLE, ROW_INDEX, TABITEM_ID,OBJECT_ID, DEFAULT_VALUE,USER_ID,WRAP_FLAG) values (?,?,?,?,?,?,?,?)",
+								new String[] {
+								        js.getString("hide_flag"),
+										js.getString("title_name"),
+										js.getString("num"),
+										js.getString("title_id"),
+										objectId,
+										js.getString("default_value"),
+										user_id,
+										warp
+							});
+
+			}
+			conPlat.commit();
+			//userDf.enableCache(user_id,objectId);
+			jacper.print("{success:true}");
+		}
+		if(type.equals("rest")){
+		    conPlat.setAutoCommit(false);
+		    conPlat.exec("delete from $[cert].user_form_config where object_id=? and user_id=?",
+						new String[] {objectId,user_id});
+			conPlat.commit();
+			//userDf.disableCache(user_id,objectId);
+			jacper.print("{success:true}");
+		}	
+		}	
+	}catch (Exception e) {
+		try {
+			conPlat.rollback();
+		} catch (Exception ecc) {
+		}
+		e.printStackTrace();
+	} finally {
+		try {
+			conPlat.setAutoCommit(true);
+		} catch (Exception ecc) {
+		}
+		conPlat.close();
+	}
+  } 
+}

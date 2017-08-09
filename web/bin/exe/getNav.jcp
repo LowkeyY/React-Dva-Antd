@@ -1,0 +1,119 @@
+
+
+import com.kinglib.*;
+import com.kinglib.ui.tree.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.workbench.*;
+import com.kinglib.ui.core.utils.CtrlEvent;
+import com.kinglib.ui.core.utils.JSExtend;
+
+@class{
+	public void doGet(Jacper jacper){
+		
+		Connection conPlat = jacper.getConnection("plat");
+		
+		HttpSession hs = jacper.getSession();
+		long user_id=hs.uid;
+
+		String parent_id = jacper.getString("parent_id","0");
+		String old_parent = jacper.getString("old_parent","0");
+		
+		if (old_parent.equals("0")) 
+			old_parent = parent_id;
+		
+		//Program prg =ProgramFactory.getInstance().getProgram(conPlat,parent_id);
+		//String tree_title=prg.getTitle();
+
+		ObjectManager OM=ObjectManager.getInstance();
+		ObjectNode prgNode=OM.getObject(parent_id);
+		String tree_title=prgNode.getName();
+		ObjectNode applicationNode=prgNode.upTo(ObjectType.APPLICATION);
+		String applicationId=applicationNode.getId();
+
+		Tree tempTree =TreeFactory.getInstance().getTree(conPlat,parent_id);
+		String[][] arrtree=tempTree.getData(jacper,conPlat);
+
+		String type=tempTree.getType();
+
+		String targets="";
+        String tree_herf="";
+        String framenum="";
+        String eventString="";
+		String url = "/bin/exe/tree.jcp?objectId="+parent_id+"&amp;old_parent="+old_parent;
+
+		String[][] target = new String[2][3];
+		String[][] targetType = new String[2][3];
+		String[][] target_task =new String[2][3];
+		String[][] task_type = new String[2][3];
+		String[][] taskStatus = new String[2][3];
+
+		TreeConfig[] data=tempTree.getLevelConfig(1);
+
+		target[0] = data[0].getTarget().split(",");
+		targetType[0] =  data[0].getTargetType().split(",");
+		target_task[0] = data[0].getTargetTask().split(",");
+		task_type[0] = data[0].getTaskType().split(",");
+		taskStatus[0] = data[0].getTaskStatus().split(",");
+		String treeType=data[0].getTreeType();
+
+		String data_id="-99999";
+		String export_data="-99999";
+
+		if (task_type!=null&&!task_type[0][0].equals("")){ 
+			for ( int h=0; h<target[0].length; h++ ){	 
+					int k=h+1;								
+					if(treeType.equals("2")||task_type[0][h].equals("1")){
+							tree_herf+="herfs"+k+"=\""+task_type[0][h]+"?parent_id="+target[0][h]+"&amp;from_id="+target[0][h]+"&amp;export_data="+export_data+"&amp;export_data="+data_id+"\" ";
+
+							targets+="target"+k+"=\""+target_task[0][h]+"\" ";		
+					}else{
+						eventString="event=\"event2\"";
+					}
+			}
+			framenum=target[0].length+"";
+		}else{
+			framenum="0";
+		}
+		String starticon="/themes/icon"+data[0].getStartIcon();
+		String endicon="/themes/icon"+data[0].getEndIcon();
+
+		try{
+			JSONObject navJSON = new JSONObject("{}");
+			navJSON.put("treeTitle",tree_title);
+			navJSON.put("applicationId",applicationId);
+			navJSON.put("url",url);
+			navJSON.put("targets",targets);
+			navJSON.put("treeHerf",tree_herf);
+			navJSON.put("frameNum",framenum);
+			navJSON.put("eventString",eventString);
+			navJSON.put("startIcon",starticon);
+			navJSON.put("endIcon",endicon);
+			String oid=String.valueOf(parent_id);
+			if (JSExtend.getInstance().hasDefined(oid)) {
+				Object[][] enventBody = conPlat.getLarges(
+						"select field_name,event_name,event_body,tab_id from $[plat].prg_jsext where object_id=?",
+						new String[] { oid });
+				JSONObject formEvent = new JSONObject();
+				try {
+					for (int i = 0; i < enventBody.length; i++) {
+						CtrlEvent.parseEventBody(enventBody[i], CtrlEvent.isUserDefine("FormPanel",
+								(String) enventBody[i][1]), CtrlEvent.getEvent("FormPanel", (String) enventBody[i][1]),
+								formEvent);
+					}
+					if (formEvent.length() > 0) {
+						navJSON.put("events", formEvent);
+					}
+				} catch (JSONException e) {
+					throw new Err(Err.DEFINED_ERROR, "自定义事件解析错误",null,e,"<ol><li>1、返回应用管理->模块设计，点击js扩展。</li><li>2、查看语法</li></ol>");
+				}
+			}
+			
+			jacper.getResponse().setContentType("application/x-json");
+			<??>navJSON.toString()<??>;
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		conPlat.close();
+	}
+}

@@ -1,0 +1,40 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+
+import com.social.api.core.model.*; 
+
+
+@class{
+
+public void doGet(Jacper jacper){
+
+	boolean isLogin = jacper.setSession();  
+	HttpSession hs = jacper.getSession();
+	String dept_id=jacper.getStr("dept_id");
+	String select_dept_id = jacper.getStr("select_dept_id");
+
+
+	String hasChild = "0";
+	String forder_id = ""+dept_id;
+
+	<?<root _id="?>forder_id<?">
+	<forder _parent="?>forder_id<?" event="event1">?>;
+  
+	try{
+		Dept p=Dept.getDept(dept_id);
+		for(Dept d:p.getChildsBySort()){
+			if(!"".equals(select_dept_id) && select_dept_id.equals(d.getDeptId()))
+				continue;
+			<?<e _id="?>d.getDeptId()<?" _parent="?>forder_id<?" framenum="1" _hasChild ="?>(d.hasChild()?"1":"0")<?"   type="view" params="dept_id=?>d.getDeptId()<?&amp;org_id=?>d.getOrgId()<?" title="?>d.getShortName()<?" url="/bin/user/tree.jcp?dept_id=?>d.getDeptId()+(!"".equals(select_dept_id) ? "&amp;select_dept_id="+select_dept_id:"")<?"  icon0="/themes/icon/common/group.gif" icon1="/themes/icon/common/group.gif" />?>;
+		}	
+	}catch(Exception e){
+		e.printStackTrace();
+	}
+	<?</forder>
+	</root>?>;
+}
+} 
+
+
+		

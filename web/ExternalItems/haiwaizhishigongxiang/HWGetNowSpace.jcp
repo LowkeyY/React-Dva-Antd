@@ -1,0 +1,30 @@
+import com.kinglib.Connection;
+import com.kinglib.Jacper;
+
+import gpra.filesystem.HWUnits;
+import gpra.filesystem.space.HWSpaceFactory.HWSessions;
+//public class file_delete{
+@class{
+	public void doPost(Jacper jacper){
+		try {
+			Object spaceId = jacper.getSession().get(HWSessions.HW_BASE_SPACEID.name());
+			Connection con = jacper.getConnection(HWUnits.HW_DBLINK);
+
+			String getNameSql ="select space_name from dir_space_base where space_id=?";
+			String[][] rs = con.get(getNameSql,new String[]{spaceId.toString()});
+
+			if(rs!=null && rs.length>0){
+				System.out.println("space_name:"+rs[0][0]);
+				jacper.print("{succes:true,name:'"+rs[0][0]+"',id:'"+spaceId.toString()+"'}");
+			}else{
+				System.out.println("获取空间名称失败。");
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+	public void doGet(Jacper jacper){
+		doPost(jacper);
+	}
+}

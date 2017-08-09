@@ -1,0 +1,100 @@
+
+import java.io.IOException;
+import com.kinglib.*;
+
+import com.susing.js.*;
+import com.kinglib.util.Strings;
+import bsh.Interpreter;
+import java.util.Map;
+import java.io.*;
+import com.susing.core.*;
+import com.susing.jacper.*;
+import org.w3c.dom.*;
+import com.kinglib.CmdLineParser;
+import org.mozilla.javascript.ErrorReporter;
+import org.mozilla.javascript.EvaluatorException;
+
+
+@class{
+public void doPost(Jacper jacper){
+
+
+		String content = jacper.getStr("content");
+		String fileName = jacper.getStr("fullName");
+
+		String classDir ="";
+		String rootDir = "";
+		Element jcpConfig = (Element)KingleSystem.getProperty("jacper-config");
+		if(jcpConfig != null){
+			classDir =jcpConfig.getAttribute("class-path");
+			NodeList list = jcpConfig.getElementsByTagName("path");
+			String[][] pathInfo = new String[list.getLength()][2];
+			for(int i=0;i<pathInfo.length;i++){
+				Element el = (Element)list.item(i);
+				pathInfo[i][0] =el.getAttribute("url-starts");
+				pathInfo[i][1] = el.getAttribute("source-path");
+				if(pathInfo[i][0].equals("/"))  rootDir=pathInfo[i][1];
+			}
+		}
+
+		String tempdir = KingleSystem.getTempDirectory();
+		int rootLen = rootDir.length();
+
+		PrintStream outPut=System.out;
+		PrintStream ps=null;
+		try{
+			ps=new PrintStream(jacper.getResponse().getOutputStream(),false,"utf-8");
+			System.setOut(ps);
+		}catch(Exception ea){
+			jacper.print(jacper.trans("运行失败,系统内部错误"));
+		}
+		try{
+			try {
+				OutputStreamWriter out = new OutputStreamWriter(new FileOutputStream(rootDir+fileName),"UTF-8");
+				out.write(content);
+				out.flush();
+				out.close();
+			}catch(UnsupportedEncodingException e){
+				e.printStackTrace();
+			}catch(FileNotFoundException e){
+				e.printStackTrace();
+			}catch (IOException e){
+				e.printStackTrace();
+			}
+			 Reader in = null;
+			 Writer out = null;
+			 String charset = "UTF-8";
+			 in = new InputStreamReader(new FileInputStream(rootDir+fileName), charset);
+			 String outputFilename ="";
+
+			 try {
+				JavaScriptCompressor compressor = new JavaScriptCompressor(in, new ExtErrorReporter(ps));
+				in.close(); in = null;
+				if (outputFilename.equals("")){
+					if(fileName!=null){
+						if(fileName.indexOf(".")!=-1){
+							outputFilename=rootDir+fileName.substring(0,fileName.indexOf("."))+".js";
+						}else{
+							outputFilename=rootDir+fileName+".js";
+						}
+						out = new OutputStreamWriter(new FileOutputStream(outputFilename),charset);
+					}
+				}else {
+					out = new OutputStreamWriter(new FileOutputStream(outputFilename),charset);
+				}
+				boolean munge = false;
+				boolean preserveAllSemiColons =true;
+				boolean disableOptimizations = true;
+				int linebreakpos = -1;
+				boolean verbose=true;
+				compressor.compress(out,linebreakpos, munge, verbose,preserveAllSemiColons, disableOptimizations);	
+				System.out.println(jacper.trans("文件")+" : "+fileName+jacper.trans("编译成功"));
+			}catch (EvaluatorException e) {
+
+			}
+		}catch(Exception ea){
+			ea.printStackTrace();
+		}
+		System.setOut(outPut);
+}
+}

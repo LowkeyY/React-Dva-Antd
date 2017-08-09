@@ -1,0 +1,89 @@
+import com.kinglib.Connection;
+import com.kinglib.HttpSession;
+import com.kinglib.Jacper;
+import com.kinglib.service.cms.CMSService;
+import com.kinglib.service.cms.model.LanMu;
+import com.kinglib.service.cms.model.ZhanDian;
+import com.kinglib.util.json.JSONArray;
+import com.kinglib.util.json.JSONObject;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+
+import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.UUID;
+import com.susing.core.KingleSystem;
+
+@class{
+public void doGet(Jacper jacper) {
+doPost(jacper);
+}
+	public void doPost(Jacper jacper) {
+	try {
+			HttpSession hs = jacper.getSession();
+			Connection conEdu = jacper.getConnection("education");
+			String startdate = jacper.getString("startdate");
+			String enddate=jacper.getString("enddate");
+			JSONObject jbout=new JSONObject();
+			JSONArray ja = new JSONArray();
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
+			Date startd=sdf.parse(startdate);
+			Date endd=sdf.parse(enddate);
+			
+		Calendar start = Calendar.getInstance();  
+	    start.setTime(startd);  
+	    Long startTIme = start.getTimeInMillis();  
+	  
+	    Calendar end = Calendar.getInstance();  
+	    end.setTime(endd);  
+	    Long endTime = end.getTimeInMillis();  
+	  
+	    Long oneDay = 1000 * 60 * 60 * 24l;  
+	  
+	    Long time = startTIme;  
+	    
+	    List<String[]> rslist=new ArrayList<String[]>();
+	    while (time <= endTime) {  
+	        Date d = new Date(time);  
+	        DateFormat df = new SimpleDateFormat("yyyy-MM-dd");  
+	        String s=df.format(d);
+	        String sql="select count(*),count(distinct computer_mac),count(distinct ip) from tongjiguanli where date_format(login_time,'%Y-%m-%d')=date_format(str_to_date('"+s+"','%Y-%m-%d'),'%Y-%m-%d')";
+	        
+	        String[][]rs=conEdu.get(sql);
+	        String[] rs1=new String[4];
+	        rs1[0]=rs[0][0];
+	        rs1[1]=rs[0][1];
+	        rs1[2]=rs[0][2];
+	        rs1[3]=s;
+			rslist.add(rs1);
+				        
+	        time += oneDay;  
+	    }  
+	    double count=0;
+	    for (String[] rslistss : rslist) {
+	    	count+=Integer.parseInt(rslistss[0]);
+		}
+	    
+	    for (String[] rslistss : rslist) {
+	    	JSONObject jb=new JSONObject();
+	        jb.put("riqi",rslistss[3]);
+	        double baifen=Math.round(Integer.parseInt(rslistss[0])/count*100*100)/100.0;
+	        jb.put("pv",rslistss[0]);
+	        jb.put("pvbili",baifen+"%");
+	        jb.put("uv",rslistss[1]);
+	        jb.put("ip",rslistss[2]);
+	        ja.put(jb);
+		}
+	    
+			jbout.put("authArray",ja);
+			System.out.println(jbout);
+			jacper.print(jbout);
+	} catch (Exception e) {
+			e.printStackTrace();
+	}
+	}}

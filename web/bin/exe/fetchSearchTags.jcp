@@ -1,0 +1,44 @@
+import com.kinglib.*;
+import com.kinglib.util.*;
+import java.util.*;
+import com.kinglib.util.json.*;
+import com.kinglib.workbench.program.*;
+import com.kinglib.workbench.search.*;
+@class{
+public void doPost(Jacper jacper){
+	Connection conPlat = jacper.getConnection("plat");
+	String query=jacper.getStr("query");
+	String objectId=jacper.getStr("objectId");
+	Program program=ProgramFactory.getInstance().getProgram(conPlat,objectId);
+	String searchType=program.getSearchType();
+	jacper.getResponse().setContentType("application/x-json");
+    ArrayList tagItems=SearchTagFactory.getInstance().getSearchTag(conPlat,searchType);
+	try{	
+		    JSONObject tagJSON = new JSONObject();	
+			tagJSON.put("success",true);
+			String[] tagArray=new String[tagItems.size()];
+			tagItems.toArray(tagArray);
+			JSONArray jarr=new JSONArray();
+			int count=0;
+			for(int i=0;i<tagArray.length;i++){
+				JSONObject rowItem = new JSONObject();
+				if(tagArray[i].startsWith(query)){
+					if(count<15){
+						rowItem.put("id",tagArray[i]);
+						rowItem.put("tag",tagArray[i]);
+						rowItem.put("name",tagArray[i]);
+						jarr.put(rowItem);
+						count++;
+					}else{
+						break;
+					}
+				}
+			}
+			tagJSON.put("rows",jarr);
+			jacper.print(tagJSON);
+	}catch(Exception e){
+		e.printStackTrace();
+	}finally{
+		conPlat.close();
+	}
+}}

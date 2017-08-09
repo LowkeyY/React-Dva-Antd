@@ -1,0 +1,52 @@
+
+import com.kinglib.*;
+import com.kinglib.util.*;
+import com.kinglib.workbench.*;
+import com.social.api.core.model.*; 
+import com.kinglib.*;
+import com.kinglib.util.json.*;
+import com.kinglib.i18n.*;
+@class{
+
+public void doGet(Jacper jacper){
+
+	boolean isLogin = jacper.setSession();  
+	HttpSession hs = jacper.getSession();
+	long user_id=hs.uid; 
+
+	String objectId = jacper.getStr("objectId");
+	jacper.getResponse().setContentType("application/x-json");
+
+	try{
+			JSONArray jarr=new JSONArray();
+			Translator t=I18n.getLocal(user_id+"").getTranslator(UserType.class);
+			for (UserType sp : UserType.values()) {
+				JSONObject userTypeJSON = new JSONObject(); 
+				userTypeJSON.put("id",sp.getValue());
+				userTypeJSON.put("title",sp.getName(t));
+				jarr.put(userTypeJSON);
+			}
+			if(!objectId.equals("")){
+				ObjectNode pnode=ObjectManager.getObject(objectId);
+				if(pnode!=null){
+					ObjectNode sysNode=pnode.upTo(ObjectType.SYSTEM);
+					if(sysNode!=null){
+						ObjectNode[] nodes=sysNode.findAllChildsByType(ObjectType.USERTYPE);
+						for(ObjectNode node:nodes){
+							JSONObject userTypeJSON = new JSONObject(); 
+							userTypeJSON.put("id",node.getId());
+							userTypeJSON.put("title",node.getName());
+							jarr.put(userTypeJSON);
+						}
+					}
+				}
+			}
+			jacper.print(jarr);
+		}catch(Exception e){
+			e.printStackTrace(); 
+		}
+}
+} 
+
+
+		

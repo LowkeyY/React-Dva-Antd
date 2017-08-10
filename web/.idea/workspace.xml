@@ -14,14 +14,26 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="DeptFrame.js" pinned="false" current-in-tab="true">
+      <file leaf-file-name="DeptFrame.js" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/bin/user/DeptFrame.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="232">
-              <caret line="9" column="252" lean-forward="false" selection-start-line="9" selection-start-column="252" selection-end-line="9" selection-end-column="252" />
+            <state relative-caret-position="600">
+              <caret line="152" column="30" lean-forward="false" selection-start-line="152" selection-start-column="30" selection-end-line="152" selection-end-column="30" />
               <folding>
-                <marker date="1502272900500" expanded="true" signature="317:335" ph="..." />
+                <marker date="1502356752927" expanded="true" signature="327:345" ph="..." />
+                <marker date="1502356752927" expanded="true" signature="537:550" ph="..." />
+                <marker date="1502356752927" expanded="true" signature="617:630" ph="..." />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Frame.js" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/dev/potal/Frame.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-4721">
+              <caret line="0" column="14" lean-forward="true" selection-start-line="0" selection-start-column="14" selection-end-line="0" selection-end-column="14" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -29,8 +41,8 @@
       <file leaf-file-name="DeptFrame.jss" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/bin/user/DeptFrame.jss">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="816">
-              <caret line="108" column="5" lean-forward="false" selection-start-line="108" selection-start-column="5" selection-end-line="108" selection-end-column="5" />
+            <state relative-caret-position="504">
+              <caret line="94" column="0" lean-forward="true" selection-start-line="94" selection-start-column="0" selection-end-line="94" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -39,21 +51,21 @@
       <file leaf-file-name="UserFrame.js" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/bin/user/UserFrame.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3120">
-              <caret line="91" column="21" lean-forward="true" selection-start-line="91" selection-start-column="8" selection-end-line="91" selection-end-column="21" />
+            <state relative-caret-position="6">
+              <caret line="256" column="26" lean-forward="true" selection-start-line="256" selection-start-column="26" selection-end-line="256" selection-end-column="26" />
               <folding>
-                <element signature="e#17610#17798#0" expanded="false" />
-                <element signature="e#18563#19783#0" expanded="false" />
+                <element signature="e#10520#10602#0" expanded="false" />
+                <element signature="e#10638#10865#0" expanded="false" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="form_fileupload.html" pinned="false" current-in-tab="false">
-        <entry file="file://D:/资料/metronic/theme_rtl/templates/admin/form_fileupload.html">
+      <file leaf-file-name="ui_alert_dialog_api.html" pinned="false" current-in-tab="false">
+        <entry file="file://D:/资料/metronic/theme/templates/admin/ui_alert_dialog_api.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="0">
-              <caret line="58" column="18" lean-forward="true" selection-start-line="58" selection-start-column="18" selection-end-line="58" selection-end-column="18" />
+            <state relative-caret-position="304">
+              <caret line="1190" column="20" lean-forward="false" selection-start-line="1190" selection-start-column="20" selection-end-line="1190" selection-end-column="20" />
               <folding />
             </state>
           </provider>
@@ -63,22 +75,35 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>panks</find>
       <find>用户管理</find>
-      <find>getActionsType</find>
       <find>ajax</find>
       <find>click</find>
       <find>\n</find>
       <find>reload</find>
-      <find>DataTable</find>
       <find>portlet box green</find>
       <find>offset</find>
       <find>deptName</find>
       <find>userPageHtml</find>
       <find>toolsPageBody</find>
-      <find>panksToolsPage</find>
-      <find>getToolsId</find>
       <find>modal-</find>
+      <find>input</find>
+      <find>form</find>
+      <find>getActionsType</find>
+      <find>invalidHandler</find>
+      <find>validator</find>
+      <find>successInfo</find>
+      <find>panksToolsPage</find>
+      <find>modal fad</find>
+      <find>table</find>
+      <find>getToolsId</find>
+      <find>modal-content</find>
+      <find>api</find>
+      <find>_create</find>
+      <find>currentSelectDeptId</find>
+      <find>DataTable</find>
+      <find>table</find>
+      <find>initForm</find>
+      <find>option[value=</find>
       <find>导航</find>
     </findStrings>
   </component>
@@ -89,10 +114,13 @@
         <option value="$PROJECT_DIR$/bin/user/UserFrame.jss" />
         <option value="$PROJECT_DIR$/bin/user/DeptFrame1.jss" />
         <option value="D:/资料/metronic/theme/templates/admin/form_controls.html" />
-        <option value="$PROJECT_DIR$/bin/user/UserFrame.js" />
         <option value="$PROJECT_DIR$/metronic/assets/admin/pages/scripts/form-image-crop.js" />
+        <option value="D:/资料/metronic/theme/templates/admin/ui_alert_dialog_api.html" />
+        <option value="$PROJECT_DIR$/bin/log/frame.js" />
+        <option value="$PROJECT_DIR$/bin/user/UserFrame.js" />
         <option value="$PROJECT_DIR$/bin/user/DeptFrame.jss" />
         <option value="$PROJECT_DIR$/bin/user/DeptFrame.js" />
+        <option value="$PROJECT_DIR$/dev/potal/Frame.js" />
       </list>
     </option>
   </component>
@@ -109,7 +137,7 @@
     <detection-done>true</detection-done>
     <sorting>DEFINITION_ORDER</sorting>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
+  <component name="ProjectFrameBounds" extendedState="7">
     <option name="x" value="260" />
     <option name="y" value="20" />
     <option name="width" value="1400" />
@@ -141,13 +169,13 @@
             <path>
               <item name="web" type="b2602c69:ProjectViewProjectNode" />
               <item name="web" type="462c0819:PsiDirectoryNode" />
-              <item name="bin" type="462c0819:PsiDirectoryNode" />
+              <item name="dev" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="web" type="b2602c69:ProjectViewProjectNode" />
               <item name="web" type="462c0819:PsiDirectoryNode" />
-              <item name="bin" type="462c0819:PsiDirectoryNode" />
-              <item name="user" type="462c0819:PsiDirectoryNode" />
+              <item name="dev" type="462c0819:PsiDirectoryNode" />
+              <item name="potal" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -183,15 +211,15 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1502166475610</updated>
-      <workItem from="1502166476718" duration="50812000" />
+      <workItem from="1502166476718" duration="80951000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="50812000" />
+    <option name="totallyTimeSpent" value="80951000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
+    <frame x="-8" y="-8" width="1936" height="1056" extended-state="7" />
     <editor active="true" />
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.24973656" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
@@ -220,7 +248,7 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="4" />
+      <option name="time" value="9" />
     </breakpoint-manager>
     <watches-manager />
   </component>
@@ -358,32 +386,87 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://D:/资料/metronic/theme/templates/admin2/charts_amcharts.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="280">
+          <caret line="702" column="41" lean-forward="false" selection-start-line="702" selection-start-column="35" selection-end-line="702" selection-end-column="41" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/bin/user/getOrg.jcp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="192">
+          <caret line="8" column="0" lean-forward="true" selection-start-line="8" selection-start-column="0" selection-end-line="8" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/bin/user/_getOrg.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding>
+            <element signature="n#!!doc" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://D:/资料/metronic/theme/templates/admin/ui_alert_dialog_api.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="304">
+          <caret line="1190" column="20" lean-forward="false" selection-start-line="1190" selection-start-column="20" selection-end-line="1190" selection-end-column="20" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/bin/log/frame.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="114">
+          <caret line="12" column="12" lean-forward="true" selection-start-line="12" selection-start-column="12" selection-end-line="12" selection-end-column="12" />
+          <folding>
+            <element signature="e#75#1740#0" expanded="false" />
+            <element signature="e#1777#3060#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/bin/user/UserFrame.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3120">
-          <caret line="91" column="21" lean-forward="true" selection-start-line="91" selection-start-column="8" selection-end-line="91" selection-end-column="21" />
+        <state relative-caret-position="6">
+          <caret line="256" column="26" lean-forward="true" selection-start-line="256" selection-start-column="26" selection-end-line="256" selection-end-column="26" />
           <folding>
-            <element signature="e#17610#17798#0" expanded="false" />
-            <element signature="e#18563#19783#0" expanded="false" />
+            <element signature="e#10520#10602#0" expanded="false" />
+            <element signature="e#10638#10865#0" expanded="false" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/bin/user/DeptFrame.jss">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="816">
-          <caret line="108" column="5" lean-forward="false" selection-start-line="108" selection-start-column="5" selection-end-line="108" selection-end-column="5" />
+        <state relative-caret-position="504">
+          <caret line="94" column="0" lean-forward="true" selection-start-line="94" selection-start-column="0" selection-end-line="94" selection-end-column="0" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/bin/user/DeptFrame.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="232">
-          <caret line="9" column="252" lean-forward="false" selection-start-line="9" selection-start-column="252" selection-end-line="9" selection-end-column="252" />
+        <state relative-caret-position="600">
+          <caret line="152" column="30" lean-forward="false" selection-start-line="152" selection-start-column="30" selection-end-line="152" selection-end-column="30" />
           <folding>
-            <marker date="1502272900500" expanded="true" signature="317:335" ph="..." />
+            <marker date="1502356752927" expanded="true" signature="327:345" ph="..." />
+            <marker date="1502356752927" expanded="true" signature="537:550" ph="..." />
+            <marker date="1502356752927" expanded="true" signature="617:630" ph="..." />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/dev/potal/Frame.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-4721">
+          <caret line="0" column="14" lean-forward="true" selection-start-line="0" selection-start-column="14" selection-end-line="0" selection-end-column="14" />
+          <folding />
         </state>
       </provider>
     </entry>

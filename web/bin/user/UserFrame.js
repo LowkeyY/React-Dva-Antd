@@ -249,7 +249,7 @@
                         return false;
                     }
                     if (tag === "#" + getToolsId(conf.id, "delete")) {
-                        var rows = table.selects("index");
+                        var rows = table.PageDatatable("index");
                     } else {
                         if (tag === "#" + getToolsId(conf.id + "_edit")) {
                             var rows = table.selects("index");
